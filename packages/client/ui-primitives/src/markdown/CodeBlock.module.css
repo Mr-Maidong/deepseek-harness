@@ -22,9 +22,21 @@
   position: sticky;
   top: 0;
   z-index: 6;
-  background-color: var(--dsw-alias-bg-base);
+  background-color: var(--dsw-alias-markdown-code-block-sticky-cover);
+  backdrop-filter: blur(8px);
   border-top-left-radius: var(--dsl-code-block-border-radius);
   border-top-right-radius: var(--dsl-code-block-border-radius);
+}
+
+/* The sticky cover must stay opaque outside the banner's rounded corners.
+   Without this rectangular underlay, the scroll canvas shows through while
+   the banner is pinned over later code content. */
+.bannerWrap::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
 }
 
 .banner {
@@ -37,6 +49,7 @@
   font: var(--dsl-code-block-banner-font);
   border-top-left-radius: var(--dsl-code-block-border-radius);
   border-top-right-radius: var(--dsl-code-block-border-radius);
+  backdrop-filter: blur(8px);
 }
 
 .infostring {

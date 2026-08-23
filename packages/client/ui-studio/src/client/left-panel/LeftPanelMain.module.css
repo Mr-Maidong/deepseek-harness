@@ -1,0 +1,120 @@
+.main {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  color: var(--studio-ink);
+}
+
+.workBase,
+.fileTree,
+.workBaseCollapsed,
+.fileTreeCollapsed {
+  min-height: 0;
+  overflow: hidden;
+  transition: flex-basis 200ms ease, max-height 200ms ease;
+}
+
+.workBase {
+  position: relative;
+  flex: 1.15 1 0;
+}
+
+.workBase::after,
+.workBaseCollapsed::after {
+  position: absolute;
+  right: 12px;
+  bottom: 0;
+  left: 12px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--studio-line) 18%, var(--studio-line) 82%, transparent);
+  content: '';
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.workBaseCollapsed,
+.fileTreeCollapsed {
+  position: relative;
+  flex: 0 0 40px;
+  max-height: 40px;
+}
+
+.fileTree {
+  flex: 1 1 0;
+}
+
+.sectionTitle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 14px 8px;
+  border: 0;
+  border-bottom: 1px solid rgba(164, 181, 184, 0.12);
+  background: rgba(14, 23, 31, 0.24);
+  color: var(--studio-muted);
+  font: 500 15px/20px 'LXGW WenKai Mono GB', monospace;
+  letter-spacing: 0.12em;
+  text-align: left;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.sectionTitle:hover {
+  background: rgba(156, 169, 164, 0.07);
+  color: var(--studio-ink);
+}
+
+.sectionTitle:focus-visible {
+  outline: 1px solid var(--studio-gold);
+  outline-offset: -2px;
+}
+
+.sectionTitle > svg:first-child,
+.sectionChevron {
+  flex: none;
+  color: var(--studio-gold);
+  opacity: 0.82;
+}
+
+.sectionChevron {
+  margin-left: auto;
+  transform: rotate(0deg);
+  transition: transform 180ms ease;
+}
+
+.sectionChevron:global(.studio-icon-open) {
+  transform: rotate(90deg);
+}
+
+.sectionBody {
+  height: calc(100% - 44px);
+  min-height: 0;
+  overflow: auto;
+  scrollbar-color: transparent transparent;
+  scrollbar-width: thin;
+}
+
+.sectionBody:hover,
+.sectionBody:focus-within {
+  scrollbar-color: var(--studio-line) transparent;
+}
+
+.sectionBody::-webkit-scrollbar { width: 6px; }
+.sectionBody::-webkit-scrollbar-thumb { background: transparent; }
+.sectionBody:hover::-webkit-scrollbar-thumb,
+.sectionBody:focus-within::-webkit-scrollbar-thumb { background: var(--studio-line); }
+
+@media (prefers-reduced-motion: reduce) {
+  .workBase,
+  .fileTree,
+  .workBaseCollapsed,
+  .fileTreeCollapsed,
+  .sectionTitle,
+  .sectionChevron { transition: none; }
+}

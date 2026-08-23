@@ -1,0 +1,278 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  color: var(--studio-ink);
+  --workbase-accent: var(--studio-gold);
+  --workbase-surface: var(--studio-gold-wash);
+  --workbase-danger: var(--studio-red);
+  --workbase-divider: var(--studio-line);
+  --workbase-row-height: 36px;
+}
+
+.iconButton {
+  display: inline-grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--studio-muted);
+  cursor: pointer;
+  transition: color 150ms ease, background 150ms ease;
+}
+
+.iconButton:hover {
+  background: var(--workbase-surface);
+  color: var(--workbase-accent);
+}
+
+.iconButton:focus-visible,
+.workspaceToggle:focus-visible,
+.sessionButton:focus-visible,
+.addWorkspace:focus-visible {
+  outline: 1px solid var(--workbase-accent);
+  outline-offset: -2px;
+}
+
+.list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px 8px 12px;
+}
+
+.empty {
+  margin: 12px 4px;
+  padding: 12px 8px;
+  color: var(--studio-muted);
+  font: 400 13px/19px 'LXGW WenKai Mono GB', monospace;
+  text-align: center;
+}
+
+.workspaceGroup {
+  position: relative;
+  margin: 0 0 10px;
+  padding: 0 0 8px;
+  border-bottom: 1px solid rgba(164, 181, 184, 0.1);
+}
+
+.workspaceGroup[data-current] {
+  border-bottom-color: rgba(162, 63, 71, 0.34);
+}
+
+.workspaceHeader,
+.sessionRow {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: var(--workbase-row-height);
+  border-radius: 3px;
+  transition: background 150ms ease;
+}
+
+.workspaceHeader {
+  padding-left: 2px;
+}
+
+.workspaceToggle,
+.sessionButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--studio-ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.workspaceToggle {
+  flex: 1 1 auto;
+  min-height: var(--workbase-row-height);
+  padding: 5px 6px 5px 4px;
+}
+
+.workspaceHeader:hover,
+.sessionRow:hover {
+  background: rgba(156, 169, 164, 0.07);
+}
+
+.workspaceToggle:hover,
+.sessionButton:hover {
+  background: transparent;
+}
+
+.chevron {
+  flex: none;
+  color: var(--studio-muted);
+  transform: rotate(0deg);
+  transition: transform 180ms ease, color 150ms ease;
+}
+
+.chevron:global(.studio-icon-open) {
+  transform: rotate(90deg);
+  color: var(--studio-accent, var(--studio-gold));
+}
+
+.workspaceTitle,
+.sessionTitle {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspaceTitle {
+  color: var(--studio-ink);
+  font: 500 14px/21px 'LXGW WenKai Mono GB', monospace;
+}
+
+.workspaceActions,
+.rowActions {
+  display: flex;
+  gap: 2px;
+  padding-right: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+.workspaceHeader:hover .workspaceActions,
+.sessionRow:hover .rowActions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.deleteAction:hover { background: var(--studio-red-wash-strong); color: var(--workbase-danger); }
+
+.sessionList {
+  margin: 2px 6px 0 14px;
+  padding: 3px 0 1px 10px;
+}
+
+.emptyHint {
+  padding: 6px 8px;
+  color: var(--studio-muted);
+  font: 400 13px/18px 'LXGW WenKai Mono GB', monospace;
+}
+
+.sessionRow[data-current] {
+  position: relative;
+  background: linear-gradient(90deg, var(--studio-red-wash-strong), transparent 86%);
+}
+
+.sessionRow[data-current]:hover {
+  background: linear-gradient(90deg, rgba(162, 63, 71, 0.2), rgba(156, 169, 164, 0.07) 86%);
+}
+
+.sessionRow[data-current]::before {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: -11px;
+  width: 2px;
+  background: var(--studio-red);
+  content: '';
+}
+
+.sessionButton {
+  flex: 1 1 auto;
+  min-height: var(--workbase-row-height);
+  padding: 6px 6px;
+}
+
+.sessionRow[data-current] .sessionIcon { color: var(--workbase-accent); }
+.sessionTitle { color: inherit; font: 400 14px/20px 'LXGW WenKai Mono GB', monospace; }
+
+.renameInput,
+.pathInput {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 2px 5px;
+  padding: 5px 6px;
+  border: 1px solid var(--workbase-accent);
+  border-radius: 3px;
+  background: var(--studio-input);
+  color: var(--studio-ink);
+  font: 400 12px/18px 'LXGW WenKai Mono GB', monospace;
+  outline: none;
+}
+
+.addWorkspace {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  align-self: flex-end;
+  margin: 4px 10px 10px;
+  padding: 0;
+  border: 1px solid rgba(156, 169, 164, 0.18);
+  border-radius: 3px;
+  background: rgba(156, 169, 164, 0.03);
+  color: var(--studio-muted);
+  cursor: pointer;
+}
+
+.addWorkspace:hover {
+  background: var(--workbase-surface);
+  color: var(--workbase-accent);
+}
+
+.addRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  margin: 4px 8px 8px;
+  padding: 0 8px;
+  border-top: 1px solid var(--workbase-divider);
+  color: var(--studio-muted);
+}
+
+.addingHint { font: 400 13px/18px 'LXGW WenKai Mono GB', monospace; }
+
+.operationError {
+  margin: 2px 8px 0;
+  padding: 6px 8px;
+  border-left: 2px solid var(--workbase-danger);
+  background: var(--studio-red-wash);
+  color: var(--studio-ink);
+  font: 400 12px/18px 'LXGW WenKai Mono GB', monospace;
+}
+
+.loadingSpinner {
+  width: 12px;
+  height: 12px;
+  border: 1px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: studio-spin 700ms linear infinite;
+}
+
+@keyframes studio-spin { to { transform: rotate(360deg); } }
+
+.dangerButton {
+  padding: 7px 13px;
+  border: 1px solid var(--studio-red-line);
+  border-radius: 3px;
+  background: var(--studio-red-wash-strong);
+  color: var(--studio-ink);
+  font: 500 14px/20px 'LXGW WenKai Mono GB', monospace;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iconButton,
+  .workspaceHeader,
+  .sessionRow,
+  .workspaceActions,
+  .rowActions,
+  .chevron,
+  .loadingSpinner { transition: none; animation: none; }
+}

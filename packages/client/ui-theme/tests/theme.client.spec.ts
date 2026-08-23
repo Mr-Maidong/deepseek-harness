@@ -176,6 +176,13 @@ describe('ThemeRuntime', () => {
     expect(semantic).toMatchObject({ valueType: 'CSS value' })
     expect(semantic).not.toHaveProperty('cssVariable')
     expect(tokens.filter(token => token.name === '--dsw-alias-bg-base')).toHaveLength(1)
+    expect(tokens).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: '--dsw-font-family', valueType: 'font-family', cssVariable: '--dsw-font-family' }),
+      expect.objectContaining({ name: '--ds-font-family-code', valueType: 'font-family', cssVariable: '--ds-font-family-code' }),
+      expect.objectContaining({ name: '--dsw-specific-bubble', cssVariable: '--dsw-specific-bubble' }),
+      expect.objectContaining({ name: '--dsw-specific-input-major', cssVariable: '--dsw-specific-input-major' }),
+      expect.objectContaining({ name: '--dsw-alias-markdown-code-block-sticky-cover', cssVariable: '--dsw-alias-markdown-code-block-sticky-cover' }),
+    ]))
 
     tokens[0]!.description = 'caller mutation'
     expect(theme.exportInspectTokens()[0]!.description).not.toBe('caller mutation')

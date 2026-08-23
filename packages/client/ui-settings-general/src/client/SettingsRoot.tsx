@@ -102,7 +102,7 @@ function SettingsPanel({ rows, renderSlot, activeId, onSelect, onClose }: PanelP
  * @returns the settings shell element tree.
  */
 export function SettingsRoot(props: SettingsRootComponentProps) {
-  const { wide, useSections, useOnboardingSteps, useSessions, renderSlot } = props
+  const { wide, triggerHidden, openRequest, useSections, useOnboardingSteps, useSessions, renderSlot } = props
   const [open, setOpen] = useState(false)
   const [activeId, setActiveId] = useState<string | undefined>(undefined)
   const [completedOnboarding, setCompletedOnboarding] = useState<ReadonlySet<string>>(() => new Set())
@@ -114,6 +114,10 @@ export function SettingsRoot(props: SettingsRootComponentProps) {
     setActiveId(id)
     setOpen(true)
   }, [])
+
+  useEffect(() => {
+    if (openRequest !== undefined && openRequest > 0) setOpen(true)
+  }, [openRequest])
 
   // The ledger tick keeps the nav rows fresh: registrants re-register with
   // freshly localized text on locale change, and the trigger/header/close
@@ -141,7 +145,7 @@ export function SettingsRoot(props: SettingsRootComponentProps) {
 
   return (
     <>
-      <button
+      {!triggerHidden && <button
         type="button"
         className={clsx(css.trigger, !wide && css.rail)}
         aria-haspopup="dialog"
@@ -149,7 +153,7 @@ export function SettingsRoot(props: SettingsRootComponentProps) {
         onClick={() => { setOpen(true) }}
       >
         {renderSlot('settings.trigger', { wide })}
-      </button>
+      </button>}
       {open && (
         <SettingsPanel
           rows={rows}

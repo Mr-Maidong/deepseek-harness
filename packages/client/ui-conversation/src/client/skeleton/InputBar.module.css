@@ -55,8 +55,9 @@
   border: 1px solid var(--dsw-alias-border-l2-darkmode-thin);
   border-radius: 22px;
   background: var(--dsw-specific-input-major);
+  backdrop-filter: blur(12px);
   box-shadow: var(--dsw-shadow-lv2);
-  font-size: 16px;
+  font-size: 15px;
   line-height: 24px;
   /* Elevated surface in dark, same as the menus: the draft scrollport inside
      scrolls once the composer hits its height cap, so the thumb takes the l2

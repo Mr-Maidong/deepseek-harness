@@ -26,7 +26,7 @@ import { readFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { createRequire } from 'node:module'
-import { dirname, join } from 'node:path'
+import { dirname, extname, join, resolve } from 'node:path'
 import { Service } from '@deepseek-ai/cordis'
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/cordis-plugin-loader'
@@ -77,6 +77,20 @@ interface PkgMeta extends WebBootRowFields {
 
 /** Recovery instruction shared by grouped startup and steady-state bundle diagnostics. */
 const CLIENT_BUNDLE_BUILD_INSTRUCTION = 'run `pnpm run build` before launch'
+
+/** MIME types for package-owned browser assets. */
+const ASSET_MIME: Record<string, string> = {
+  '.css': 'text/css; charset=utf-8',
+  '.gif': 'image/gif',
+  '.jpeg': 'image/jpeg',
+  '.jpg': 'image/jpeg',
+  '.png': 'image/png',
+  '.svg': 'image/svg+xml',
+  '.ttf': 'font/ttf',
+  '.webp': 'image/webp',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+}
 
 /** Missing built client export, retained as structured data for activation-error grouping. */
 class MissingClientBundleError extends Error {
@@ -362,6 +376,15 @@ export class ClientModuleRegistry extends Service {
     return this.table.get(id)?.meta.clientPath
   }
 
+  /** Resolve a package-owned browser asset beneath its lib/assets directory. */
+  private assetPath(id: string, relativePath: string): string | undefined {
+    const clientPath = this.clientPath(id)
+    if (clientPath === undefined) return undefined
+    const root = resolve(dirname(clientPath), 'assets')
+    const path = resolve(root, relativePath)
+    return path === root || path.startsWith(`${root}/`) || path.startsWith(`${root}\\`) ? path : undefined
+  }
+
   /**
    * Re-hash one bundle (the HMR watch's registration hook — the only entry
    * point through which bundle content changes reach the graph).
@@ -539,13 +562,19 @@ export class ClientModuleRegistry extends Service {
     const prefix = '/plugins/'
     const mapSuffix = '/client.js.map'
     const bundleSuffix = '/client.js'
+    const assetMarker = '/assets/'
     const isSourceMap = pathname.startsWith(prefix) && pathname.endsWith(mapSuffix)
-    const suffix = isSourceMap ? mapSuffix : bundleSuffix
-    const clientPath = pathname.startsWith(prefix) && pathname.endsWith(suffix)
-      ? this.clientPath(pathname.slice(prefix.length, -suffix.length))
+    const bundlePath = pathname.startsWith(prefix) && pathname.endsWith(bundleSuffix)
+      ? this.clientPath(pathname.slice(prefix.length, -bundleSuffix.length))
       : undefined
-    const path = clientPath === undefined ? undefined : `${clientPath}${isSourceMap ? '.map' : ''}`
-    if (path === undefined) {
+    const assetStart = pathname.startsWith(prefix) ? pathname.indexOf(assetMarker, prefix.length) : -1
+    const assetPath = assetStart >= 0
+      ? this.assetPath(pathname.slice(prefix.length, assetStart), pathname.slice(assetStart + assetMarker.length))
+      : undefined
+    const path = bundlePath === undefined
+      ? (isSourceMap ? (this.clientPath(pathname.slice(prefix.length, -mapSuffix.length)) ?? '') + '.map' : assetPath)
+      : bundlePath
+    if (path === undefined || path === '') {
       res.writeHead(404)
       res.end()
       return
@@ -553,7 +582,7 @@ export class ClientModuleRegistry extends Service {
     try {
       const body = await readFile(path)
       res.writeHead(200, {
-        'content-type': isSourceMap ? 'application/json; charset=utf-8' : 'text/javascript; charset=utf-8',
+        'content-type': isSourceMap ? 'application/json; charset=utf-8' : assetPath !== undefined ? (ASSET_MIME[extname(path)] ?? 'application/octet-stream') : 'text/javascript; charset=utf-8',
         'cache-control': 'no-cache',
       })
       res.end(body)

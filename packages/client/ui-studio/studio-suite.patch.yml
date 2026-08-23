@@ -1,0 +1,13 @@
+# External Studio Suite overlay.
+# Disable the supplied root layout and sidebar, then add Studio as their
+# replacement. The profile resolves this local package through node_modules,
+# allowing client-modules to serve its browser bundle.
+- id: ui-layout
+  disabled: true
+
+- id: ui-sidebar
+  disabled: true
+
+- insert:
+    - id: ui-studio
+      name: '@deepseek-ai/dsh-client-ui-studio'

@@ -47,32 +47,32 @@ body {
   --dsw-font-markdown-h4-font-size: 16px;
   --dsw-font-markdown-h4-font-style: normal;
 
-  --dsw-font-markdown-base: 16px/28px var(--dsw-font-family);
+  --dsw-font-markdown-base: 15px/28px var(--dsw-font-family);
   --dsw-font-markdown-base-font-family: var(--dsw-font-family);
   --dsw-font-markdown-base-font-weight: 400;
   --dsw-font-markdown-base-line-height: 28px;
-  --dsw-font-markdown-base-font-size: 16px;
+  --dsw-font-markdown-base-font-size: 15px;
   --dsw-font-markdown-base-font-style: normal;
 
-  --dsw-font-markdown-base-strong: 600 16px/28px var(--dsw-font-family);
+  --dsw-font-markdown-base-strong: 600 15px/28px var(--dsw-font-family);
   --dsw-font-markdown-base-strong-font-family: var(--dsw-font-family);
   --dsw-font-markdown-base-strong-font-weight: 600;
   --dsw-font-markdown-base-strong-line-height: 28px;
-  --dsw-font-markdown-base-strong-font-size: 16px;
+  --dsw-font-markdown-base-strong-font-size: 15px;
   --dsw-font-markdown-base-strong-font-style: normal;
 
-  --dsw-font-markdown-base-italic: italic 16px/28px var(--dsw-font-family);
+  --dsw-font-markdown-base-italic: italic 15px/28px var(--dsw-font-family);
   --dsw-font-markdown-base-italic-font-family: var(--dsw-font-family);
   --dsw-font-markdown-base-italic-font-weight: 400;
   --dsw-font-markdown-base-italic-line-height: 28px;
-  --dsw-font-markdown-base-italic-font-size: 16px;
+  --dsw-font-markdown-base-italic-font-size: 15px;
   --dsw-font-markdown-base-italic-font-style: italic;
 
-  --dsw-font-markdown-base-strong-italic: italic 600 16px/28px var(--dsw-font-family);
+  --dsw-font-markdown-base-strong-italic: italic 600 15px/28px var(--dsw-font-family);
   --dsw-font-markdown-base-strong-italic-font-family: var(--dsw-font-family);
   --dsw-font-markdown-base-strong-italic-font-weight: 600;
   --dsw-font-markdown-base-strong-italic-line-height: 28px;
-  --dsw-font-markdown-base-strong-italic-font-size: 16px;
+  --dsw-font-markdown-base-strong-italic-font-size: 15px;
   --dsw-font-markdown-base-strong-italic-font-style: italic;
 
   --dsw-font-markdown-table: 15px/25px var(--dsw-font-family);
@@ -153,25 +153,25 @@ body {
   --dsw-font-l-20-font-size: 20px;
   --dsw-font-l-20-font-style: normal;
 
-  --dsw-font-m-18: 500 16px/28px var(--dsw-font-family);
+  --dsw-font-m-18: 500 15px/28px var(--dsw-font-family);
   --dsw-font-m-18-font-family: var(--dsw-font-family);
   --dsw-font-m-18-font-weight: 500;
   --dsw-font-m-18-line-height: 28px;
-  --dsw-font-m-18-font-size: 16px;
+  --dsw-font-m-18-font-size: 15px;
   --dsw-font-m-18-font-style: normal;
 
-  --dsw-font-base-16: 16px/24px var(--dsw-font-family);
+  --dsw-font-base-16: 15px/24px var(--dsw-font-family);
   --dsw-font-base-16-font-family: var(--dsw-font-family);
   --dsw-font-base-16-font-weight: 400;
   --dsw-font-base-16-line-height: 24px;
-  --dsw-font-base-16-font-size: 16px;
+  --dsw-font-base-16-font-size: 15px;
   --dsw-font-base-16-font-style: normal;
 
-  --dsw-font-base-strong-16: 500 16px/24px var(--dsw-font-family);
+  --dsw-font-base-strong-16: 500 15px/24px var(--dsw-font-family);
   --dsw-font-base-strong-16-font-family: var(--dsw-font-family);
   --dsw-font-base-strong-16-font-weight: 500;
   --dsw-font-base-strong-16-line-height: 24px;
-  --dsw-font-base-strong-16-font-size: 16px;
+  --dsw-font-base-strong-16-font-size: 15px;
   --dsw-font-base-strong-16-font-style: normal;
 
   --dsw-font-s-14: 14px/22px var(--dsw-font-family);

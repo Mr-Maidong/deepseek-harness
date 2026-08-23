@@ -47,6 +47,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  opacity: 0.96;
 }
 
 /* Settled-flow identity boundary. It is neutral today and becomes the natural

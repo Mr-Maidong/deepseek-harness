@@ -250,6 +250,7 @@ interface AssetEmitter {
     source: Uint8Array
     originalFileName: string
   }): string
+  addWatchFile(file: string): void
 }
 
 function staticLinkedConfig(id: string, entry: string, outputName = basename(entry, '.js')): UserConfig {
@@ -518,7 +519,7 @@ function clientConfig(id: string, entry: string): UserConfig {
         const exportEntries = Object.entries(cssExports ?? {})
           .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
         for (const [local, exp] of exportEntries) classMap[local] = exp.name
-        return styleInjectionModule(id, fileId, code.toString(), classMap)
+        return styleInjectionModule(id, fileId, rewriteCssAssetUrls(this, id, fileId, code.toString()), classMap)
       },
     }, {
       name: 'dsh-css-text-inline',
@@ -534,7 +535,7 @@ function clientConfig(id: string, entry: string): UserConfig {
         this.addWatchFile(fileId)
         const source = await readFile(fileId)
         const { code } = transform({ filename: fileId, code: source, minify: true })
-        return `export default ${JSON.stringify(code.toString())};`
+        return `export default ${JSON.stringify(rewriteCssAssetUrls(this, id, fileId, code.toString()))};`
       },
     }, {
       name: 'dsh-css-global-inline',
@@ -549,7 +550,7 @@ function clientConfig(id: string, entry: string): UserConfig {
         this.addWatchFile(fileId)
         const source = await readFile(fileId)
         const { code } = transform({ filename: fileId, code: source, minify: true })
-        return styleInjectionModule(id, fileId, code.toString())
+        return styleInjectionModule(id, fileId, rewriteCssAssetUrls(this, id, fileId, code.toString()))
       },
     }],
     outputOptions: {
@@ -577,6 +578,27 @@ const SOURCE_MARKER = `${sep}src${sep}`
 
 /** Trailing sourcemap reference tsc appends to every emitted module. */
 const SOURCEMAP_COMMENT = /\n\/\/# sourceMappingURL=.*\s*$/
+
+/** Emit local CSS URL targets under the plugin asset route and return the rewritten CSS. */
+function rewriteCssAssetUrls(context: AssetEmitter, id: string, stylesheet: string, css: string): string {
+  return css.replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/g, (whole, quote: string, value: string) => {
+    if (value.startsWith('data:') || value.startsWith('#') || value.startsWith('/') || /^[a-z][a-z0-9+.-]*:/i.test(value)) return whole
+    const file = sourceAssetPath(value, stylesheet)
+    if (!existsSync(file)) return whole
+    const boundary = file.lastIndexOf(SOURCE_MARKER)
+    if (boundary < 0) throw new Error(`tsdown: CSS asset ${file} is outside the package sources`)
+    const relativeFile = file.slice(boundary + SOURCE_MARKER.length).split(sep).join('/')
+    const fileName = `assets/${relativeFile}`
+    context.emitFile({
+      type: 'asset',
+      fileName,
+      source: readFileSync(file),
+      originalFileName: file,
+    })
+    context.addWatchFile(file)
+    return `url(${quote}/plugins/${id}/${fileName}${quote})`
+  })
+}
 
 /** Resolve an emitted JS asset import against its source-tree counterpart. */
 function sourceAssetPath(source: string, importer: string): string {

@@ -406,6 +406,7 @@ textarea:focus-visible {
 }
 
 .todoForm input {
+  border-radius: 6px;
   border-color: rgba(191, 205, 201, 0.26);
   background: rgba(202, 213, 209, 0.1);
 }
@@ -445,6 +446,7 @@ textarea:focus-visible {
 
 .todoForm .sendDraft {
   margin-top: 0;
+  border-radius: 6px;
   border-color: rgba(156, 169, 164, 0.52);
   background: rgba(156, 169, 164, 0.1);
   color: #d6dddc;

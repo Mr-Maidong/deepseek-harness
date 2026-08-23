@@ -11,7 +11,7 @@ import type {
   SessionId, SessionListState, WorkspaceId, WorkspaceListState, WorkspaceView,
 } from '@deepseek-ai/dsh-client-runtime/client'
 import { Modal } from '@deepseek-ai/dsh-client-ui-primitives'
-import { AddWorkspaceIcon, AddIcon, ChevronIcon, DeleteIcon, EditIcon, SessionIcon } from './icons/icons.tsx'
+import { ChevronIcon, SessionIcon } from './icons/icons.tsx'
 import { NS } from './locales.ts'
 import type { LeftPanelInjected } from './LeftPanelMain.tsx'
 import css from './WorkBase.module.css'
@@ -49,18 +49,18 @@ function WorkspaceCard({
         </button>
         <div className={css.workspaceActions}>
           <button type="button" className={css.iconButton} aria-label={t('workspace.newSession')} title={t('workspace.newSession')} onClick={onNewSession}>
-            <AddIcon />
+            <span className={css.newIcon} aria-hidden="true" />
           </button>
           <button type="button" className={css.iconButton} aria-label={t('workspace.rename')} title={t('workspace.rename')} onClick={onRename}>
-            <EditIcon />
+            <span className={css.editIcon} aria-hidden="true" />
           </button>
           <button type="button" className={`${css.iconButton} ${css.deleteAction}`} aria-label={t('workspace.delete')} onClick={onDelete}>
-            <DeleteIcon />
+            <span className={css.deleteIcon} aria-hidden="true" />
           </button>
         </div>
       </div>
-      {expanded && (
-        <div className={css.sessionList}>
+      <div className={css.sessionList} data-expanded={expanded || undefined}>
+        <div className={css.sessionListContent}>
           {sessions.length === 0 && <div className={css.emptyHint}>{t('workspace.empty')}</div>}
           {sessions.map(session => (
             <SessionRow
@@ -74,7 +74,7 @@ function WorkspaceCard({
             />
           ))}
         </div>
-      )}
+      </div>
     </div>
   )
 }
@@ -123,7 +123,7 @@ function SessionRow({ sessionId, title, current, archiving, onArchive, deps }: {
           disabled={archiving}
           onClick={() => { setRenaming(true); setDraft(title) }}
         >
-          <EditIcon />
+          <span className={css.editIcon} aria-hidden="true" />
         </button>
         <button
           type="button"
@@ -133,7 +133,7 @@ function SessionRow({ sessionId, title, current, archiving, onArchive, deps }: {
           disabled={archiving}
           onClick={onArchive}
         >
-          {archiving ? <span className={css.loadingSpinner} aria-hidden="true" /> : <DeleteIcon />}
+          {archiving ? <span className={css.loadingSpinner} aria-hidden="true" /> : <span className={css.deleteIcon} aria-hidden="true" />}
         </button>
       </div>
     </div>
@@ -236,7 +236,7 @@ export function WorkBase(props: WorkBaseProps): React.ReactElement {
             if (path !== null) void props.createWorkspace({ path })
           }).finally(() => { setAdding(false) })
         }}>
-          <AddWorkspaceIcon />
+          <span className={css.newIcon} aria-hidden="true" />
         </button>
       )}
       {archiveError !== undefined && <div className={css.operationError} role="status">{archiveError}</div>}

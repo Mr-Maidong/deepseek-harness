@@ -8,6 +8,7 @@
   isolation: isolate;
   color: var(--studio-ink, #d6dddc);
   font-family: 'LXGW WenKai Mono GB', monospace;
+  transition: padding 320ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .navigation::before {
@@ -72,8 +73,8 @@
 
 .navigation[data-collapsed] .settingsMark,
 .navigation[data-collapsed] .collapseMark {
-  width: 30px;
-  height: 30px;
+  width: 24px;
+  height: 24px;
 }
 
 
@@ -99,7 +100,11 @@
   text-align: left;
   cursor: pointer;
   overflow: hidden;
-  transition: color 220ms ease, transform 220ms ease;
+  transition: color 220ms ease, transform 220ms ease, grid-template-columns 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.navList > .navItem:first-child {
+  border-radius: 6px;
 }
 
 .navItem::before {
@@ -274,8 +279,8 @@
 
 .footerButton {
   display: grid;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   place-items: center;
   padding: 0;
   border: 0;
@@ -299,23 +304,23 @@
 .settingsMark,
 .collapseMark {
   display: block;
-  width: 32px;
-  height: 32px;
-  background-image: url('./studio-action-atlas.webp');
+  width: 24px;
+  height: 24px;
   background-repeat: no-repeat;
-  background-size: 200% 100%;
+  background-position: center;
+  background-size: contain;
 }
 
 .settingsMark {
-  background-position: 0 0;
+  background-image: url('./settings.webp');
 }
 
 .collapseMark {
-  background-position: 100% 0;
+  background-image: url('./collapse.webp');
 }
 
 .expandMark {
-  transform: rotate(180deg);
+  background-image: url('./expand.webp');
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -348,9 +353,9 @@
   width: 36px;
   height: 36px;
   flex: none;
-  background-image: url('./studio-icon-atlas.webp');
   background-repeat: no-repeat;
-  background-size: 200% 200%;
+  background-position: center;
+  background-size: contain;
 }
 
 .navItem .atlasMark {
@@ -380,6 +385,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .brand .fishHitbox:hover .brandFish { animation: none; }
+  .navigation,
+  .navItem { transition: none; }
 }
 
 .atlasBrand {
@@ -387,15 +394,15 @@
 }
 
 .atlas_project {
-  background-position: 100% 0;
+  background-image: url('./agent-brain.webp');
 }
 
 .atlas_team {
-  background-position: 0 100%;
+  background-image: url('./agent-team.webp');
 }
 
 .atlas_knowledge {
-  background-position: 100% 100%;
+  background-image: url('./agent-knowledge.webp');
 }
 
 .navItem:hover .atlasMark {

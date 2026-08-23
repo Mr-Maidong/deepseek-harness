@@ -117,8 +117,8 @@ function DirRow({ path, name, depth, expanded, onToggle, listings }: {
         <FolderIcon open={isExpanded} className={css.dirIcon} />
         <span className={css.dirName}>{name}</span>
       </button>
-      {isExpanded && (
-        <div className={css.children}>
+      <div className={css.children} data-expanded={isExpanded || undefined}>
+        <div className={css.childrenContent}>
           {children !== undefined && children.entries.length === 0 && <div className={css.emptySub} />}
           {children !== undefined && children.entries.map(entry => (
             <DirRow
@@ -132,7 +132,7 @@ function DirRow({ path, name, depth, expanded, onToggle, listings }: {
             />
           ))}
         </div>
-      )}
+      </div>
     </div>
   )
 }

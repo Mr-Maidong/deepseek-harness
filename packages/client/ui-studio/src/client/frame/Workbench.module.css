@@ -21,10 +21,25 @@
 }
 
 h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
   color: #edf2f0;
   font-size: 18px;
   font-weight: 500;
+}
+
+.titleIcon {
+  display: inline-block;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  background: url('../navigation/ideals.webp') center / contain no-repeat;
+}
+
+.titleText {
+  padding-top: 2px;
 }
 
 .subtitle {
@@ -46,6 +61,10 @@ h2 {
   flex-wrap: nowrap;
   align-items: center;
   gap: 4px;
+}
+
+.projectActions > button:nth-child(2) {
+  border-radius: 6px;
 }
 
 .projectTabs {
@@ -106,6 +125,26 @@ h2 {
   background: rgba(156, 169, 164, 0.05);
   color: #edf2f0;
 }
+
+.sendIcon {
+  display: block;
+  width: 16px;
+  height: 16px;
+  background: url('../navigation/send.webp') center / contain no-repeat;
+}
+
+.newIcon,
+.deleteIcon {
+  display: block;
+  width: 16px;
+  height: 16px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.newIcon { background-image: url('../navigation/new.webp'); }
+.deleteIcon { background-image: url('../navigation/delete.webp'); }
 
 button:focus-visible,
 input:focus-visible,

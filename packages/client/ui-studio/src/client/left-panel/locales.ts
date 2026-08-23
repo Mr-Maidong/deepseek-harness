@@ -26,7 +26,7 @@ export const zh = {
   'fileTree.empty': '选择工作区以浏览其文件',
   'fileTree.loading': '加载中…',
   'fileTree.error': '无法读取此目录',
-  'workbench.title': '灵光台',
+  'workbench.title': '灵光池',
   'workbench.subtitle': '你的灵感收纳处，也是行动起点',
   'workbench.addProject': '新建项目',
   'workbench.addTodo': '添加灵光',

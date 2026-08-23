@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import { AddIcon, DeleteIcon, SendIcon } from '../left-panel/icons/icons.tsx'
 import { NS } from '../left-panel/locales.ts'
 import css from './Workbench.module.css'
 
@@ -123,7 +122,7 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
   return <section className={css.workbench} aria-labelledby="studio-workbench-title">
     <header className={css.header}>
       <div>
-        <h2 id="studio-workbench-title">{t('workbench.title')}</h2>
+        <h2 id="studio-workbench-title"><span className={css.titleIcon} aria-hidden="true" /><span className={css.titleText}>{t('workbench.title')}</span></h2>
         <p className={css.subtitle}>{t('workbench.subtitle')}</p>
       </div>
     </header>
@@ -147,7 +146,7 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
           title={t('workbench.addProject')}
           onClick={() => { setProjectDraftOpen(open => !open); setProjectTitle('') }}
         >
-          <AddIcon />
+          <span className={css.newIcon} aria-hidden="true" />
         </button>
         <button
           className={css.quietButton}
@@ -157,7 +156,7 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
           title={t('workbench.sendAll')}
           onClick={() => { void sendProject() }}
         >
-          <SendIcon />
+          <span className={css.sendIcon} aria-hidden="true" />
         </button>
         <button
           className={css.quietButton}
@@ -167,7 +166,7 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
           title="移除项目"
           onClick={removeProject}
         >
-          <DeleteIcon />
+          <span className={css.deleteIcon} aria-hidden="true" />
         </button>
       </div>
     </div>
@@ -201,7 +200,7 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
                 title={t('workbench.sendOne')}
                 onClick={() => { void sendTodo(todo) }}
               >
-                <SendIcon />
+                <span className={css.sendIcon} aria-hidden="true" />
               </button>
               <button
                 className={css.todoDelete}
@@ -210,7 +209,7 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
                 title={t('workbench.removeTodo')}
                 onClick={() => { removeTodo(todo.id) }}
               >
-                <DeleteIcon />
+                <span className={css.deleteIcon} aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -241,7 +240,7 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
       {error !== undefined && <p className={css.error} role="alert">{error}</p>}
       <form className={css.todoForm} onSubmit={(event) => { event.preventDefault(); addTodo() }}>
         <input value={draftTitle} onChange={(event) => { setDraftTitle(event.target.value) }} placeholder={t('workbench.addTodo')} aria-label={t('workbench.addTodo')} />
-        <button className={css.sendDraft} type="submit" disabled={draftTitle.trim() === ''} aria-label={t('workbench.addTodo')} title={t('workbench.addTodo')}><SendIcon /></button>
+        <button className={css.sendDraft} type="submit" disabled={draftTitle.trim() === ''} aria-label={t('workbench.addTodo')} title={t('workbench.addTodo')}><span className={css.sendIcon} aria-hidden="true" /></button>
       </form>
     </>}
   </section>

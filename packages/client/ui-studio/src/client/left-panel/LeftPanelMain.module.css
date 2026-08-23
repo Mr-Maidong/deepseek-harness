@@ -11,9 +11,18 @@
 .fileTree,
 .workBaseCollapsed,
 .fileTreeCollapsed {
+  display: flex;
+  flex-direction: column;
   min-height: 0;
   overflow: hidden;
-  transition: flex-basis 200ms ease, max-height 200ms ease;
+  transition: flex-grow 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    flex-basis 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    max-height 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.workBase,
+.fileTree {
+  max-height: 100%;
 }
 
 .workBase {
@@ -37,8 +46,10 @@
 .workBaseCollapsed,
 .fileTreeCollapsed {
   position: relative;
-  flex: 0 0 40px;
-  max-height: 40px;
+  flex-grow: 0;
+  flex-shrink: 0;
+  flex-basis: 44px;
+  max-height: 44px;
 }
 
 .fileTree {
@@ -75,17 +86,33 @@
   outline-offset: -2px;
 }
 
-.sectionTitle > svg:first-child,
+.sectionTitle > span:first-child,
 .sectionChevron {
   flex: none;
-  color: var(--studio-gold);
   opacity: 0.82;
 }
 
+.workspaceIcon,
+.fileTreeIcon {
+  width: 16px;
+  height: 16px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+
+.workspaceIcon { background-image: url('../navigation/workspace.webp'); }
+.fileTreeIcon { background-image: url('../navigation/folder.webp'); }
+
 .sectionChevron {
+  width: 16px;
+  height: 16px;
   margin-left: auto;
-  transform: rotate(0deg);
-  transition: transform 180ms ease;
+  background-image: url('../navigation/expand.webp');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .sectionChevron:global(.studio-icon-open) {
@@ -93,11 +120,19 @@
 }
 
 .sectionBody {
-  height: calc(100% - 44px);
+  flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
+  opacity: 1;
   scrollbar-color: transparent transparent;
   scrollbar-width: thin;
+  transition: opacity 180ms ease;
+}
+
+.workBaseCollapsed .sectionBody,
+.fileTreeCollapsed .sectionBody {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .sectionBody:hover,
@@ -115,6 +150,7 @@
   .fileTree,
   .workBaseCollapsed,
   .fileTreeCollapsed,
+  .sectionBody,
   .sectionTitle,
   .sectionChevron { transition: none; }
 }

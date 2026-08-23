@@ -7,14 +7,18 @@ function Icon({ size = 16, children, ...props }: IconProps & { children: ReactNo
   return <svg viewBox="0 0 16 16" width={size} height={size} fill="none" aria-hidden="true" {...props}>{children}</svg>
 }
 
+function AssetIcon({ className, size = 16 }: IconProps): ReactElement {
+  return <span className={className} style={{ width: size, height: size }} aria-hidden="true" />
+}
+
 /** WorkBase section icon. */
 export function WorkBaseIcon(props: IconProps): ReactElement {
-  return <Icon {...props}><path d="M2.5 4.25A1.25 1.25 0 0 1 3.75 3h3l1.35 1.5h4.15a1.25 1.25 0 0 1 1.25 1.25v5.5a1.25 1.25 0 0 1-1.25 1.25h-8.5a1.25 1.25 0 0 1-1.25-1.25v-7Z" stroke="currentColor" strokeWidth="1.25" strokeLinejoin="round" /></Icon>
+  return <AssetIcon {...props} />
 }
 
 /** FileTree section icon. */
 export function FileTreeIcon(props: IconProps): ReactElement {
-  return <Icon {...props}><path d="M3 3.25h10M3 6.5h10M3 9.75h6M3 13h5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" /></Icon>
+  return <AssetIcon {...props} />
 }
 
 /** Plus action icon. */
@@ -33,20 +37,23 @@ export function RefreshIcon(props: IconProps): ReactElement {
 }
 
 /** Folder outline icon. */
-export function FolderIcon({ open = false, ...props }: IconProps & { open?: boolean }): ReactElement {
-  return <Icon {...props}><path d="M2.5 4.25A1.25 1.25 0 0 1 3.75 3h3l1.35 1.5h4.15a1.25 1.25 0 0 1 1.25 1.25v5.5a1.25 1.25 0 0 1-1.25 1.25h-8.5a1.25 1.25 0 0 1-1.25-1.25v-7Z" stroke="currentColor" strokeWidth="1.25" strokeLinejoin="round" fill={open ? 'currentColor' : 'none'} fillOpacity={open ? 0.12 : 0} /></Icon>
+export function FolderIcon(props: IconProps & { open?: boolean }): ReactElement {
+  const { className, size } = props
+  return size === undefined
+    ? <AssetIcon className={className} />
+    : <AssetIcon className={className} size={size} />
 }
 
 /** Directory disclosure icon. */
 export function ChevronIcon({ open = false, className, ...props }: IconProps & { open?: boolean }): ReactElement {
   const stateClassName = open ? 'studio-icon-open' : undefined
   const mergedClassName = [className, stateClassName].filter(Boolean).join(' ')
-  return <Icon className={mergedClassName || undefined} {...props}><path d="m6 3.75 4.25 4.25L6 12.25" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" /></Icon>
+  return <AssetIcon className={mergedClassName || undefined} {...props} />
 }
 
 /** Session row icon. */
 export function SessionIcon(props: IconProps): ReactElement {
-  return <Icon {...props}><path d="M4 3.25h8M3 6.5h10M4 9.75h8M5 13h6" stroke="currentColor" strokeWidth="1.15" strokeLinecap="round" /></Icon>
+  return <AssetIcon {...props} />
 }
 
 /** Edit action icon. */

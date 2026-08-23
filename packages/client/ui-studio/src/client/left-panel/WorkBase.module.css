@@ -30,6 +30,21 @@
   color: var(--workbase-accent);
 }
 
+.newIcon,
+.editIcon,
+.deleteIcon {
+  display: block;
+  width: 16px;
+  height: 16px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.newIcon { background-image: url('../navigation/new.webp'); }
+.editIcon { background-image: url('../navigation/edit.webp'); }
+.deleteIcon { background-image: url('../navigation/delete.webp'); }
+
 .iconButton:focus-visible,
 .workspaceToggle:focus-visible,
 .sessionButton:focus-visible,
@@ -110,9 +125,13 @@
 
 .chevron {
   flex: none;
-  color: var(--studio-muted);
-  transform: rotate(0deg);
-  transition: transform 180ms ease, color 150ms ease;
+  width: 16px;
+  height: 16px;
+  background-image: url('../navigation/expand.webp');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), color 150ms ease;
 }
 
 .chevron:global(.studio-icon-open) {
@@ -130,7 +149,7 @@
 
 .workspaceTitle {
   color: var(--studio-ink);
-  font: 500 14px/21px 'LXGW WenKai Mono GB', monospace;
+  font: 500 14px/20px 'LXGW WenKai Mono GB', monospace;
 }
 
 .workspaceActions,
@@ -152,8 +171,20 @@
 .deleteAction:hover { background: var(--studio-red-wash-strong); color: var(--workbase-danger); }
 
 .sessionList {
+  display: grid;
+  grid-template-rows: 0fr;
   margin: 2px 6px 0 14px;
   padding: 3px 0 1px 10px;
+  transition: grid-template-rows 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.sessionList[data-expanded] {
+  grid-template-rows: 1fr;
+}
+
+.sessionListContent {
+  min-height: 0;
+  overflow: hidden;
 }
 
 .emptyHint {
@@ -187,7 +218,21 @@
   padding: 6px 6px;
 }
 
-.sessionRow[data-current] .sessionIcon { color: var(--workbase-accent); }
+.sessionListContent > :first-child .sessionButton {
+  border-radius: 6px;
+}
+
+.sessionRow[data-current] .sessionIcon {
+  color: var(--workbase-accent);
+}
+
+.sessionIcon {
+  display: block;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  background: url('../navigation/conversation.webp') center / contain no-repeat;
+}
 .sessionTitle { color: inherit; font: 400 14px/20px 'LXGW WenKai Mono GB', monospace; }
 
 .renameInput,
@@ -274,5 +319,7 @@
   .workspaceActions,
   .rowActions,
   .chevron,
+  .sessionList,
+  .sessionListContent,
   .loadingSpinner { transition: none; animation: none; }
 }

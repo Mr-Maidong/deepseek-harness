@@ -27,40 +27,40 @@ export type LeftPanelMainProps = PropsRuntime<'studio.workspace'> & PropsLocale<
 
 /** Render WorkBase and FileTree concurrently, sharing the recent workspace root. */
 export function LeftPanelMain(props: LeftPanelMainProps): React.ReactElement {
-  const [expanded, setExpanded] = useState<'workBase' | 'fileTree'>('workBase')
+  const [expanded, setExpanded] = useState<ReadonlySet<'workBase' | 'fileTree'>>(new Set(['workBase']))
   const workspaces = props.useWorkspaces(s => s, (a, b) => a === b)
   const rootPath = workspaces.recentWorkspaceId !== undefined
     ? workspaces.items.find(w => w.workspaceId === workspaces.recentWorkspaceId)?.path
     : workspaces.items[0]?.path
   return (
     <div className={css.main}>
-      <section className={expanded === 'workBase' ? css.workBase : css.workBaseCollapsed} aria-labelledby="studio-workbase-title">
+      <section className={expanded.has('workBase') ? css.workBase : css.workBaseCollapsed} aria-labelledby="studio-workbase-title">
         <button
           type="button"
           id="studio-workbase-title"
           className={css.sectionTitle}
-          aria-expanded={expanded === 'workBase'}
-          onClick={() => { setExpanded('workBase') }}
+          aria-expanded={expanded.has('workBase')}
+          onClick={() => { setExpanded(previous => previous.has('workBase') ? new Set([...previous].filter(key => key !== 'workBase')) : new Set(previous).add('workBase')) }}
         >
-          <WorkBaseIcon />
+          <WorkBaseIcon className={css.workspaceIcon} />
           <span>{props.t('workBase.title')}</span>
-          <ChevronIcon open={expanded === 'workBase'} className={css.sectionChevron} />
+          <ChevronIcon open={expanded.has('workBase')} className={css.sectionChevron} />
         </button>
-        {expanded === 'workBase' && <div className={css.sectionBody}><WorkBase {...props} /></div>}
+        <div className={css.sectionBody}><WorkBase {...props} /></div>
       </section>
-      <section className={expanded === 'fileTree' ? css.fileTree : css.fileTreeCollapsed} aria-labelledby="studio-filetree-title">
+      <section className={expanded.has('fileTree') ? css.fileTree : css.fileTreeCollapsed} aria-labelledby="studio-filetree-title">
         <button
           type="button"
           id="studio-filetree-title"
           className={css.sectionTitle}
-          aria-expanded={expanded === 'fileTree'}
-          onClick={() => { setExpanded('fileTree') }}
+          aria-expanded={expanded.has('fileTree')}
+          onClick={() => { setExpanded(previous => previous.has('fileTree') ? new Set([...previous].filter(key => key !== 'fileTree')) : new Set(previous).add('fileTree')) }}
         >
-          <FileTreeIcon />
+          <FileTreeIcon className={css.fileTreeIcon} />
           <span>{props.t('fileTree.title')}</span>
-          <ChevronIcon open={expanded === 'fileTree'} className={css.sectionChevron} />
+          <ChevronIcon open={expanded.has('fileTree')} className={css.sectionChevron} />
         </button>
-        {expanded === 'fileTree' && <div className={css.sectionBody}><FileTree {...props} rootPath={rootPath} /></div>}
+        <div className={css.sectionBody}><FileTree {...props} rootPath={rootPath} /></div>
       </section>
     </div>
   )

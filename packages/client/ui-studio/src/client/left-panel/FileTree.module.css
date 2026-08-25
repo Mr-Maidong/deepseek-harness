@@ -40,7 +40,7 @@
   flex: none;
   width: 16px;
   height: 16px;
-  background: url('../navigation/expand.webp') center / contain no-repeat;
+  background: url('../assets/icons/expand.webp') center / contain no-repeat;
   transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -51,7 +51,7 @@
   flex: none;
   width: 16px;
   height: 16px;
-  background: url('../navigation/folder.webp') center / contain no-repeat;
+  background: url('../assets/icons/folder.webp') center / contain no-repeat;
   color: var(--studio-gold);
   opacity: 0.86;
 }

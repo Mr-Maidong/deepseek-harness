@@ -4,7 +4,7 @@ English | [中文](README.zh.md)
 
 `ui-studio` provides the editor-style three-column Studio frame. It owns the runtime `root` layout, arranges the navigation rail, conversation area, and workbench, and exposes the layout actions used by the sidebar and conversation plugins.
 
-The left rail provides workspace and session navigation plus the read-only workspace file tree. The center preserves the existing conversation composer and conversation rendering chain. The right workbench records project todos, supports project creation, bottom-docked todo publishing, completion toggles, detail editing, and sending one todo or the current project to chat. Additional center seats remain available for later plugins.
+The left rail provides workspace and session navigation plus the read-only workspace file tree. The center preserves the existing conversation composer and conversation rendering chain. The right workbench records project todos, supports project creation, bottom-docked todo publishing, completion toggles, detail editing, and sending one todo or the current project to chat. Todo definitions, execution status, and completion summaries persist per Workspace and are shared by all Sessions in that workspace. Additional center seats remain available for later plugins.
 
 Panel widths are transient browser state. The frame keeps closed panels mounted where required, constrains drag results to the column ranges, and preserves stored preferences when the viewport temporarily cannot fit them. `ctx.layout` maps sidebar actions to the left rail; details actions are no-ops because Studio has no details column.
 
@@ -32,7 +32,7 @@ New views should establish one clear content layer, one quiet structural layer, 
 
 ## Model Experience
 
-None. Studio manages browser view state and sends user-selected todo text to the conversation UI; it does not assemble or send provider requests.
+Studio manages the current Workspace's project todo state and sends user-selected todo text to the conversation UI. Completion summaries are saved through the todo store's atomic completion action; Studio does not assemble or send provider requests.
 
 #### KV Cache effect
 
@@ -42,5 +42,5 @@ None. This package does not build provider prompts or maintain provider-side cac
 
 - **Content seats remain extensible** — the Studio frame does not provide a built-in code editor or tool dock; those areas are reserved for later registrants.
 - **No details column** — the details seat is declared for composition but is not rendered by this layout, so `ctx.layout.openDetails` and `ctx.layout.closeDetails` are no-ops.
-- **Transient geometry and workbench data** — panel widths, projects, and todos return to their initial values after reload; no browser persistence is provided.
+- **Workbench persistence is Workspace-scoped** — projects, todo status, and completion summaries are shared by all Sessions in the same Workspace and remain separate across Workspaces. The browser store still uses the runtime persistence adapter; durable `.dsh/storages` backing is not yet connected.
 - **No narrow-viewport auto-collapse** — the left rail keeps its stored preference below the narrow-layout threshold.

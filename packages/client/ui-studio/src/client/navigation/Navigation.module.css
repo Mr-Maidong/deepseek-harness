@@ -312,15 +312,15 @@
 }
 
 .settingsMark {
-  background-image: url('./settings.webp');
+  background-image: url('../assets/icons/settings.webp');
 }
 
 .collapseMark {
-  background-image: url('./collapse.webp');
+  background-image: url('../assets/icons/collapse.webp');
 }
 
 .expandMark {
-  background-image: url('./expand.webp');
+  background-image: url('../assets/icons/expand.webp');
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -394,15 +394,15 @@
 }
 
 .atlas_project {
-  background-image: url('./agent-brain.webp');
+  background-image: url('../assets/icons/agent-brain.webp');
 }
 
 .atlas_team {
-  background-image: url('./agent-team.webp');
+  background-image: url('../assets/icons/agent-team.webp');
 }
 
 .atlas_knowledge {
-  background-image: url('./agent-knowledge.webp');
+  background-image: url('../assets/icons/agent-knowledge.webp');
 }
 
 .navItem:hover .atlasMark {

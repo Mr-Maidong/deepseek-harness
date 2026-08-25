@@ -16,7 +16,7 @@
   color: #d6dddc;
   background:
     linear-gradient(180deg, rgba(14, 23, 31, 0.42), rgba(17, 26, 34, 0.72)),
-    url('../navigation/navigation-mist.webp') center / cover no-repeat,
+    url('../assets/illustrations/navigation-mist.webp') center / cover no-repeat,
     #111a22;
   font-family: 'LXGW WenKai Mono GB', monospace;
   --studio-ink: #d6dddc;

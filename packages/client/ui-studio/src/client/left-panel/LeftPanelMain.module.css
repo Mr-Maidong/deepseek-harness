@@ -101,14 +101,14 @@
   background-size: contain;
 }
 
-.workspaceIcon { background-image: url('../navigation/workspace.webp'); }
-.fileTreeIcon { background-image: url('../navigation/folder.webp'); }
+.workspaceIcon { background-image: url('../assets/icons/workspace.webp'); }
+.fileTreeIcon { background-image: url('../assets/icons/folder.webp'); }
 
 .sectionChevron {
   width: 16px;
   height: 16px;
   margin-left: auto;
-  background-image: url('../navigation/expand.webp');
+  background-image: url('../assets/icons/expand.webp');
   background-repeat: no-repeat;
   background-position: center;
   background-size: contain;

@@ -29,17 +29,16 @@ export const zh = {
   'workbench.title': '灵光池',
   'workbench.subtitle': '你的灵感收纳处，也是行动起点',
   'workbench.addProject': '新建项目',
+  'workbench.removeProject': '移除项目',
   'workbench.addTodo': '添加灵光',
   'workbench.todoDetailPrompt': '任务详情（可选）',
-  'workbench.todoDefaultDetail': '待补充任务说明。',
-  'workbench.editDetail': '编辑任务详情',
+  'workbench.editDetail': '编辑灵光详情',
   'workbench.saveDetail': '保存',
   'workbench.cancelEdit': '取消',
   'workbench.sendAll': '发送灵光到聊天框',
   'workbench.sendOne': '发送单条灵光到聊天框',
   'workbench.removeTodo': '删除灵光',
   'workbench.sendFailed': '发送失败，请重试。',
-  'workbench.empty': '还没有灵光',
   'workbench.projectPrompt': '项目名称',
 } as const
 
@@ -69,9 +68,9 @@ export const en: Record<LeftPanelKey, string> = {
   'workbench.title': 'Workbench',
   'workbench.subtitle': 'A place to gather inspiration and begin taking action.',
   'workbench.addProject': 'New project',
+  'workbench.removeProject': 'Remove project',
   'workbench.addTodo': 'Add todo',
   'workbench.todoDetailPrompt': 'Task details (optional)',
-  'workbench.todoDefaultDetail': 'Add task details when ready.',
   'workbench.editDetail': 'Edit task details',
   'workbench.saveDetail': 'Save',
   'workbench.cancelEdit': 'Cancel',
@@ -79,7 +78,6 @@ export const en: Record<LeftPanelKey, string> = {
   'workbench.sendOne': 'Send item to chat',
   'workbench.removeTodo': 'Delete todo',
   'workbench.sendFailed': 'Could not send the todo. Try again.',
-  'workbench.empty': 'No todos yet',
   'workbench.projectPrompt': 'Project name',
 }
 

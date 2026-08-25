@@ -7,7 +7,7 @@
   min-height: 0;
   box-sizing: border-box;
   overflow: hidden;
-  padding: 18px 14px 12px;
+  padding: 12px 14px 12px;
   color: #dfe5e3;
   font: 14px/1.55 'LXGW WenKai Mono GB', monospace;
 }
@@ -35,7 +35,7 @@ h2 {
   flex: none;
   width: 24px;
   height: 24px;
-  background: url('../navigation/ideals.webp') center / contain no-repeat;
+  background: url('../assets/icons/ideals.webp') center / contain no-repeat;
 }
 
 .titleText {
@@ -130,7 +130,7 @@ h2 {
   display: block;
   width: 16px;
   height: 16px;
-  background: url('../navigation/send.webp') center / contain no-repeat;
+  background: url('../assets/icons/send.webp') center / contain no-repeat;
 }
 
 .newIcon,
@@ -143,8 +143,8 @@ h2 {
   background-size: contain;
 }
 
-.newIcon { background-image: url('../navigation/new.webp'); }
-.deleteIcon { background-image: url('../navigation/delete.webp'); }
+.newIcon { background-image: url('../assets/icons/new.webp'); }
+.deleteIcon { background-image: url('../assets/icons/delete.webp'); }
 
 button:focus-visible,
 input:focus-visible,
@@ -347,6 +347,94 @@ textarea:focus-visible {
   color: #dfeef1;
 }
 
+.todoDetail :where(h1, h2, h3, h4, h5, h6) {
+  margin: 6px 0 2px;
+  color: #dfeef1;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  line-height: 1.4;
+}
+
+.todoDetail :where(h1, h2, h3, h4, h5, h6):first-child {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.todoDetail p {
+  margin: 0;
+  font-size: 13px;
+}
+
+.todoDetail p:first-child {
+  margin-top: 0;
+}
+
+.todoDetail p:last-child {
+  margin-bottom: 0;
+}
+
+.todoDetail strong {
+  font-weight: 500;
+  color: #edf2f0;
+}
+
+.todoDetail ul,
+.todoDetail ol {
+  margin: 4px 0;
+  padding-left: 16px;
+}
+
+.todoDetail li {
+  margin: 2px 0;
+  line-height: 1.45;
+}
+
+.todoDetail li > p {
+  margin: 0;
+}
+
+.todoDetail blockquote {
+  margin: 4px 0;
+  padding: 2px 0 2px 8px;
+  border-left: 2px solid rgba(164, 181, 184, 0.3);
+  color: #9cb0b2;
+}
+
+.todoDetail hr {
+  margin: 6px 0;
+  border: 0;
+  border-top: 1px solid rgba(164, 181, 184, 0.14);
+}
+
+.todoDetail :not(pre) > code {
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(164, 181, 184, 0.12);
+  color: #edf2f0;
+  font-size: 11px;
+}
+
+.todoDetail pre {
+  margin: 4px 0;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: rgba(14, 23, 31, 0.4);
+  overflow-x: auto;
+  font-size: 11px;
+}
+
+.todoDetail table {
+  margin: 4px 0;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.todoDetail th,
+.todoDetail td {
+  padding: 2px 6px;
+  border: 1px solid rgba(164, 181, 184, 0.15);
+}
+
 .todoDetailEditor {
   position: relative;
   z-index: 1;
@@ -380,9 +468,29 @@ textarea:focus-visible {
   color: #8f9b9e;
 }
 
-.empty {
-  margin: 5px 0;
+.todoDetail[data-completion] {
+  color: #c8d8d3;
+  font-size: 12px;
+}
+
+.emptyState {
+  display: flex;
+  flex: 1;
+  min-height: 120px;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   color: #bcc6c9;
+  text-align: center;
+}
+
+.emptyArtwork {
+  display: block;
+  width: min(124px, 72%);
+  aspect-ratio: 1;
+  background: url('../assets/illustrations/empty.webp') center / contain no-repeat;
+  filter: contrast(.18) brightness(2.1);
+  opacity: 0.8;
 }
 
 .todoForm {

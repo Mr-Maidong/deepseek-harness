@@ -35,6 +35,7 @@ import { StudioFrame } from './frame/StudioFrame.tsx'
 import { StudioWorkbench } from './frame/workbench.tsx'
 import { StudioLayout } from './frame/layout-service.ts'
 import { createStudioStore } from './frame/stores.ts'
+import { createProjectTodoStore } from './frame/project-todo-store.ts'
 import type {
   StudioCenterEditorOwnerProps, StudioCenterToolbarOwnerProps,
   StudioLeftMainOwnerProps, StudioNavigationOwnerProps, StudioStatusOwnerProps, StudioWorkspaceOwnerProps,
@@ -62,7 +63,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     /** Status registrants receive the active section; absence leaves the status column empty. */
     'studio.status': { kind: 'single'; scope: 'root'; owner: StudioStatusOwnerProps }
     /** Workbench registrants receive the active section; absence leaves the status column empty. */
-    'studio.workbench': { kind: 'single'; scope: 'root'; owner: StudioWorkbenchOwnerProps }
+    'studio.workbench': { kind: 'single'; scope: 'session'; owner: StudioWorkbenchOwnerProps }
     /** Editor registrants replace the empty session-scoped editor seat. */
     'studio.center.editor': { kind: 'single'; scope: 'session'; owner: StudioCenterEditorOwnerProps }
     /** Toolbar registrants replace the empty session-scoped toolbar seat. */
@@ -113,7 +114,7 @@ export function apply(ctx: ClientContext): void {
         'studio.left.main': { kind: 'single', scope: 'root' },
         'studio.workspace': { kind: 'single', scope: 'root' },
         'studio.status': { kind: 'single', scope: 'root' },
-        'studio.workbench': { kind: 'single', scope: 'root' },
+        'studio.workbench': { kind: 'single', scope: 'session' },
         'studio.center.editor': { kind: 'single', scope: 'session' },
         'studio.center.toolbar': { kind: 'single', scope: 'session' },
       },
@@ -148,10 +149,10 @@ export function apply(ctx: ClientContext): void {
     }, LeftPanelMain)
     const disposeWorkbenchRegistration = ctx.slots.register({
       name: 'studio.workbench',
-      inject: () => ({
+      store: createProjectTodoStore,
+      storeScope: 'workspace',
+      inject: sessionId => ({
         sendToChat: async (message: string) => {
-          const sessionId = ctx.sessions.list.getSnapshot().current
-          if (sessionId === undefined) throw new Error('请先打开一个会话')
           const session = ctx.sessions.binding(sessionId)?.session
           if (session === undefined) throw new Error('当前会话不可用，请重新打开')
           const result = await session.prompt([{ type: 'text', text: message }], 'queue')

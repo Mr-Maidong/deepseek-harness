@@ -41,9 +41,9 @@
   background-size: contain;
 }
 
-.newIcon { background-image: url('../navigation/new.webp'); }
-.editIcon { background-image: url('../navigation/edit.webp'); }
-.deleteIcon { background-image: url('../navigation/delete.webp'); }
+.newIcon { background-image: url('../assets/icons/new.webp'); }
+.editIcon { background-image: url('../assets/icons/edit.webp'); }
+.deleteIcon { background-image: url('../assets/icons/delete.webp'); }
 
 .iconButton:focus-visible,
 .workspaceToggle:focus-visible,
@@ -127,7 +127,7 @@
   flex: none;
   width: 16px;
   height: 16px;
-  background-image: url('../navigation/expand.webp');
+  background-image: url('../assets/icons/expand.webp');
   background-repeat: no-repeat;
   background-position: center;
   background-size: contain;
@@ -231,7 +231,7 @@
   flex: none;
   width: 16px;
   height: 16px;
-  background: url('../navigation/conversation.webp') center / contain no-repeat;
+  background: url('../assets/icons/conversation.webp') center / contain no-repeat;
 }
 .sessionTitle { color: inherit; font: 400 14px/20px 'LXGW WenKai Mono GB', monospace; }
 

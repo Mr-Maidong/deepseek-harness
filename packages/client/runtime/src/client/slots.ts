@@ -58,6 +58,8 @@ type EngineStoreInstance = ReturnType<EngineStoreHandle['create']>
 interface StoreAxisRecord {
   /** Scope of the slot the handle mounted under (the core validated cross-scope conflicts). */
   scope: SlotScope
+  /** Store identity axis: slot scope by default, or owning workspace for session entries. */
+  storeScope?: 'workspace'
   /** Live registrations holding the handle. */
   refs: number
   /** Root scope: the single instance under {@link ROOT_INSTANCE_KEY}; session scope: one per session id. */
@@ -69,6 +71,7 @@ interface ErasedRegisterOptions {
   name: string
   children?: Record<string, SlotSpec<SlotEntryDef>>
   store?: StoreDecl
+  storeScope?: 'workspace'
   inject?: (...args: never[]) => Record<string, unknown>
   key?: string
   id?: string
@@ -362,6 +365,7 @@ export class SlotRegistry extends Service {
     const erased: ErasedRegisterOptions = {
       ...options,
       ...(store !== undefined ? { store } : {}),
+      ...(options.storeScope !== undefined ? { storeScope: options.storeScope } : {}),
       ...(registrant !== undefined ? { registrant } : {}),
     }
     // Core write first: all load-time validation (undeclared target,
@@ -371,7 +375,7 @@ export class SlotRegistry extends Service {
     if (store !== undefined) {
       // Register succeeded, so the target's spec is on the ledger.
       const scope = (this._core.specDynamic(options.name) as SlotSpec<SlotEntryDef>).scope
-      this._acquire(store, scope)
+      this._acquire(store, scope, erased.storeScope)
     }
     let disposed = false
     return () => {
@@ -423,23 +427,40 @@ export class SlotRegistry extends Service {
   private resolveStore(handle: EngineStoreHandle, sessionId: string | undefined): StoreInstanceLike {
     const record = this._stores.get(handle)
     if (record === undefined) throw new Error('store handle is not registered (entry unloaded, or the handle never went through register)')
-    const key = record.scope === 'root' ? ROOT_INSTANCE_KEY : sessionId
+    const key = record.scope === 'root'
+      ? ROOT_INSTANCE_KEY
+      : record.storeScope === 'workspace'
+        ? this.workspaceKey(sessionId)
+        : sessionId
     if (key === undefined) throw new Error(`${record.scope} store resolution requires a session id`)
     let instance = record.instances.get(key)
     if (instance === undefined) {
-      // Session instances get the scope key (the engine suffixes the persist
-      // key per session); root instances stay keyless.
+      // Workspace stores use the workspace id as both their in-memory identity
+      // and persistence suffix, so sessions in one workspace share one record.
       instance = record.scope === 'root' ? handle.create() : handle.create(key)
       record.instances.set(key, instance)
     }
     return instance
   }
 
+  private workspaceKey(sessionId: string | undefined): string | undefined {
+    if (sessionId === undefined) return undefined
+    const workspaces = this.ctx.get('workspaces')
+    const workspace = workspaces?.list.getSnapshot().items.find(item => item.sessionIds.includes(sessionId as never))
+    if (workspace === undefined) throw new Error(`cannot resolve workspace for session ${sessionId}`)
+    return workspace.workspaceId
+  }
+
   /** Bind (or re-reference) a handle on the axis; cross-scope conflicts already threw in the core. */
-  private _acquire(handle: EngineStoreHandle, scope: SlotScope): void {
+  private _acquire(handle: EngineStoreHandle, scope: SlotScope, storeScope?: 'workspace'): void {
     const record = this._stores.get(handle)
     if (record === undefined) {
-      this._stores.set(handle, { scope, refs: 1, instances: new Map() })
+      this._stores.set(handle, {
+        scope,
+        ...(storeScope === undefined ? {} : { storeScope }),
+        refs: 1,
+        instances: new Map(),
+      })
       return
     }
     record.refs += 1

@@ -538,6 +538,8 @@ type BaseOptions<
   children?: D
   /** Store seat: a shared handle (apply-constructed) or an exclusive factory (framework-called per entry x scope). */
   store?: H
+  /** Resolve a session-mounted store by its owning workspace instead of by session. */
+  storeScope?: 'workspace'
   /**
    * Dictionary namespace of this entry's copy. Declaring it puts the
    * framework-synthesized `t` seat (typed to the namespace's dictionary
@@ -565,6 +567,8 @@ export interface StoredEntry {
   children?: Readonly<Record<string, SlotSpec<SlotEntryDef>>> | undefined
   /** Declared store seat (instance resolution and lifecycle live with the host machinery). */
   store?: StoreDecl | undefined
+  /** Store identity axis for session-mounted stores. */
+  storeScope?: 'workspace' | undefined
   /** Declared dictionary namespace (the render machinery synthesizes the `t` seat from it). */
   locale?: string | undefined
   /** Diagnostics label of who registered. */
@@ -598,6 +602,7 @@ interface ErasedOptions {
   priority?: number | undefined
   children?: Record<string, SlotSpec<SlotEntryDef>> | undefined
   store?: StoreDecl | undefined
+  storeScope?: 'workspace' | undefined
   locale?: string | undefined
   /* oxlint-disable-next-line typescript/no-explicit-any --
    * implementation-signature position only (both public overloads type inject

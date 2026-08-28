@@ -31,7 +31,7 @@ function ancestryCrumbs(target: string): DirectoryEntry[] {
   for (;;) {
     const parent = dirname(current)
     // basename of a root is '' — label the root crumb by its full path ('/', 'C:\').
-    crumbs.unshift({ name: parent === current ? current : basename(current), path: current, hidden: false })
+    crumbs.unshift({ name: parent === current ? current : basename(current), path: current, hidden: false, kind: 'directory' })
     if (parent === current) return crumbs
     current = parent
   }
@@ -151,8 +151,9 @@ function messageOf(error: unknown): string {
 
 /**
  * One listing row for a dirent, following symlinks to directories; null for
- * non-directories and broken/cyclic links (skipped silently — the browser
- * shows what can be entered, and a broken link cannot).
+ * broken/cyclic links (skipped silently — the browser shows what can be
+ * entered, and a broken link cannot). Directories and files both surface,
+ * distinguished by `kind`.
  */
 async function directoryRow(
   parent: string, name: string, isDirectory: boolean, isSymbolicLink: boolean, signal: AbortSignal | undefined,
@@ -171,10 +172,12 @@ async function directoryRow(
       return null
     }
   }
-  if (!enterable) return null
   // POSIX hidden convention; Windows' hidden attribute is not exposed by
   // dirents (Known Limitations). The client owns whether hidden rows show.
-  return { name, path, hidden: name.startsWith('.') }
+  const hidden = name.startsWith('.')
+  return enterable
+    ? { name, path, hidden, kind: 'directory' }
+    : { name, path, hidden, kind: 'file' }
 }
 
 /** Validated plugin configuration. */
@@ -254,9 +257,9 @@ export default class BrowseDirectoryPicker extends DirectoryPicker {
         for (;;) {
           const dirent = await raceAbort(level.read(), signal)
           if (dirent === null) break
-          // Only rows a browser could enter contend for the window; dirent
-          // says "directory" outright, a symlink needs the later stat probe.
-          if (!dirent.isDirectory() && !dirent.isSymbolicLink()) continue
+          // Every child contends for the window: directories, files, and
+          // symlinks (a symlink's enterability is decided by the later stat
+          // probe). The window keeps the name-sorted head of the whole level.
           const candidate = { name: dirent.name, isDirectory: dirent.isDirectory(), isSymbolicLink: dirent.isSymbolicLink() }
           if (boundedInsert(window, candidate, keep)) evicted = true
         }

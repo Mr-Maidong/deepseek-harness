@@ -27,7 +27,12 @@
 
 .workBase {
   position: relative;
-  flex: 1.15 1 0;
+  flex: 0 1 auto;
+  max-height: 25%;
+}
+
+.workBase .sectionBody {
+  flex: 0 1 auto;
 }
 
 .workBase::after,

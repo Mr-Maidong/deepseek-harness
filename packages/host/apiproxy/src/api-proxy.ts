@@ -2869,10 +2869,10 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
 
       async listDirectory(request, signal) {
         const capability = ctx.directoryPicker.capability()
-        if (capability.kind !== 'browse') {
+        if (capability.list === undefined) {
           return err(request, {
             code: 'directory-picker-unavailable',
-            message: `host.listDirectory needs the browse capability; the composed picker serves "${capability.kind}"`,
+            message: `host.listDirectory needs a listing capability; the composed picker serves "${capability.kind}"`,
             details: { capability: capability.kind },
           })
         }

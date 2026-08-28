@@ -13,6 +13,8 @@ export interface DirectoryEntry {
   path: string
   /** Hidden by the host platform's convention (dot-prefixed on POSIX); the client owns whether to show it. */
   hidden: boolean
+  /** Whether the row is a directory (enterable) or a plain file. Breadcrumb ancestors are always directories. */
+  kind: 'directory' | 'file'
 }
 
 /** host.listDirectory response value: one directory level plus its ancestry. */

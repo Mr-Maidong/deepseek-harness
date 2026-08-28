@@ -22,6 +22,13 @@ export interface DirectoryPickerNativeCapability {
    * @returns the chosen absolute path, or null when the operator cancels.
    */
   pick(signal: AbortSignal): Promise<string | null>
+  /**
+   * List one directory level for a file-tree consumer when supported.
+   * @param path - absolute directory to list; absent lists the host home directory.
+   * @param signal - caller lifetime; abort stops the pending filesystem work.
+   * @returns the level's listing with breadcrumb ancestry.
+   */
+  list?(path?: string, signal?: AbortSignal): Promise<DirectoryListing>
 }
 
 /** One directory row: a listing child or a breadcrumb ancestor. */
@@ -32,6 +39,8 @@ export interface DirectoryEntry {
   path: string
   /** Hidden by the host platform's convention (dot-prefixed on POSIX); the client owns whether to show it. */
   hidden: boolean
+  /** Whether the row is a directory (enterable) or a plain file. Breadcrumb ancestors are always directories. */
+  kind: 'directory' | 'file'
 }
 
 /** One directory level plus its ancestry, as a browse backend reports it. */

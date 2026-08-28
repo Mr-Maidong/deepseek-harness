@@ -45,12 +45,29 @@ afterAll(async () => {
 })
 
 describe('BrowseDirectoryPicker', () => {
-  it('lists directories only, flags hidden rows, follows symlinks, skips broken links, sorts by name', async () => {
+  it('lists directories and files, flags hidden rows, follows symlinks, skips broken links, sorts by name', async () => {
     const listing = await capability.list(root)
     expect(listing.path).toBe(root)
     expect(listing.home).toBe(homedir())
-    expect(listing.entries.map(entry => entry.name)).toEqual(['.hidden-dir', 'linked', 'projects'])
-    expect(listing.entries.map(entry => entry.hidden)).toEqual([true, false, false])
+    // Directories and files both surface, name-sorted; the file-link symlink
+    // only exists on POSIX (Windows denies unprivileged file symlinks).
+    const names = listing.entries.map(entry => entry.name)
+    expect(names).toContain('.hidden-dir')
+    expect(names).toContain('linked')
+    expect(names).toContain('projects')
+    expect(names).toContain('notes.txt')
+    expect(names.indexOf('.hidden-dir')).toBeLessThan(names.indexOf('linked'))
+    expect(names.indexOf('linked')).toBeLessThan(names.indexOf('projects'))
+    // Directories and files are distinguished by kind; a symlink to a file is a file.
+    const byName = new Map(listing.entries.map(entry => [entry.name, entry]))
+    expect(byName.get('.hidden-dir')!.kind).toBe('directory')
+    expect(byName.get('linked')!.kind).toBe('directory')
+    expect(byName.get('projects')!.kind).toBe('directory')
+    expect(byName.get('notes.txt')!.kind).toBe('file')
+    if (byName.has('file-link')) expect(byName.get('file-link')!.kind).toBe('file')
+    // Hidden rows are flagged; the dot-prefixed directory is hidden.
+    expect(byName.get('.hidden-dir')!.hidden).toBe(true)
+    expect(byName.get('projects')!.hidden).toBe(false)
     // Every entry path is absolute and host-joined — clients never join segments.
     expect(listing.entries.every(entry => entry.path === join(root, entry.name))).toBe(true)
     // Well under the default bound: the complete level, not a cut one.

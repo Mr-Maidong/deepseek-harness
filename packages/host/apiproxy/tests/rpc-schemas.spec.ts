@@ -332,11 +332,12 @@ describe('host domain schemas', () => {
     const listing = hostListDirectoryValueSchema.parse({
       path: '/home/u/p',
       home: '/home/u',
-      crumbs: [{ name: '/', path: '/', hidden: false }, { name: 'p', path: '/home/u/p', hidden: false }],
-      entries: [{ name: '.dot', path: '/home/u/p/.dot', hidden: true }],
+      crumbs: [{ name: '/', path: '/', hidden: false, kind: 'directory' }, { name: 'p', path: '/home/u/p', hidden: false, kind: 'directory' }],
+      entries: [{ name: '.dot', path: '/home/u/p/.dot', hidden: true, kind: 'file' }],
       truncated: false,
     })
     expect(listing.entries[0]?.hidden).toBe(true)
+    expect(listing.entries[0]?.kind).toBe('file')
     // The flag is part of the wire value, not an optional decoration.
     expect(() => hostListDirectoryValueSchema.parse({ path: '/x', home: '/x', crumbs: [], entries: [] })).toThrow()
     expect(hostCreateDirectoryRequestSchema.parse({ path: '/x', name: 'new' })).toEqual({ path: '/x', name: 'new' })

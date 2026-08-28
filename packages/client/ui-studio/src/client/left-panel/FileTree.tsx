@@ -2,9 +2,9 @@
  * FileTree: a read-only directory tree over the current session's
  * workspace path. Each level is fetched lazily through
  * `ctx.workspaces.listDirectory` (the Host browse capability lists
- * directories with breadcrumb ancestry); expanding a directory scans it,
- * collapsing prunes the subtree. File entries are a future host extension —
- * today the tree is directory navigation only.
+ * directories and files with breadcrumb ancestry); expanding a directory
+ * scans it, collapsing prunes the subtree. File rows are leaves — they
+ * render but do not expand.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
@@ -111,7 +111,7 @@ function DirRow({ path, name, depth, expanded, onToggle, listings }: {
   const isExpanded = expanded.has(path)
   const children = listings.get(path)
   return (
-    <div className={css.row} style={{ paddingLeft: depth * 14 }}>
+    <div className={css.row} style={{ paddingLeft: depth * 6 }}>
       <button type="button" className={css.dirButton} onClick={() => { onToggle(path) }} aria-expanded={isExpanded}>
         <ChevronIcon open={isExpanded} className={css.chevron} />
         <FolderIcon open={isExpanded} className={css.dirIcon} />
@@ -121,17 +121,33 @@ function DirRow({ path, name, depth, expanded, onToggle, listings }: {
         <div className={css.childrenContent}>
           {children !== undefined && children.entries.length === 0 && <div className={css.emptySub} />}
           {children !== undefined && children.entries.map(entry => (
-            <DirRow
-              key={entry.path}
-              path={entry.path}
-              name={entry.name}
-              depth={depth + 1}
-              expanded={expanded}
-              onToggle={onToggle}
-              listings={listings}
-            />
+            entry.kind === 'directory'
+              ? (
+                <DirRow
+                  key={entry.path}
+                  path={entry.path}
+                  name={entry.name}
+                  depth={depth + 1}
+                  expanded={expanded}
+                  onToggle={onToggle}
+                  listings={listings}
+                />
+              )
+              : <FileRow key={entry.path} name={entry.name} depth={depth + 1} />
           ))}
         </div>
+      </div>
+    </div>
+  )
+}
+
+/** One file row: a leaf with no disclosure, indented to its level. */
+function FileRow({ name, depth }: { name: string; depth: number }): React.ReactElement {
+  return (
+    <div className={css.row} style={{ paddingLeft: depth * 6 }}>
+      <div className={css.fileRow}>
+        <span className={css.fileGlyph} aria-hidden="true" />
+        <span className={css.fileName}>{name}</span>
       </div>
     </div>
   )

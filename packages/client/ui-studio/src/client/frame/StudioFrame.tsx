@@ -85,7 +85,7 @@ export type StudioFrameProps =
   & PropsStore<ReturnType<typeof createStudioStore>>
 
 /** Render the four-column personal workbench. */
-export function StudioFrame({ useStore, actions, renderSlot }: StudioFrameProps) {
+export function StudioFrame({ useStore, actions, renderSlot, SessionProvider }: StudioFrameProps) {
   const panels = useStore(s => s)
   const frameRef = useRef<HTMLDivElement | null>(null)
   const viewport = useFrameWidth(frameRef)
@@ -140,7 +140,7 @@ export function StudioFrame({ useStore, actions, renderSlot }: StudioFrameProps)
       {renderSlot('studio.workspace', { activeSection })}
     </aside>
     <main className={css.conversationCol}>{renderSlot('conversation', {})}</main>
-    <aside className={css.statusCol}>{renderSlot('studio.workbench', { activeSection })}</aside>
+    <aside className={css.statusCol}><SessionProvider>{renderSlot('studio.workbench', { activeSection })}</SessionProvider></aside>
     <div className={css.overlayLayer} data-shell-overlay>{renderSlot('shell.overlay', {})}</div>
     <DragHandle side="workspace" left={navigationWidth + cols.workspace} onStart={() => { start('workspace') }} onDrag={(dx) => { drag('workspace', dx) }} onEnd={end} />
     <DragHandle side="conversation" left={viewport - cols.status} onStart={() => { start('status') }} onDrag={(dx) => { drag('status', -dx) }} onEnd={end} />

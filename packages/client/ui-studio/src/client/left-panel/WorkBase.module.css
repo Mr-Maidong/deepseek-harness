@@ -58,7 +58,19 @@
   min-height: 0;
   overflow: auto;
   padding: 10px 8px 12px;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
 }
+
+.list:hover,
+.list:focus-within {
+  scrollbar-color: var(--studio-line) transparent;
+}
+
+.list::-webkit-scrollbar { width: 6px; }
+.list::-webkit-scrollbar-thumb { background: transparent; }
+.list:hover::-webkit-scrollbar-thumb,
+.list:focus-within::-webkit-scrollbar-thumb { background: var(--studio-line); }
 
 .empty {
   margin: 12px 4px;
@@ -70,8 +82,8 @@
 
 .workspaceGroup {
   position: relative;
-  margin: 0 0 10px;
-  padding: 0 0 8px;
+  margin: 0 0 6px;
+  padding: 0 0 6px;
   border-bottom: 1px solid rgba(164, 181, 184, 0.1);
 }
 

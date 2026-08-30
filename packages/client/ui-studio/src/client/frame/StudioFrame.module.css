@@ -16,7 +16,7 @@
   color: #d6dddc;
   background:
     linear-gradient(180deg, rgba(14, 23, 31, 0.42), rgba(17, 26, 34, 0.72)),
-    url('../assets/illustrations/navigation-mist.webp') center / cover no-repeat,
+    url('../assets/illustrations/0.webp') center / cover no-repeat,
     #111a22;
   font-family: 'LXGW WenKai Mono GB', monospace;
   --studio-ink: #d6dddc;
@@ -127,7 +127,7 @@
    remains at the viewport bottom while the transcript moves underneath it. */
 .conversationCol::after {
   position: absolute;
-  right: 0;
+  right: 8px;
   bottom: 0;
   left: 0;
   z-index: 6;

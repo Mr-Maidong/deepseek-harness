@@ -3,12 +3,12 @@
 // vertical collision flips the bubble to the other side, but there is no
 // arrow) — visuals and behavior get a proper pass later.
 // The anchor is the child element itself (cloneElement, no wrapper node), so
-// attaching a tooltip never changes the anchor's layout context. The bubble is
-// position:fixed and coordinates come from the anchor's rect at show time, so
-// it escapes ancestor overflow clipping (the sidebar rail clips its column)
-// without a portal.
+// attaching a tooltip never changes the anchor's layout context. The bubble uses
+// the anchor's rect at show time and is portaled to document.body, so ancestor
+// overflow and stacking contexts cannot place it beneath another surface.
 
 import { cloneElement, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { FocusEventHandler, MouseEventHandler, MutableRefObject, ReactElement, Ref } from 'react'
 import css from './Tooltip.module.css'
 
@@ -152,7 +152,7 @@ export function Tooltip({ label, side = 'right', delayMs = 0, disabled = false, 
         onFocus: (e) => { children.props.onFocus?.(e); triggers.current.focus = true; cancelShow(); show() },
         onBlur: (e) => { children.props.onBlur?.(e); triggers.current.focus = false; hide() },
       })}
-      {pos !== null && (
+      {pos !== null && createPortal(
         <span
           ref={bubble}
           className={css.bubble}
@@ -161,7 +161,8 @@ export function Tooltip({ label, side = 'right', delayMs = 0, disabled = false, 
           role="tooltip"
         >
           {resolvedLabel}
-        </span>
+        </span>,
+        document.body,
       )}
     </>
   )

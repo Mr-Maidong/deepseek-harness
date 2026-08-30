@@ -32,7 +32,7 @@ Studio 采用水墨写意风格，融合宋元山水、山海志怪和泼墨写�
 
 ## 模型体验
 
-Studio 管理当前工作区的项目待办，并将用户选中的待办文本发送到对话界面。完成总结通过待办 store 的原子完成操作保存；Studio 不组装或发送 provider 请求。
+Studio 管理当前工作区的项目待办，并将用户选中的待办文本发送到对话界面。任务执行后可在任务所属的当前 Session 点击“调用模型生成总结并写回”，模型通过 `workbench_complete` 将摘要、实现路径、修改文件和验证结果追加到该 Session；浏览器从 `studioTodoCompletions` 投影恢复该结果。在其他 Session 查看同一工作区任务时，此动作不可用。用户直接勾选完成仍使用待办 store 的原子完成操作；Studio 不组装或发送 provider 请求。
 
 #### KV 缓存影响
 

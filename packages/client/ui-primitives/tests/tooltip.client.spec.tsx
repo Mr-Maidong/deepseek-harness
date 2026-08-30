@@ -72,6 +72,17 @@ describe('Tooltip', () => {
     expect(screen.queryByRole('tooltip')).toBeNull()
   })
 
+  it('mounts the bubble at document body to escape local stacking contexts', () => {
+    render(
+      <Tooltip label="Open sidebar">
+        <button type="button">anchor</button>
+      </Tooltip>,
+    )
+    fireEvent.mouseEnter(screen.getByText('anchor'))
+    const bubble = screen.getByRole('tooltip')
+    expect(bubble.parentElement).toBe(document.body)
+  })
+
   it('supports bottom placement and the focus/blur channel', () => {
     render(
       <Tooltip label="Below" side="bottom">

@@ -11,6 +11,7 @@ import { z as zod } from 'zod'
 import type { ZodType } from 'zod'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { TodoItem } from '@deepseek-ai/dsh-session'
+import type { WorkbenchTodoCompletion } from './types.ts'
 // Type-only: resolves ctx.sessionProjections for the optional unit child.
 import type {} from '@deepseek-ai/dsh-session-projection'
 // The `todos` projection-key declaration lives in src/types.ts (its one home);
@@ -111,6 +112,17 @@ function toTodoList(raw: { content: string; status: string }[], allowParallel: b
 }
 
 /** Wire payload schema of the `todos` projection (whole list or pre-first-write null). */
+const completionProjectionSchema: ZodType<Record<string, WorkbenchTodoCompletion> | null> = zod.union([
+  zod.record(zod.string(), zod.object({
+    todoId: zod.string(), summary: zod.string(), implementationPath: zod.array(zod.string()),
+    changedFiles: zod.array(zod.object({ path: zod.string(), purpose: zod.string() })),
+    verification: zod.array(zod.object({ command: zod.string(), result: zod.union([zod.literal('passed'), zod.literal('failed'), zod.literal('skipped')]), note: zod.string().optional() })),
+    completedAt: zod.string(), completedBy: zod.literal('model'),
+  })),
+  zod.null(),
+])
+
+/** Wire payload schema of the `todos` projection (whole list or pre-first-write null). */
 const todosProjectionSchema: ZodType<TodoItem[] | null> = zod.union([
   zod.array(zod.object({
     content: zod.string(),
@@ -146,6 +158,40 @@ export function apply(ctx: Context, config: Config): void {
       stateVersion: 2,
     })
   })
+  ctx.inject(['sessionProjections'], (projectionCtx) => {
+    projectionCtx.sessionProjections.register<'studioTodoCompletions', Record<string, WorkbenchTodoCompletion> | null>({
+      key: 'studioTodoCompletions', stateSchema: completionProjectionSchema, init: () => null, stateVersion: 1,
+      apply: (state, event) => {
+        if (event.type !== 'studio/todo-complete') return state
+        return { ...(state ?? {}), [event.data.todoId]: event.data }
+      },
+      wire: { viewSchema: completionProjectionSchema, view: state => state },
+    })
+  })
+
+  ctx.tools.register(defineTool({
+    name: 'workbench_complete',
+    description: 'Write the completed execution summary for one Lingguang Studio work item. Echo the todoId from the task prompt exactly. Call only after the task is complete and report only verification commands actually run.',
+    parameters: {
+      todoId: { type: 'string', required: true, description: 'Stable todo id from the task prompt.' },
+      summary: { type: 'string', required: true, description: 'User-facing result summary.' },
+      implementationPath: { type: 'array', required: true, items: { type: 'string' }, description: 'Actual implementation steps.' },
+      changedFiles: { type: 'array', required: true, items: { type: 'object', additionalProperties: false, properties: { path: { type: 'string', required: true }, purpose: { type: 'string', required: true } } } },
+      verification: { type: 'array', required: true, items: { type: 'object', additionalProperties: false, properties: { command: { type: 'string', required: true }, result: { type: 'string', required: true, enum: ['passed', 'failed', 'skipped'] }, note: { type: 'string' } } } },
+    },
+    output: { schema: { type: 'object', additionalProperties: false, properties: { todoId: { type: 'string', required: true }, recorded: { type: 'boolean', required: true } } }, render: (_args, value) => [{ type: 'text', text: `Recorded completion for todo ${value.todoId}.` }] },
+    execute(args, exec) {
+      const todoId = args.todoId.trim(); const summary = args.summary.trim()
+      if (todoId === '') throw new Error('workbench_complete requires a non-empty todoId')
+      if (summary === '') throw new Error('workbench_complete requires a non-empty summary')
+      if (!exec.agent) throw new Error('workbench_complete requires an owning agent session')
+      const data: WorkbenchTodoCompletion = { ...args, todoId, summary, completedAt: new Date().toISOString(), completedBy: 'model' }
+      exec.agent.session.append('studio/todo-complete', data)
+      return Promise.resolve({ todoId, recorded: true })
+    },
+    presentCall: args => ({ card: 'generic', title: 'Write Lingguang completion', kind: 'other', rawInput: args }),
+  }))
+
   ctx.tools.register(defineTool({
     name: 'todo_write',
     description: describe(allowParallel),

@@ -164,7 +164,7 @@ textarea:focus-visible {
   min-width: 0;
   flex: 1;
   border: 1px solid rgba(164, 181, 184, 0.16);
-  border-radius: 2px;
+  border-radius: 4px;
   padding: 5px 8px;
   background: rgba(14, 23, 31, 0.22);
   color: #edf2f0;
@@ -282,6 +282,7 @@ textarea:focus-visible {
 }
 
 .todoSend,
+.todoWriteBack,
 .todoDelete {
   display: grid;
   width: 24px;
@@ -295,20 +296,39 @@ textarea:focus-visible {
   cursor: pointer;
 }
 
-.todoSend {
+.todoSend,
+.todoWriteBack {
   color: #aebcbd;
 }
 
-.todoSend:hover {
+.summaryIcon {
+  display: block;
+  width: 16px;
+  height: 16px;
+  background: url('../assets/icons/trace.webp') center / contain no-repeat;
+}
+
+.todoWriteBack:hover {
   color: #e2e9e6;
   background: rgba(156, 169, 164, 0.1);
 }
 
-.todoCard[data-done] .todoSend {
+.todoSend:disabled,
+.todoWriteBack:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.todoSend:hover:not(:disabled) {
+  color: #e2e9e6;
+  background: rgba(156, 169, 164, 0.1);
+}
+
+.todoCard[data-done] .todoWriteBack {
   color: #b98587;
 }
 
-.todoCard[data-done] .todoSend:hover {
+.todoCard[data-done] .todoWriteBack:hover {
   color: #e3b7b8;
 }
 
@@ -465,7 +485,8 @@ textarea:focus-visible {
 
 .todoCard[data-done] .todoDetail {
   border-top-color: rgba(162, 63, 71, 0.12);
-  color: #8f9b9e;
+  opacity: 0.5;
+  cursor: default;
 }
 
 .todoDetail[data-completion] {
@@ -513,15 +534,8 @@ textarea:focus-visible {
   background: rgba(162, 63, 71, 0.76);
 }
 
-.todoForm input {
-  border-radius: 6px;
-  border-color: rgba(191, 205, 201, 0.26);
-  background: rgba(202, 213, 209, 0.1);
-}
-
 .todoForm input:focus {
-  border-color: rgba(156, 169, 164, 0.62);
-  background: rgba(202, 213, 209, 0.14);
+  border-color: rgba(105, 136, 124, 0.62);
 }
 
 .todoForm input {
@@ -554,7 +568,7 @@ textarea:focus-visible {
 
 .todoForm .sendDraft {
   margin-top: 0;
-  border-radius: 6px;
+  border-radius: 4px;
   border-color: rgba(156, 169, 164, 0.52);
   background: rgba(156, 169, 164, 0.1);
   color: #d6dddc;

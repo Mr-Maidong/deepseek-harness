@@ -14,6 +14,7 @@
     { "path": "../ui-theme" },
     { "path": "../ui-primitives" },
     { "path": "../ui-renderer" },
+    { "path": "../../todo/tool-todo" },
     { "path": "../runtime" },
     { "path": "../../runtime-diagnostics/invariants" }
   ]

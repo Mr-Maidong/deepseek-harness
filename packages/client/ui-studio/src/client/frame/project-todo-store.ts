@@ -8,7 +8,7 @@ export type TodoCompletion = {
   summary: string
   implementationPath: string[]
   changedFiles: Array<{ path: string; purpose: string }>
-  verification: Array<{ command: string; result: 'passed' | 'failed' | 'skipped'; note?: string }>
+  verification: Array<{ command: string; result: 'passed' | 'failed' | 'skipped'; note?: string | undefined }>
   completedAt: string
   completedBy: 'model' | 'user'
 }

@@ -28,7 +28,7 @@
 .workBase {
   position: relative;
   flex: 0 1 auto;
-  max-height: 25%;
+  max-height: 30%;
 }
 
 .workBase .sectionBody {

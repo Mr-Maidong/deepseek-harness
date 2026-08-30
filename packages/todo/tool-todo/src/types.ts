@@ -10,11 +10,23 @@
 
 import type { TodoItem } from '@deepseek-ai/dsh-session/types'
 
+/** A structured execution result written back to one Studio work item. */
+export type WorkbenchTodoCompletion = {
+  todoId: string
+  summary: string
+  implementationPath: string[]
+  changedFiles: Array<{ path: string; purpose: string }>
+  verification: Array<{ command: string; result: 'passed' | 'failed' | 'skipped'; note?: string | undefined }>
+  completedAt: string
+  completedBy: 'model'
+}
+
 export type { TodoItem } from '@deepseek-ai/dsh-session/types'
 
 declare module '@deepseek-ai/dsh-session-projection/types' {
   interface SessionProjectionStateMap {
     todos: TodoItem[] | null
+    studioTodoCompletions: Record<string, WorkbenchTodoCompletion> | null
   }
   interface SessionProjectionMap {
     /**
@@ -23,5 +35,18 @@ declare module '@deepseek-ai/dsh-session-projection/types' {
      * carries the complete replacement list, so the fold is last-wins.
      */
     todos: TodoItem[] | null
+    /** The latest model-written completion for each Studio work-item id. */
+    studioTodoCompletions: Record<string, WorkbenchTodoCompletion> | null
+  }
+}
+
+declare module '@deepseek-ai/dsh-session/types' {
+  interface SessionEventMap {
+    /**
+     * Model-written completion for one Studio work item. The latest event for a
+     * todo id is its rendered completion.
+     * @param data - stable work-item id and structured execution result.
+     */
+    'studio/todo-complete': WorkbenchTodoCompletion
   }
 }

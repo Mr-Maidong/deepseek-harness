@@ -32,7 +32,7 @@ New views should establish one clear content layer, one quiet structural layer, 
 
 ## Model Experience
 
-Studio manages the current Workspace's project todo state and sends user-selected todo text to the conversation UI. Completion summaries are saved through the todo store's atomic completion action; Studio does not assemble or send provider requests.
+Studio manages the current Workspace's project todo state and sends user-selected todo text to the conversation UI. After execution, the workbench can ask the model to write back a summary from the task's owning Session; the model calls `workbench_complete`, which appends the structured result to that Session and exposes it through the `studioTodoCompletions` projection. The action is unavailable when viewing the workspace task from another Session. Direct user completion continues to use the todo store's atomic completion action; Studio does not assemble or send provider requests.
 
 #### KV Cache effect
 

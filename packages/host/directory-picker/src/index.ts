@@ -12,6 +12,9 @@
  */
 
 import { Context, Service } from '@deepseek-ai/cordis'
+import type { DirectoryListing } from './types.ts'
+
+export type { DirectoryEntry, DirectoryListing } from './types.ts'
 
 /** The native interaction: one OS directory chooser on the host display. */
 export interface DirectoryPickerNativeCapability {
@@ -29,39 +32,6 @@ export interface DirectoryPickerNativeCapability {
    * @returns the level's listing with breadcrumb ancestry.
    */
   list?(path?: string, signal?: AbortSignal): Promise<DirectoryListing>
-}
-
-/** One directory row: a listing child or a breadcrumb ancestor. */
-export interface DirectoryEntry {
-  /** Base name shown in a browser row (a root crumb carries its full path). */
-  name: string
-  /** Absolute host path — clients never join path segments themselves. */
-  path: string
-  /** Hidden by the host platform's convention (dot-prefixed on POSIX); the client owns whether to show it. */
-  hidden: boolean
-  /** Whether the row is a directory (enterable) or a plain file. Breadcrumb ancestors are always directories. */
-  kind: 'directory' | 'file'
-}
-
-/** One directory level plus its ancestry, as a browse backend reports it. */
-export interface DirectoryListing {
-  /** Absolute path of the listed directory. */
-  path: string
-  /** The host account's home directory (breadcrumb "Home" rooting). */
-  home: string
-  /**
-   * Ancestor chain from the filesystem root to the listed directory
-   * inclusive; every crumb is a jump target (crumb `hidden` is always false).
-   */
-  crumbs: DirectoryEntry[]
-  /** Direct child directories, name-sorted; symlinks to directories included. */
-  entries: DirectoryEntry[]
-  /**
-   * True when the backend cut `entries` at its complete-result bound: the
-   * level has more child directories than reported, and the missing rows are
-   * the name-sorted tail (hidden rows count toward the bound).
-   */
-  truncated: boolean
 }
 
 /**

@@ -7,9 +7,10 @@
  */
 import { useEffect, useState } from 'react'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type {
-  SessionId, SessionListState, WorkspaceId, WorkspaceListState, WorkspaceView,
-} from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { SessionListState } from '@deepseek-ai/dsh-api-session-controller/client'
+import type { WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-api-workspace-controller/client'
+import type { WorkspaceSnapshot } from '@deepseek-ai/dsh-api-workspace-controller/client'
 import { Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import { ChevronIcon, SessionIcon } from './icons/icons.tsx'
 import { NS } from './locales.ts'
@@ -143,8 +144,8 @@ function SessionRow({ sessionId, title, current, archiving, onArchive, deps }: {
 /** The workspace view body: New Session bar, workspace cards, Add prompt, delete confirm. */
 export function WorkBase(props: WorkBaseProps): React.ReactElement {
   const { t } = props
-  const workspaces = props.useWorkspaces((s: WorkspaceListState) => s.items, Object.is)
-  const archivedSessionIds = props.useWorkspaces((s: WorkspaceListState) => s.archivedSessionIds, Object.is)
+  const workspaces = props.useWorkspaces((s: WorkspaceSnapshot) => s.items, Object.is)
+  const archivedSessionIds = props.useWorkspaces((s: WorkspaceSnapshot) => s.archivedSessionIds, Object.is)
   const archivedSessionSet = new Set(archivedSessionIds)
   const byId = props.useSessions((s: SessionListState) => s.byId, Object.is)
   const current = props.useSessions((s: SessionListState) => s.current)

@@ -15,9 +15,14 @@
  * presenter projects `ctx.theme` onto the document exactly as the shadowed
  * frame's did.
  */
-import type {
-  ClientContext, SessionId, WorkspaceId,
-} from '@deepseek-ai/dsh-client-runtime/client'
+import type { Context as ClientContext } from '@deepseek-ai/cordis'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { WorkspaceId } from '@deepseek-ai/dsh-api-workspace-controller/client'
+import type {} from '@deepseek-ai/dsh-api-session-controller/client'
+import type {} from '@deepseek-ai/dsh-api-workspace-controller/client'
+import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
+import type {} from '@deepseek-ai/dsh-client-ui-session/client'
+import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
@@ -73,7 +78,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 }
 
 /** Required services (cordis fiber inject — the loader passes all module exports as an object plugin). */
-export const inject = ['slots', 'theme', 'locale', 'sessions', 'workspaces']
+export const inject = ['slots', 'theme', 'locale', 'sessions', 'workspaces', 'uiWorkspace']
 
 /**
  * Client plugin body: provide ctx.layout, seat the theme presenter, and one
@@ -125,9 +130,9 @@ export function apply(ctx: ClientContext): void {
       inject: () => ({}),
     }, StudioFrame)
     const workspaceInjected = (): LeftPanelInjected => ({
-      startSession: (workspaceId?: WorkspaceId) => { ctx.workspaces.startSession(workspaceId) },
+      startSession: (workspaceId?: WorkspaceId) => { ctx.uiWorkspace.startSession(workspaceId) },
       open: (sessionId: SessionId) => { ctx.sessions.open(sessionId) },
-      archiveSession: async (sessionId: SessionId) => { await ctx.workspaces.archiveSession(sessionId) },
+      archiveSession: async (sessionId: SessionId) => { await ctx.uiWorkspace.archiveSession(sessionId) },
       renameSession: async (sessionId: SessionId, title: string) => {
         const session = ctx.sessions.binding(sessionId)?.session
         if (session === undefined) throw new Error(`unknown session "${sessionId}"`)
@@ -140,8 +145,8 @@ export function apply(ctx: ClientContext): void {
         void ctx.sessions.fork({ sessionId, increaseTitle: true }).then((childId) => { ctx.sessions.open(childId) })
       },
       createWorkspace: input => ctx.workspaces.create(input),
-      pickDirectory: () => ctx.workspaces.pickDirectory(),
-      listDirectory: (path, signal) => ctx.workspaces.listDirectory(path, signal),
+      pickDirectory: () => ctx.uiWorkspace.pickDirectory(),
+      listDirectory: (path, signal) => ctx.uiWorkspace.listDirectory(path, signal),
     })
     const disposeWorkspaceRegistration = ctx.slots.register({
       name: 'studio.workspace',

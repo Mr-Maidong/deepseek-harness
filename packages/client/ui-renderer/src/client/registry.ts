@@ -557,7 +557,9 @@ export class SlotRegistry extends Service {
 
   /** Resolve the owning workspace id for a session id. */
   private workspaceKey(sessionId: string): string {
-    const workspaces = this.ctx.get('workspaces')
+    const workspaces = this.ctx.get('workspaces') as {
+      list: { getSnapshot(): { items: readonly { sessionIds: readonly string[]; workspaceId: string }[] } }
+    } | undefined
     const workspace = workspaces?.list.getSnapshot().items.find(item => item.sessionIds.includes(sessionId as never))
     if (workspace === undefined) throw new Error(`cannot resolve workspace for session ${sessionId}`)
     return workspace.workspaceId

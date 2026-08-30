@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PointerEvent, RefObject } from 'react'
 import type { PropsRenderSlots, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
+import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import { computeColumns } from './columns.ts'
 import type { createStudioStore } from './stores.ts'
 import { Navigation } from '../navigation/Navigation.tsx'

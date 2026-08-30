@@ -767,7 +767,7 @@ describe('DirectoryBrowser', () => {
     const ROOT = '/u'
     const MID = `${ROOT}/mid`
     const LEAF = `${MID}/leaf`
-    const chain = [{ name: '/', path: '/', hidden: false, kind: 'directory' }, { name: 'u', path: ROOT, hidden: false, kind: 'directory' }]
+    const chain: DirectoryListing['crumbs'] = [{ name: '/', path: '/', hidden: false, kind: 'directory' }, { name: 'u', path: ROOT, hidden: false, kind: 'directory' }]
     const tree: Record<string, DirectoryListing> = {
       [ROOT]: {
         path: ROOT,

@@ -1,4 +1,5 @@
-import { defineStore, type EngineStoreHandle } from '@deepseek-ai/dsh-client-runtime/client'
+import { randomUUID } from '@deepseek-ai/dsh-util-crypto'
+import { defineStore, type EngineStoreHandle } from '@deepseek-ai/dsh-client-store'
 
 /** Lifecycle state for one project todo. */
 export type TodoStatus = 'pending' | 'in_progress' | 'completed' | 'blocked'
@@ -49,9 +50,7 @@ type ProjectTodoActions = {
 }
 
 function createId(): string {
-  return typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? crypto.randomUUID()
-    : Date.now().toString(36) + Math.random().toString(36).slice(2)
+  return randomUUID()
 }
 
 function now(): string {

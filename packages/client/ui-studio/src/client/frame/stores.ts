@@ -1,5 +1,5 @@
 /** Per-root transient geometry store for the four-column studio workbench. */
-import { defineStore, type EngineStoreHandle } from '@deepseek-ai/dsh-client-runtime/client'
+import { defineStore, type EngineStoreHandle } from '@deepseek-ai/dsh-client-store'
 import {
   clampWidth, CONVERSATION_DEFAULT, CONVERSATION_MAX, CONVERSATION_MIN,
   NAVIGATION_DEFAULT, NAVIGATION_MAX, NAVIGATION_MIN, STATUS_DEFAULT, STATUS_MAX,

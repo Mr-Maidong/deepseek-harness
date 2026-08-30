@@ -15,7 +15,10 @@
     { "path": "../ui-primitives" },
     { "path": "../ui-renderer" },
     { "path": "../../todo/tool-todo" },
-    { "path": "../runtime" },
+    { "path": "../../api/session-controller/tsconfig.client.json" },
+    { "path": "../../api/workspace-controller/tsconfig.client.json" },
+    { "path": "../store" },
+    { "path": "../ui-workspace" },
     { "path": "../../runtime-diagnostics/invariants" }
   ]
 }

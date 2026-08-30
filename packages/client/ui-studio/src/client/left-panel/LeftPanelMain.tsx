@@ -1,7 +1,8 @@
 /** Studio workspace content: WorkBase above FileTree, with no tab switching. */
 import { useState } from 'react'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type { SessionId, WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-api-workspace-controller/client'
 import { ChevronIcon, FileTreeIcon, WorkBaseIcon } from './icons/icons.tsx'
 import { WorkBase } from './WorkBase.tsx'
 import { FileTree } from './FileTree.tsx'
@@ -19,7 +20,7 @@ export interface LeftPanelInjected {
   forkSession: (sessionId: SessionId) => void
   createWorkspace: (input: { path: string }) => Promise<WorkspaceView>
   pickDirectory: () => Promise<string | null>
-  listDirectory: (path?: string, signal?: AbortSignal) => Promise<import('@deepseek-ai/dsh-client-runtime/client').DirectoryListing>
+  listDirectory: (path?: string, signal?: AbortSignal) => Promise<import('@deepseek-ai/dsh-api-remotes/client').DirectoryListing>
 }
 
 /** Props for the composed left rail seat. */
@@ -29,9 +30,7 @@ export type LeftPanelMainProps = PropsRuntime<'studio.workspace'> & PropsLocale<
 export function LeftPanelMain(props: LeftPanelMainProps): React.ReactElement {
   const [expanded, setExpanded] = useState<ReadonlySet<'workBase' | 'fileTree'>>(new Set(['workBase']))
   const workspaces = props.useWorkspaces(s => s, (a, b) => a === b)
-  const rootPath = workspaces.recentWorkspaceId !== undefined
-    ? workspaces.items.find(w => w.workspaceId === workspaces.recentWorkspaceId)?.path
-    : workspaces.items[0]?.path
+  const rootPath = workspaces.items[0]?.path
   return (
     <div className={css.main}>
       <section className={expanded.has('workBase') ? css.workBase : css.workBaseCollapsed} aria-labelledby="studio-workbase-title">

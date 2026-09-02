@@ -77,6 +77,19 @@ export class DirectoryPickerController extends TypertRemoteService {
   }
 
   /**
+   * Read one bounded UTF-8 text file for a Remote caller's preview.
+   * @param path - absolute file path returned by the Host directory listing.
+   * @param signal - caller lifetime; abort stops the pending filesystem read.
+   * @returns the file's UTF-8 content.
+   */
+  @Remote('readText')
+  async readText(path: string, signal: AbortSignal): Promise<string> {
+    const capability = this.requireCapability('browse', 'readText')
+    try { return await capability.readText(path, signal) }
+    catch (error: unknown) { throw cancellableFailure(error, signal, 'file read was aborted') }
+  }
+
+  /**
    * Create one child directory for a Remote caller's in-app browser.
    * @param path - absolute existing parent directory.
    * @param name - single non-blank path segment.

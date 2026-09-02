@@ -37,6 +37,7 @@ const BROWSE_STUB: DirectoryPickerCapability = {
       truncated: false,
     }
   },
+  readText: async path => `contents of ${path}`,
   createDirectory: async (path, name) => {
     if (name === 'taken') {
       throw new DirectoryPickerError('directory-exists', `${path}/${name}`, 'already exists')
@@ -102,6 +103,23 @@ describe('directoryPicker pick Remote', () => {
   })
 })
 
+describe('directoryPicker readText Remote', () => {
+  it('reads text through the browse capability', async () => {
+    const picker = await harness(BROWSE_STUB)
+    await expect(picker.readText('/home/user/project.ts', new AbortController().signal)).resolves.toBe('contents of /home/user/project.ts')
+  })
+
+  it('reports unavailable capability and cancellation', async () => {
+    const native = await harness()
+    await expect(refused(native.readText('/tmp/x', new AbortController().signal))).resolves.toMatchObject({ code: 'directory-picker-unavailable' })
+    const abort = new AbortController()
+    const picker = await harness({ ...BROWSE_STUB, readText: (_path, signal) => new Promise<string>((_resolve, reject) => { signal?.addEventListener('abort', () => { reject(new Error('read aborted')) }, { once: true }) }) })
+    const pending = refused(picker.readText('/tmp/x', abort.signal))
+    abort.abort()
+    await expect(pending).resolves.toMatchObject({ code: 'cancelled' })
+  })
+})
+
 describe('directoryPicker browse Remotes', () => {
   it('serves listings and creation, defaulting to the home directory', async () => {
     const picker = await harness(BROWSE_STUB)
@@ -129,6 +147,7 @@ describe('directoryPicker browse Remotes', () => {
       kind: 'browse',
       list: (path, signal) => BROWSE_STUB.list(path, signal),
       createDirectory,
+      readText: async path => `contents of ${path}`,
     })
 
     for (const name of ['', ' ', '.', '..', 'a/b', 'a\\b']) {
@@ -149,6 +168,7 @@ describe('directoryPicker browse Remotes', () => {
         signal?.addEventListener('abort', () => { reject(new Error('scan aborted')) }, { once: true })
       }),
       createDirectory: async () => '/never',
+      readText: async path => `contents of ${path}`,
     })
     const abort = new AbortController()
     const pending = refused(picker.list(undefined, abort.signal))

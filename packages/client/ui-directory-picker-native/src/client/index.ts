@@ -27,9 +27,8 @@ export const inject = ['slots', 'uiWorkspace']
  */
 export function apply(ctx: ClientContext): void {
   const injected = (): NativeFlowInjected => ({ pick: () => ctx.uiWorkspace.pickDirectory() })
-  // Both declaration lifetimes must be live before the pair installs; the
-  // generator makes the two registrations one transactional effect. The
-  // outer/inner nesting order is arbitrary; neither hole has precedence.
+  // The shipped sidebar and Studio layouts are alternatives, so each flow
+  // registers independently with the declaration it needs.
   ctx.slots.inject('conversation.hero.workspace.directoryFlow', () =>
     ctx.slots.inject('sidebar.workspaces.directoryFlow', function* () {
       yield ctx.slots.register({
@@ -39,4 +38,7 @@ export function apply(ctx: ClientContext): void {
         name: 'sidebar.workspaces.directoryFlow', inject: injected,
       }, NativeDirectoryFlow)
     }))
+  ctx.slots.inject('studio.workspace.directoryFlow', () => ctx.slots.register({
+    name: 'studio.workspace.directoryFlow', inject: injected,
+  }, NativeDirectoryFlow))
 }

@@ -18,9 +18,9 @@
  * including creating a new directory to hand back. That occupant-owned
  * creation is why adding a workspace has a single route: an unoccupied hole
  * leaves the surface with no add affordance at all.
- * Two holes exist because the two menu surfaces are independent slot entries
- * and a hole has exactly one declaring entry — they carry the same owner
- * contract and the same occupant.
+ * Three holes exist because the two original menu surfaces and Studio's
+ * workspace column are independent slot entries and a hole has exactly one
+ * declaring entry — they carry the same owner contract and the same occupant.
  */
 import type { ConnectionGenerationState } from '@deepseek-ai/dsh-client-connection/client'
 import type { HostObservable, PropsHooks, PropsLocale, PropsRenderSlots, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
@@ -57,6 +57,8 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     'conversation.hero.workspace.directoryFlow': { kind: 'single'; scope: 'root'; owner: DirectoryFlowOwnerProps }
     /** Directory-flow hole under the sidebar browsing region (declared by the WorkspaceBrowser entry). */
     'sidebar.workspaces.directoryFlow': { kind: 'single'; scope: 'root'; owner: DirectoryFlowOwnerProps }
+    /** Studio's workspace add flow, occupied by the selected native or browse picker. */
+    'studio.workspace.directoryFlow': { kind: 'single'; scope: 'root'; owner: DirectoryFlowOwnerProps }
   }
 }
 

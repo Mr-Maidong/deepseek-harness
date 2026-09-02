@@ -63,6 +63,14 @@ export interface DirectoryPickerBrowseCapability {
    * `directory-create-failed` for a parent that is not fully qualified or any other failure.
    */
   createDirectory(path: string, name: string): Promise<string>
+  /**
+   * Read one bounded UTF-8 text file selected from a Host-provided listing.
+   * @param path - absolute file path from the listing; callers must not construct it from user segments.
+   * @param signal - caller lifetime; abort stops the pending read.
+   * @returns the complete UTF-8 file content within the backend's fixed bound.
+   * @throws {DirectoryPickerError} `directory-unreadable` for non-files, oversized files, invalid paths, and read failures.
+   */
+  readText(path: string, signal?: AbortSignal): Promise<string>
 }
 
 /**

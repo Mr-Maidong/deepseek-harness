@@ -45,6 +45,13 @@ afterAll(async () => {
 })
 
 describe('BrowseDirectoryPicker', () => {
+  it('rejects symlink text previews and reads bounded regular UTF-8 files', async () => {
+    await expect(capability.readText(join(root, 'notes.txt'))).resolves.toBe('not a directory')
+    if ((await capability.list(root)).entries.some(entry => entry.name === 'file-link')) {
+      await expect(capability.readText(join(root, 'file-link'))).rejects.toBeInstanceOf(DirectoryPickerError)
+    }
+  })
+
   it('lists directories and files, flags hidden rows, follows symlinks, skips broken links, sorts by name', async () => {
     const listing = await capability.list(root)
     expect(listing.path).toBe(root)

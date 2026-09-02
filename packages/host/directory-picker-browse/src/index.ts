@@ -9,7 +9,7 @@
  * @module @deepseek-ai/dsh-host-directory-picker-browse
  */
 
-import { mkdir, opendir, stat } from 'node:fs/promises'
+import { lstat, mkdir, opendir, readFile, realpath, stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { basename, dirname, join, posix, resolve, win32 } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
@@ -203,6 +203,7 @@ export default class BrowseDirectoryPicker extends DirectoryPicker {
     kind: 'browse',
     list: (path, signal) => this.list(path, signal),
     createDirectory: (path, name) => this.createDirectory(path, name),
+    readText: (path, signal) => this.readText(path, signal),
   }
 
   constructor(ctx: Context, private readonly config: Config) {
@@ -297,6 +298,25 @@ export default class BrowseDirectoryPicker extends DirectoryPicker {
       entries.push(row)
     }
     return { path: target, home, crumbs: ancestryCrumbs(target), entries, truncated }
+  }
+
+  private async readText(path: string, signal?: AbortSignal): Promise<string> {
+    if (!fullyQualified(path)) throw new DirectoryPickerError('directory-unreadable', path, 'file path must be fully qualified')
+    signal?.throwIfAborted()
+    const target = resolve(path)
+    const info = await raceAbort(lstat(target), signal).catch((error: unknown) => {
+      signal?.throwIfAborted()
+      throw new DirectoryPickerError('directory-unreadable', target, messageOf(error))
+    })
+    if (!info.isFile() || info.isSymbolicLink() || info.size > 1024 * 1024) throw new DirectoryPickerError('directory-unreadable', target, 'file is not a readable preview')
+    const resolved = await raceAbort(realpath(target), signal)
+    if (resolved !== target) throw new DirectoryPickerError('directory-unreadable', target, 'file resolves outside its listed path')
+    try {
+      return await raceAbort(readFile(target, 'utf8'), signal)
+    } catch (error: unknown) {
+      signal?.throwIfAborted()
+      throw new DirectoryPickerError('directory-unreadable', target, messageOf(error))
+    }
   }
 
   private async createDirectory(path: string, name: string): Promise<string> {

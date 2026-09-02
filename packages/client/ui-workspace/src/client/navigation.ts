@@ -49,6 +49,7 @@ export interface UiWorkspace {
    * @returns created absolute path.
    */
   createDirectory(path: string, name: string): Promise<string>
+  readFile(path: string): Promise<{ path: string; content: string; language?: string }>
 }
 
 declare module '@deepseek-ai/cordis' {
@@ -153,6 +154,13 @@ class UiWorkspaceService extends Service implements UiWorkspace {
     const result = await this.directoryPicker.createDirectory(path, name)
     if (!result.ok) throw new DirectoryBrowseError(result.error)
     return result.value
+  }
+
+  async readFile(path: string): Promise<{ path: string; content: string; language?: string }> {
+    const result = await this.directoryPicker.readText(path)
+    if (!result.ok) throw new DirectoryBrowseError(result.error)
+    const language = ({ '.ts': 'typescript', '.tsx': 'tsx', '.js': 'javascript', '.jsx': 'jsx', '.json': 'json', '.css': 'css', '.md': 'markdown', '.py': 'python', '.sh': 'shell' } as Record<string, string>)[path.slice(path.lastIndexOf('.')).toLowerCase()]
+    return { path, content: result.value, ...(language === undefined ? {} : { language }) }
   }
 
   private watchNavigation(): () => void {

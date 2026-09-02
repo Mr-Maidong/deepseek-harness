@@ -150,6 +150,31 @@ describe('createSnapshotStore', () => {
     expect(revived.getSnapshot().a.n).toBe(42)
   })
 
+  it('fills state fields added after the stored JSON was written from init', () => {
+    const backing = new Map<string, string>()
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => backing.get(k) ?? null,
+      setItem: (k: string, v: string) => { backing.set(k, v) },
+      removeItem: (k: string) => { backing.delete(k) },
+    })
+    // A stored value written by an older build whose state type lacked `b`.
+    backing.set('spec-evolved', JSON.stringify({ a: { n: 7, s: 'kept' } }))
+    const revived = createSnapshotStore({ a: { n: 0, s: '' }, b: 'new' }, { persist: { name: 'spec-evolved' } })
+    expect(revived.getSnapshot()).toEqual({ a: { n: 7, s: 'kept' }, b: 'new' })
+  })
+
+  it('rehydrates a scalar root whole even when the stored JSON predates the current type', () => {
+    const backing = new Map<string, string>()
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => backing.get(k) ?? null,
+      setItem: (k: string, v: string) => { backing.set(k, v) },
+      removeItem: (k: string) => { backing.delete(k) },
+    })
+    backing.set('spec-scalar', JSON.stringify('kept'))
+    const revived = createSnapshotStore<string>('fresh', { persist: { name: 'spec-scalar' } })
+    expect(revived.getSnapshot()).toBe('kept')
+  })
+
   it('reports rehydration failures without preventing store creation', () => {
     const failure = new Error('storage read failed')
     vi.stubGlobal('localStorage', {

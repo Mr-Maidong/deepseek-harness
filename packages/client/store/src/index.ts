@@ -106,7 +106,7 @@ export function createSnapshotStore<T>(
   // the immer middleware without its setState-signature mutator generics).
   const withSelector = subscribeWithSelector(() => init)
   const api: StoreApi<T> = createStore<T>()(withSelector)
-  if (opts?.persist) attachPersistence(api, opts.persist.name)
+  if (opts?.persist) attachPersistence(api, opts.persist.name, init)
 
   let subscribe = (fn: () => void) => api.subscribe(() => {
     notifySubscribers([fn], '[client-store]')
@@ -142,8 +142,13 @@ export function createSnapshotStore<T>(
  * draft becomes {0:'h',1:'e',...}) — not fixable via merge/deserialize options
  * because the corruption happens before serialization. Storage failures
  * (quota, private mode) only disable persistence, never break the store.
+ *
+ * Rehydration merges the stored JSON over `init` for plain-object roots, so a
+ * stored value written by an older build that predates a newly added state
+ * field fills that field from init instead of presenting `undefined` behind a
+ * non-optional TS type. Scalar, array, and null roots rehydrate whole.
  */
-function attachPersistence<T>(api: StoreApi<T>, name: string): void {
+function attachPersistence<T>(api: StoreApi<T>, name: string, init: T): void {
   // Non-browser runs (node e2e booting the client tree) have no localStorage:
   // persistence silently disables — same contract as a storage failure, minus
   // the per-store console noise a ReferenceError would produce.
@@ -151,7 +156,7 @@ function attachPersistence<T>(api: StoreApi<T>, name: string): void {
   try {
     const raw = localStorage.getItem(name)
     if (raw !== null) {
-      api.setState(devFreeze(JSON.parse(raw) as T), true)
+      api.setState(devFreeze(rehydrate(JSON.parse(raw) as T, init)), true)
     }
   } catch (error) {
     console.error(`snapshot store '${name}' rehydration failed:`, error)
@@ -163,6 +168,25 @@ function attachPersistence<T>(api: StoreApi<T>, name: string): void {
       console.error(`snapshot store '${name}' persistence failed:`, error)
     }
   })
+}
+
+/**
+ * Overlay `stored` onto `init` for plain-object roots: fields absent from the
+ * stored JSON — added to the state type after it was written — resolve to
+ * init values instead of `undefined`. Scalar, array, and null roots return
+ * stored whole. Nested objects inside an object root are kept from stored
+ * as-is: deepening the state is the state owner's schema evolution, handled
+ * by its init structure or a new persisted key, not by the engine guessing a
+ * merge depth.
+ */
+function rehydrate<T>(stored: T, init: T): T {
+  if (stored === null || typeof stored !== 'object' || Array.isArray(stored)) return stored
+  if (init === null || typeof init !== 'object' || Array.isArray(init)) return stored
+  const merged: Record<string, unknown> = { ...(init as unknown as Record<string, unknown>) }
+  for (const [key, value] of Object.entries(stored as Record<string, unknown>)) {
+    if (value !== undefined) merged[key] = value
+  }
+  return merged as T
 }
 
 /** Deep-freeze draftable wholesale-set state outside production: set() bypasses immer's freeze. */

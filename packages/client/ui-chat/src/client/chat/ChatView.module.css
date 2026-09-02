@@ -41,8 +41,7 @@
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  opacity: 0.96;
+  gap: 8px;
 }
 
 /* `hidden="until-found"` retains a zero-height box so browser find can reveal
@@ -184,14 +183,6 @@
   justify-content: flex-end;
   padding-right: max(0px, calc((100% - var(--dsh-chat-content-width)) / 2));
   pointer-events: none;
-}
-
-:global([data-conversation-scroll]) .toBottomSlot {
-  /* Clears the sticky composer stack (docks + input card + stats): the live
-     height rides --dsh-composer-height (ConversationRoot's seat observer) so
-     the control follows a growing textarea; the fallback covers the first
-     paint before the observer fires. */
-  bottom: calc(var(--dsh-composer-height, 152px) + 16px);
 }
 
 .toBottom {

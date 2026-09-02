@@ -23,13 +23,14 @@ import type {} from '@deepseek-ai/dsh-api-workspace-controller/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
-import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
+import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-theme/client'
 import type {} from '@deepseek-ai/dsh-tool-todo/client'
 import { en, NS, zh } from './left-panel/locales.ts'
 import { LeftPanelMain, type LeftPanelInjected } from './left-panel/LeftPanelMain.tsx'
+import { CodePreview } from './preview/CodePreview.tsx'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
@@ -41,6 +42,7 @@ import { StudioFrame } from './frame/StudioFrame.tsx'
 import { StudioWorkbench } from './frame/workbench.tsx'
 import { StudioLayout } from './frame/layout-service.ts'
 import { createStudioStore } from './frame/stores.ts'
+import { createFileTreeStore } from './left-panel/file-tree-store.ts'
 import { createProjectTodoStore } from './frame/project-todo-store.ts'
 import type {
   StudioCenterEditorOwnerProps, StudioCenterToolbarOwnerProps,
@@ -70,8 +72,8 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     'studio.status': { kind: 'single'; scope: 'root'; owner: StudioStatusOwnerProps }
     /** Workbench registrants receive the active section; absence leaves the status column empty. */
     'studio.workbench': { kind: 'single'; scope: 'session'; owner: StudioWorkbenchOwnerProps }
-    /** Editor registrants replace the empty session-scoped editor seat. */
-    'studio.center.editor': { kind: 'single'; scope: 'session'; owner: StudioCenterEditorOwnerProps }
+    /** Editor registrants present a workspace file above the conversation column. */
+    'studio.center.editor': { kind: 'single'; scope: 'root'; owner: StudioCenterEditorOwnerProps }
     /** Toolbar registrants replace the empty session-scoped toolbar seat. */
     'studio.center.toolbar': { kind: 'single'; scope: 'session'; owner: StudioCenterToolbarOwnerProps }
   }
@@ -121,13 +123,14 @@ export function apply(ctx: ClientContext): void {
         'studio.workspace': { kind: 'single', scope: 'root' },
         'studio.status': { kind: 'single', scope: 'root' },
         'studio.workbench': { kind: 'single', scope: 'session' },
-        'studio.center.editor': { kind: 'single', scope: 'session' },
+        'studio.center.editor': { kind: 'single', scope: 'root' },
         'studio.center.toolbar': { kind: 'single', scope: 'session' },
       },
       // Exclusive store: the factory itself — the framework instantiates per
       // entry and delivers useStore/actions to StudioFrame as standard props.
       store: createStudioStore,
       inject: () => ({}),
+      locale: NS,
     }, StudioFrame)
     const workspaceInjected = (): LeftPanelInjected => ({
       startSession: (workspaceId?: WorkspaceId) => { ctx.uiWorkspace.startSession(workspaceId) },
@@ -145,11 +148,14 @@ export function apply(ctx: ClientContext): void {
         void ctx.sessions.fork({ sessionId, increaseTitle: true }).then((childId) => { ctx.sessions.open(childId) })
       },
       createWorkspace: input => ctx.workspaces.create(input),
-      pickDirectory: () => ctx.uiWorkspace.pickDirectory(),
       listDirectory: (path, signal) => ctx.uiWorkspace.listDirectory(path, signal),
+      readFile: path => ctx.uiWorkspace.readFile(path),
     })
+    const disposeEditorRegistration = ctx.slots.register({ name: 'studio.center.editor', locale: NS }, CodePreview)
     const disposeWorkspaceRegistration = ctx.slots.register({
       name: 'studio.workspace',
+      children: { 'studio.workspace.directoryFlow': { kind: 'single', scope: 'root' } },
+      store: createFileTreeStore,
       inject: workspaceInjected,
       locale: NS,
     }, LeftPanelMain)
@@ -170,6 +176,7 @@ export function apply(ctx: ClientContext): void {
     return () => {
       disposeWorkbenchRegistration()
       disposeWorkspaceRegistration()
+      disposeEditorRegistration()
       disposeRootRegistration()
       // provide()'s disposer settles asynchronously; teardown is synchronous fire-and-forget.
       void disposeService()

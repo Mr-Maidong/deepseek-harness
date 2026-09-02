@@ -1,154 +1,116 @@
-/**
- * FileTree: a read-only directory tree over the current session's
- * workspace path. Each level is fetched lazily through
- * `ctx.workspaces.listDirectory` (the Host browse capability lists
- * directories and files with breadcrumb ancestry); expanding a directory
- * scans it, collapsing prunes the subtree. File rows are leaves — they
- * render but do not expand.
- */
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { DirectoryListing } from '@deepseek-ai/dsh-api-remotes/client'
+import type { StudioPreview } from '../frame/contract.ts'
 import { ChevronIcon, FolderIcon } from './icons/icons.tsx'
 import { NS } from './locales.ts'
 import css from './FileTree.module.css'
 
-/** Full composed props for the file-tree view. */
+type FileContent = { path: string; content: string; language?: string }
 export type FileTreeProps = PropsRuntime<'studio.workspace'> & PropsLocale<typeof NS> & {
-  /** List one directory level (absent path = the Host home directory). */
   listDirectory: (path?: string, signal?: AbortSignal) => Promise<DirectoryListing>
-  /** The root directory to browse (current workspace path), or undefined. */
   rootPath: string | undefined
+  readFile: (path: string) => Promise<FileContent>
+  onPreview: (preview: StudioPreview) => void
+  /** Directory paths whose children are expanded, owned by the workspace store. */
+  expandedPaths: readonly string[]
+  onToggleExpanded: (path: string) => void
+  /** Path of the file currently shown in the preview card, or undefined. */
+  openPath?: string | undefined
 }
 
-/** Root-level load state: undefined while loading, null on failure. */
 function useRoot(listDirectory: FileTreeProps['listDirectory'], rootPath: string | undefined): DirectoryListing | null | undefined {
-  const [listing, setListing] = useState<DirectoryListing | null | undefined>(undefined)
+  const [listing, setListing] = useState<DirectoryListing | null | undefined>()
   useEffect(() => {
     if (rootPath === undefined) { setListing(undefined); return }
-    let cancelled = false
     const controller = new AbortController()
     setListing(undefined)
-    void listDirectory(rootPath, controller.signal)
-      .then((result) => { if (!cancelled) setListing(result) })
-      .catch(() => { if (!cancelled) setListing(null) })
-    return () => { cancelled = true; controller.abort() }
+    void listDirectory(rootPath, controller.signal).then(setListing).catch(() => {
+      if (!controller.signal.aborted) setListing(null)
+    })
+    return () => { controller.abort() }
   }, [listDirectory, rootPath])
   return listing
 }
 
-/**
- * The file-tree body: a lazy directory tree rooted at the session workspace.
- * Expanded paths live in local state; their listings are fetched on first
- * expansion and retained in a ref so collapsing and re-expanding is instant.
- */
 export function FileTree(props: FileTreeProps): React.ReactElement {
-  const { listDirectory, rootPath, t } = props
+  const { listDirectory, rootPath, t, readFile, onPreview, expandedPaths, onToggleExpanded, openPath } = props
   const listing = useRoot(listDirectory, rootPath)
-  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set())
+  const expanded = useMemo(() => new Set(expandedPaths), [expandedPaths])
   const listings = useRef(new Map<string, DirectoryListing>())
-  const pending = useRef(new Set<string>())
-
-  const toggle = useCallback((path: string) => {
-    setExpanded((prev) => {
-      const next = new Set(prev)
-      if (next.has(path)) next.delete(path)
-      else next.add(path)
-      return next
+  const [, setLoadedTick] = useState(0)
+  const toggle = useCallback((path: string) => { onToggleExpanded(path) }, [onToggleExpanded])
+  const onFile = useCallback((path: string) => {
+    // The card opens immediately in its loading state; the tree keeps
+    // rendering while the read travels to the floating preview.
+    onPreview({ path, status: 'loading' })
+    void readFile(path).then(({ content, language }) => {
+      onPreview({ path, status: 'ready', content, ...(language === undefined ? {} : { language }) })
+    }).catch(() => {
+      onPreview({ path, status: 'error' })
     })
-  }, [])
-
-  // Fetch a level the first time its path is expanded.
+  }, [onPreview, readFile])
   useEffect(() => {
     for (const path of expanded) {
-      if (listings.current.has(path) || pending.current.has(path)) continue
-      pending.current.add(path)
-      const controller = new AbortController()
-      void listDirectory(path, controller.signal)
-        .then((result) => {
-          listings.current.set(path, result)
-          // Force a re-render so the retained listing appears.
-          setExpanded(prev => new Set(prev))
-        })
-        .catch(() => {
-        // A failed expansion has no recoverable local state; the next toggle retries it.
-        })
-        .finally(() => { pending.current.delete(path) })
+      if (listings.current.has(path)) continue
+      void listDirectory(path).then((result) => {
+        listings.current.set(path, result)
+        setLoadedTick(tick => tick + 1)
+      }).catch(() => {})
     }
   }, [expanded, listDirectory])
-
-  // Keep the root listing in the shared map so the root row can expand.
-  if (listing !== undefined && listing !== null) {
-    listings.current.set(rootPath as string, listing)
-  }
-
-  if (rootPath === undefined) {
-    return <div className={css.empty}>{t('fileTree.empty')}</div>
-  }
-  if (listing === undefined) {
-    return <div className={css.empty}>{t('fileTree.loading')}</div>
-  }
-  if (listing === null) {
-    return <div className={css.empty}>{t('fileTree.error')}</div>
-  }
-
-  return (
-    <div className={css.tree}>
-      <DirRow path={listing.path} name={listing.path} depth={0} expanded={expanded} onToggle={toggle} listings={listings.current} />
-    </div>
-  )
+  if (listing !== undefined && listing !== null) listings.current.set(listing.path, listing)
+  if (rootPath === undefined) return <div className={css.empty}>{t('fileTree.empty')}</div>
+  if (listing === undefined) return <div className={css.empty}>{t('fileTree.loading')}</div>
+  if (listing === null) return <div className={css.empty}>{t('fileTree.error')}</div>
+  return <div className={css.tree}>
+    <DirRow
+      path={listing.path}
+      name={listing.path}
+      depth={0}
+      expanded={expanded}
+      onToggle={toggle}
+      listings={listings.current}
+      onFile={onFile}
+      openPath={openPath}
+    />
+  </div>
 }
 
-/** One directory row; expanded rows render their children recursively. */
-function DirRow({ path, name, depth, expanded, onToggle, listings }: {
+type DirRowProps = {
   path: string
   name: string
   depth: number
   expanded: ReadonlySet<string>
   onToggle: (path: string) => void
   listings: Map<string, DirectoryListing>
-}): React.ReactElement {
-  const isExpanded = expanded.has(path)
+  onFile: (path: string) => void
+  openPath?: string | undefined
+}
+function DirRow({ path, name, depth, expanded, onToggle, listings, onFile, openPath }: DirRowProps): React.ReactElement {
   const children = listings.get(path)
-  return (
-    <div className={css.row} style={{ paddingLeft: depth * 6 }}>
-      <button type="button" className={css.dirButton} onClick={() => { onToggle(path) }} aria-expanded={isExpanded}>
-        <ChevronIcon open={isExpanded} className={css.chevron} />
-        <FolderIcon open={isExpanded} className={css.dirIcon} />
-        <span className={css.dirName}>{name}</span>
-      </button>
-      <div className={css.children} data-expanded={isExpanded || undefined}>
-        <div className={css.childrenContent}>
-          {children !== undefined && children.entries.length === 0 && <div className={css.emptySub} />}
-          {children !== undefined && children.entries.map(entry => (
-            entry.kind === 'directory'
-              ? (
-                <DirRow
-                  key={entry.path}
-                  path={entry.path}
-                  name={entry.name}
-                  depth={depth + 1}
-                  expanded={expanded}
-                  onToggle={onToggle}
-                  listings={listings}
-                />
-              )
-              : <FileRow key={entry.path} name={entry.name} depth={depth + 1} />
-          ))}
-        </div>
-      </div>
-    </div>
-  )
+  const open = expanded.has(path)
+  return <div className={css.row} style={{ paddingLeft: depth * 6 }}>
+    <button type="button" className={css.dirButton} onClick={() => { onToggle(path) }} aria-expanded={open}>
+      <ChevronIcon open={open} className={css.chevron} />
+      <FolderIcon open={open} className={css.dirIcon} />
+      <span className={css.dirName}>{name}</span>
+    </button>
+    <div className={css.children} data-expanded={open || undefined}><div className={css.childrenContent}>
+      {children?.entries.map(entry => entry.kind === 'directory'
+        ? <DirRow key={entry.path} path={entry.path} name={entry.name} depth={depth + 1}
+          expanded={expanded} onToggle={onToggle} listings={listings} onFile={onFile} openPath={openPath} />
+        : <FileRow key={entry.path} path={entry.path} name={entry.name} depth={depth + 1}
+          onFile={onFile} openPath={openPath} />)}
+    </div></div>
+  </div>
 }
 
-/** One file row: a leaf with no disclosure, indented to its level. */
-function FileRow({ name, depth }: { name: string; depth: number }): React.ReactElement {
-  return (
-    <div className={css.row} style={{ paddingLeft: depth * 6 }}>
-      <div className={css.fileRow}>
-        <span className={css.fileGlyph} aria-hidden="true" />
-        <span className={css.fileName}>{name}</span>
-      </div>
-    </div>
-  )
+type FileRowProps = { path: string; name: string; depth: number; onFile: (path: string) => void; openPath?: string | undefined }
+function FileRow({ path, name, depth, onFile, openPath }: FileRowProps): React.ReactElement {
+  return <div className={css.row} style={{ paddingLeft: depth * 6 }}>
+    <button type="button" className={css.fileRow} data-open={path === openPath || undefined} onClick={() => { onFile(path) }}>
+      <span className={css.fileGlyph} aria-hidden="true" /><span className={css.fileName}>{name}</span>
+    </button>
+  </div>
 }

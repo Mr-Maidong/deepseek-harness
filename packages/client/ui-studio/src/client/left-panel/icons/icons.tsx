@@ -70,3 +70,8 @@ export function DeleteIcon(props: IconProps): ReactElement {
 export function SendIcon(props: IconProps): ReactElement {
   return <Icon {...props}><path d="m2.75 7.75 10.5-4-3.5 10.5-2.25-4.25-4.75-2.25Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" /><path d="m7.5 10 3.5-3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /></Icon>
 }
+
+/** Close action icon. */
+export function CloseIcon(props: IconProps): ReactElement {
+  return <Icon {...props}><path d="m4.25 4.25 7.5 7.5M11.75 4.25l-7.5 7.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></Icon>
+}

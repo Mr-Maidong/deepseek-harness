@@ -398,7 +398,7 @@ describe('ConversationRoot resident composer', () => {
     expect(b.lineageOwners.at(-1)?.openTitle).toBeUndefined()
   })
 
-  it('active phase: fixed header outside the scrollport; sticky composer seat inside it', () => {
+  it('active phase: fixed header outside the scrollport; composer seat as its sibling', () => {
     const b = mount(sessionSnapshotOf())
     const host = b.view.container.querySelector('[data-conversation-scroll]')
     const seat = b.view.container.querySelector('[data-composer-seat]')
@@ -407,9 +407,10 @@ describe('ConversationRoot resident composer', () => {
     expect(host).not.toBeNull()
     expect(seat).not.toBeNull()
     expect(header).not.toBeNull()
-    // Header is column chrome above the scrollport; the seat sticks inside it.
+    // Header is column chrome above the scrollport; the seat is a sibling of
+    // the scroll body so host frames can anchor floating content above it.
     expect(host?.contains(header)).toBe(false)
-    expect(host?.contains(seat)).toBe(true)
+    expect(host?.contains(seat)).toBe(false)
     expect(seat?.contains(textarea)).toBe(true)
     expect(b.slotCalls).toContain('conversation.session.header.lineage')
     expect(b.slotCalls).toContain('conversation.session.header.actions')
@@ -433,20 +434,21 @@ describe('ConversationRoot resident composer', () => {
         { ...workspace('second'), title: 'Selected Folder' },
       ],
     )
-    // Hero chrome present, view ring absent; scroll host already wraps the
-    // resident composer so the blank → active flip does not remount it.
+    // Hero chrome present, view ring absent; the scroll host and the resident
+    // composer seat are siblings, so the blank → active flip does not remount
+    // the textarea.
     const host = b.view.container.querySelector('[data-conversation-scroll]')
     const header = b.view.container.querySelector('header')
     expect(host).not.toBeNull()
     expect(header?.getAttribute('aria-hidden')).toBe('true')
     expect(b.view.getByText('探索未至之境')).toBeTruthy()
-    expect(b.view.getByText('预览版')).toBeTruthy()
+    expect(b.view.getByText('Hubness')).toBeTruthy()
     expect(b.view.queryByTestId('view-chat')).toBeNull()
     // The same machine-backed textarea is live in the hero, and the
     // persistence mirror stays bound (ConversationSession mounts chrome-hidden
     // for blank sessions): hero typing reaches the Conversation store.
     const box = b.view.getByRole('textbox')
-    expect(host?.contains(box)).toBe(true)
+    expect(host?.contains(box)).toBe(false)
     act(() => { b.wiring.setDraft('draft in hero') })
     expect(b.store.store.getSnapshot().draft).toBe('draft in hero')
     // Picker: open through the chip; a pick switches to the other
@@ -509,20 +511,20 @@ describe('ConversationRoot resident composer', () => {
     expect(b.view.getByRole('textbox')).toBeTruthy()
   })
 
-  it('same textarea DOM node survives the hero → active flip into the sticky scrollport', () => {
+  it('same textarea DOM node survives the hero → active flip into the composer seat', () => {
     const b = mount(sessionSnapshotOf({ blank: true }))
     const before = b.view.getByRole('textbox')
     act(() => { b.wiring.setDraft('kept across flip') })
     // First message landed: content exists, phase leaves blank. Composer
-    // already sat in the resident scrollport during hero, so the textarea
-    // node and InputHub draft both survive.
+    // already sat in the resident seat during hero, so the textarea node and
+    // InputHub draft both survive the flip.
     b.session.set(sessionSnapshotOf({ blank: false }))
     b.rerender()
     const after = b.view.getByRole('textbox')
     expect(after).toBe(before)
     expect(b.wiring.snapshot.draft).toBe('kept across flip')
     expect(b.store.store.getSnapshot().draft).toBe('kept across flip')
-    expect(b.view.container.querySelector('[data-conversation-scroll]')?.contains(after)).toBe(true)
+    expect(b.view.container.querySelector('[data-composer-seat]')?.contains(after)).toBe(true)
     expect(b.view.queryByText('探索未至之境')).toBeNull()
     expect(b.view.getByTestId('view-chat')).toBeTruthy()
   })

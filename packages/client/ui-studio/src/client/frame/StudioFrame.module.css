@@ -1,5 +1,5 @@
 @font-face {
-  font-family: 'LXGW WenKai Mono GB';
+  font-family: 'YaHei Consolas Hybrid';
   src: url('../../styles/YaHei\ Consolas\ Hybrid\ 1.12.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
@@ -18,12 +18,12 @@
     linear-gradient(180deg, rgba(14, 23, 31, 0.42), rgba(17, 26, 34, 0.72)),
     url('../assets/illustrations/0.webp') center / cover no-repeat,
     #111a22;
-  font-family: 'LXGW WenKai Mono GB', monospace;
+  font-family: 'YaHei Consolas Hybrid', monospace;
   --studio-ink: #d6dddc;
   --studio-muted: #b2bdc2;
   --studio-gold: #f0dfbc;
   --studio-motion: 320ms cubic-bezier(0.22, 1, 0.36, 1);
-  --dsw-font-family: 'LXGW WenKai Mono GB', monospace;
+  --dsw-font-family: 'YaHei Consolas Hybrid', monospace;
   transition: grid-template-columns var(--studio-motion);
   --dsh-conversation-fade-bg: var(--dsw-alias-bg-layer-2);
   --dsh-conversation-scroll-bg: var(--studio-panel);
@@ -120,27 +120,15 @@
 
 .conversationCol {
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Keep transcript content from showing through the lower composer edge. The
-   mask belongs to the fixed conversation column, not the scrollport, so it
-   remains at the viewport bottom while the transcript moves underneath it. */
-.conversationCol::after {
-  position: absolute;
-  right: 8px;
-  bottom: 0;
-  left: 0;
-  z-index: 6;
-  height: 86px;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--dsh-conversation-fade-bg) 0%, transparent),
-    color-mix(in srgb, var(--dsh-conversation-fade-bg) 86%, transparent) 58%,
-    var(--dsh-conversation-fade-bg)
-  );
-  backdrop-filter: blur(8px);
-  content: '';
-  pointer-events: none;
+.conversationView {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
 }
 
 .conversationCol :global([data-composer-seat]) {
@@ -168,8 +156,8 @@
 .brandSealInner { display: grid; place-items: center; width: 22px; height: 22px; border: 1px solid rgba(156, 169, 164, .38); transform: rotate(-45deg); }
 .brandFish { color: var(--studio-gold); transform-origin: 50% 60%; }
 .brandCopy { display: grid; gap: 4px; min-width: 0; }
-.wordmark { color: #f0dfbc; font: 500 16px/1.1 'LXGW WenKai Mono GB', monospace; letter-spacing: .07em; white-space: nowrap; }
-.brandCopy small { color: var(--studio-muted); font: 10px/1 'LXGW WenKai Mono GB', monospace; letter-spacing: .14em; white-space: nowrap; }
+.wordmark { color: #f0dfbc; font: 500 16px/1.1 'YaHei Consolas Hybrid', monospace; letter-spacing: .07em; white-space: nowrap; }
+.brandCopy small { color: var(--studio-muted); font: 10px/1 'YaHei Consolas Hybrid', monospace; letter-spacing: .14em; white-space: nowrap; }
 .brandPunctuation { margin-left: auto; padding-bottom: 13px; color: var(--studio-red); font: 22px/1 serif; }
 
 

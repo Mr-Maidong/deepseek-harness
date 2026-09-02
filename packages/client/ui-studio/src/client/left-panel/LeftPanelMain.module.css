@@ -44,7 +44,6 @@
   height: 1px;
   background: linear-gradient(90deg, transparent, var(--studio-line) 18%, var(--studio-line) 82%, transparent);
   content: '';
-  opacity: 0.9;
   pointer-events: none;
 }
 
@@ -74,7 +73,7 @@
   border-bottom: 1px solid rgba(164, 181, 184, 0.12);
   background: rgba(14, 23, 31, 0.24);
   color: var(--studio-muted);
-  font: 500 15px/20px 'LXGW WenKai Mono GB', monospace;
+  font: 500 15px/20px 'YaHei Consolas Hybrid', monospace;
   letter-spacing: 0.12em;
   text-align: left;
   cursor: pointer;

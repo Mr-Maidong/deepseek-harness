@@ -6,10 +6,11 @@
  * rail's job here is navigation, not management.
  */
 import { useEffect, useState } from 'react'
-import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import type { PropsLocale, PropsRenderSlots, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { SessionListState } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-api-workspace-controller/client'
+import type { DirectoryFlowOwnerProps } from '@deepseek-ai/dsh-client-ui-workspace/client'
 import type { WorkspaceSnapshot } from '@deepseek-ai/dsh-api-workspace-controller/client'
 import { Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import { ChevronIcon, SessionIcon } from './icons/icons.tsx'
@@ -18,7 +19,7 @@ import type { LeftPanelInjected } from './LeftPanelMain.tsx'
 import css from './WorkBase.module.css'
 
 /** Full composed props for the workspace view. */
-export type WorkBaseProps = PropsRuntime<'studio.workspace'> & PropsLocale<typeof NS> & LeftPanelInjected
+export type WorkBaseProps = PropsRuntime<'studio.workspace'> & PropsRenderSlots<'studio.workspace.directoryFlow'> & PropsLocale<typeof NS> & LeftPanelInjected
 
 /** The dependency slice cards and rows read (locale + injected verbs). */
 type WorkBaseDeps = Pick<WorkBaseProps, keyof LeftPanelInjected | 't' | 'useSessions' | 'useWorkspaces'>
@@ -62,7 +63,7 @@ function WorkspaceCard({
       </div>
       <div className={css.sessionList} data-expanded={expanded || undefined}>
         <div className={css.sessionListContent}>
-          {sessions.length === 0 && <div className={css.emptyHint}>{t('workspace.empty')}</div>}
+          {sessions.length === 0 && <div className={css.emptyHint}>{t('session.empty')}</div>}
           {sessions.map(session => (
             <SessionRow
               key={session.id}
@@ -156,6 +157,8 @@ export function WorkBase(props: WorkBaseProps): React.ReactElement {
     if (activeWorkspace !== undefined) setExpanded(activeWorkspace.workspaceId)
   }, [current, workspaces])
   const [adding, setAdding] = useState(false)
+  const [flowOpen, setFlowOpen] = useState(false)
+  const [addError, setAddError] = useState<string | undefined>(undefined)
   const [confirmDelete, setConfirmDelete] = useState<WorkspaceView | undefined>(undefined)
   const [archiveTarget, setArchiveTarget] = useState<SessionId | undefined>(undefined)
   const [archivingSessionIds, setArchivingSessionIds] = useState<ReadonlySet<SessionId>>(new Set())
@@ -232,14 +235,30 @@ export function WorkBase(props: WorkBaseProps): React.ReactElement {
         </div>
       ) : (
         <button type="button" className={css.addWorkspace} aria-label={t('workspace.add')} title={t('workspace.add')} onClick={() => {
-          setAdding(true)
-          void props.pickDirectory().then((path) => {
-            if (path !== null) void props.createWorkspace({ path })
-          }).finally(() => { setAdding(false) })
+          setAddError(undefined)
+          setFlowOpen(true)
         }}>
           <span className={css.newIcon} aria-hidden="true" />
         </button>
       )}
+      {props.renderSlot('studio.workspace.directoryFlow', {
+        open: flowOpen,
+        busy: adding,
+        onPicked: (path) => {
+          setAdding(true)
+          void props.createWorkspace({ path }).then(() => {
+            setFlowOpen(false)
+          }).catch(() => {
+            setAddError(t('workspace.addFailed'))
+          }).finally(() => { setAdding(false) })
+        },
+        onCancel: () => { setFlowOpen(false) },
+        onError: (message) => {
+          setFlowOpen(false)
+          setAddError(message)
+        },
+      } satisfies DirectoryFlowOwnerProps)}
+      {addError !== undefined && <div className={css.operationError} role="status">{addError}</div>}
       {archiveError !== undefined && <div className={css.operationError} role="status">{archiveError}</div>}
       {archiveTarget !== undefined && (
         <Modal

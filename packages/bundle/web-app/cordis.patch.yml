@@ -54,9 +54,11 @@
       config:
         maxNoteBytes: 8192
 
-    # Browser Session export: `/export` command plus the shared download dialog.
+    # Studio owns the Session-header code switch in this profile; disable the
+    # legacy Session-log download action.
     - id: session-log-download
       name: '@deepseek-ai/dsh-session-log-export'
+      disabled: true
 
     - id: workspace
       name: '@deepseek-ai/dsh-workspace'

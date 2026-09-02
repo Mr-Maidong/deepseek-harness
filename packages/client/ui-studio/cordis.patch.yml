@@ -66,12 +66,10 @@
       config:
         maxNoteBytes: 8192
 
-    # Browser Session export: `/export` command plus the shared download dialog.
-    # Its browser-half inject waits on the studio's sessionHeaderActions marker,
-    # so the standalone header button is suppressed while the service stays
-    # available to the More menu's export item.
+    # The profile does not offer browser Session-log export.
     - id: session-log-download
       name: '@deepseek-ai/dsh-session-log-export'
+      disabled: true
 
     - id: workspace
       name: '@deepseek-ai/dsh-workspace'

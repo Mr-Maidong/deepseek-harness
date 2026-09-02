@@ -76,7 +76,7 @@
   margin: 12px 4px;
   padding: 12px 8px;
   color: var(--studio-muted);
-  font: 400 13px/19px 'LXGW WenKai Mono GB', monospace;
+  font: 400 13px/19px 'YaHei Consolas Hybrid', monospace;
   text-align: center;
 }
 
@@ -161,7 +161,7 @@
 
 .workspaceTitle {
   color: var(--studio-ink);
-  font: 500 14px/20px 'LXGW WenKai Mono GB', monospace;
+  font: 500 14px/20px 'YaHei Consolas Hybrid', monospace;
 }
 
 .workspaceActions,
@@ -202,7 +202,7 @@
 .emptyHint {
   padding: 6px 8px;
   color: var(--studio-muted);
-  font: 400 13px/18px 'LXGW WenKai Mono GB', monospace;
+  font: 400 13px/18px 'YaHei Consolas Hybrid', monospace;
 }
 
 .sessionRow[data-current] {
@@ -245,7 +245,7 @@
   height: 16px;
   background: url('../assets/icons/conversation.webp') center / contain no-repeat;
 }
-.sessionTitle { color: inherit; font: 400 14px/20px 'LXGW WenKai Mono GB', monospace; }
+.sessionTitle { color: inherit; font: 400 14px/20px 'YaHei Consolas Hybrid', monospace; }
 
 .renameInput,
 .pathInput {
@@ -257,7 +257,7 @@
   border-radius: 3px;
   background: var(--studio-input);
   color: var(--studio-ink);
-  font: 400 12px/18px 'LXGW WenKai Mono GB', monospace;
+  font: 400 12px/18px 'YaHei Consolas Hybrid', monospace;
   outline: none;
 }
 
@@ -292,7 +292,7 @@
   color: var(--studio-muted);
 }
 
-.addingHint { font: 400 13px/18px 'LXGW WenKai Mono GB', monospace; }
+.addingHint { font: 400 13px/18px 'YaHei Consolas Hybrid', monospace; }
 
 .operationError {
   margin: 2px 8px 0;
@@ -300,7 +300,7 @@
   border-left: 2px solid var(--workbase-danger);
   background: var(--studio-red-wash);
   color: var(--studio-ink);
-  font: 400 12px/18px 'LXGW WenKai Mono GB', monospace;
+  font: 400 12px/18px 'YaHei Consolas Hybrid', monospace;
 }
 
 .loadingSpinner {
@@ -320,7 +320,7 @@
   border-radius: 3px;
   background: var(--studio-red-wash-strong);
   color: var(--studio-ink);
-  font: 500 14px/20px 'LXGW WenKai Mono GB', monospace;
+  font: 500 14px/20px 'YaHei Consolas Hybrid', monospace;
   cursor: pointer;
 }
 

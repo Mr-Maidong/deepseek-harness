@@ -166,13 +166,15 @@ export function ConversationRoot({
     seatObserver.current = null
     const scroller = seat?.parentElement ?? null
     if (seat === null || scroller === null) return
-    seatObserver.current = new ResizeObserver(() => {
+    const publishSeatMeasurements = (): void => {
       scroller.style.setProperty('--dsh-composer-height', `${seat.offsetHeight}px`)
       scroller.style.setProperty(
         '--dsh-conversation-viewport-height',
         `${scroller.clientHeight}px`,
       )
-    })
+    }
+    publishSeatMeasurements()
+    seatObserver.current = new ResizeObserver(publishSeatMeasurements)
     seatObserver.current.observe(seat)
     seatObserver.current.observe(scroller)
   }, [])
@@ -379,9 +381,11 @@ export function ConversationRoot({
     <div ref={rootResizeRef} className={css.root} data-phase={phase}>
       {sessionId === undefined ? null : renderSlot('conversation.session.header', {})}
       <div className={css.scrollBody} data-conversation-scroll="">
-        {sessionId === undefined ? null : renderSlot('conversation.session', {})}
-        {composerSeat}
+        <div className={css.scrollContent}>
+          {sessionId === undefined ? null : renderSlot('conversation.session', {})}
+        </div>
       </div>
+      {composerSeat}
       {/* Width handles only while a transcript is on screen; the hero has no
           content column to size. */}
       {phase === 'active' && (['left', 'right'] as const).map(side => (

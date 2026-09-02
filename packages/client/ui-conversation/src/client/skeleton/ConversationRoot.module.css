@@ -329,11 +329,46 @@
      than the glow. Clipping is unchanged — `overflow-y: auto` already made this
      a scroll container that clips both axes, so this only takes away the bar. */
   overflow-x: hidden;
+  position: relative;
+  /* Fade transcript content at the viewport edge without masking the composer,
+     which is a sibling below this scrollport. */
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0,
+    #000 calc(100% - 24px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0,
+    #000 calc(100% - 24px),
+    transparent 100%
+  );
   /* Reserved unconditionally: the composer seat rides this box's content box in
      Chat and its padding box under a view's composer overlay, so an `auto`
      gutter moves the input card sideways by the bar's width whenever the two
      differ ([decision](../../../../../../.agents/notes/implemented/bug-fix/2026-08-04-composer-tab-gutter-reservation.md)). */
   scrollbar-gutter: stable;
+  /* Match the studio file-tree scrollbar: a thin bar that stays invisible until
+     the surface is hovered or focused, then shows the studio line color. The
+     studio token inherits from the studio frame that hosts this column; the
+     theme border token is the fallback when this column renders outside it. */
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.scrollBody:hover,
+.scrollBody:focus-within {
+  scrollbar-color: var(--studio-line, var(--dsw-alias-border-l2)) transparent;
+}
+
+.scrollBody::-webkit-scrollbar { width: 6px; }
+.scrollBody::-webkit-scrollbar-thumb { background: transparent; }
+.scrollBody:hover::-webkit-scrollbar-thumb,
+.scrollBody:focus-within::-webkit-scrollbar-thumb { background: var(--studio-line, var(--dsw-alias-border-l2)); }
+
+.scrollContent {
+  display: contents;
 }
 
 .root[data-phase='active'] .viewArea {

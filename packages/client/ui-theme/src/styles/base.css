@@ -2,7 +2,7 @@
  * upstream (deepsuite theme/global.css) — supplied here so the composite
  * --dsw-font-* variables resolve and motion rides the upstream curve. */
 :root {
-  --dsw-font-family: "LXGW WenKai Mono GB", monospace;
+  --dsw-font-family: "YaHei Consolas Hybrid", monospace;
   --ds-font-family-code: var(--dsw-font-family);
   --ds-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --ds-transition-duration: 0.2s;

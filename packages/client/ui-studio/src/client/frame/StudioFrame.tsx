@@ -1,12 +1,13 @@
 /** Four-column personal workbench frame with wuxia-inspired visual treatment. */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { PointerEvent, RefObject } from 'react'
-import type { PropsRenderSlots, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
+import type { CSSProperties, PointerEvent, RefObject } from 'react'
+import type { PropsLocale, PropsRenderSlots, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import { computeColumns } from './columns.ts'
 import type { createStudioStore } from './stores.ts'
 import { Navigation } from '../navigation/Navigation.tsx'
 import type { Section } from './contract.ts'
+import { NS } from '../left-panel/locales.ts'
 import css from './StudioFrame.module.css'
 
 function useFrameWidth(ref: RefObject<HTMLDivElement | null>): number {
@@ -83,6 +84,7 @@ export type StudioFrameProps =
   & PropsRuntime<'root'>
   & PropsRenderSlots<'sidebar.settings' | 'studio.navigation' | 'studio.workspace' | 'studio.workbench' | 'conversation' | 'studio.status' | 'studio.center.editor' | 'studio.center.toolbar' | 'shell.overlay'>
   & PropsStore<ReturnType<typeof createStudioStore>>
+  & PropsLocale<typeof NS>
 
 /** Render the four-column personal workbench. */
 export function StudioFrame({ useStore, actions, renderSlot, SessionProvider }: StudioFrameProps) {
@@ -90,10 +92,24 @@ export function StudioFrame({ useStore, actions, renderSlot, SessionProvider }: 
   const frameRef = useRef<HTMLDivElement | null>(null)
   const viewport = useFrameWidth(frameRef)
   const [activeSection, setActiveSection] = useState<Section>('project')
-  const [navigationCollapsed, setNavigationCollapsed] = useState(false)
   const [settingsOpenRequest, setSettingsOpenRequest] = useState(0)
   const dragBase = useRef({ navigation: 0, workspace: 0, conversation: 0, status: 0 })
   const [dragging, setDragging] = useState(false)
+  const conversationViewRef = useRef<HTMLDivElement | null>(null)
+  const [composerHeight, setComposerHeight] = useState(0)
+  // Anchor the floating code-preview card above the resident composer bar: the
+  // bar's height is dynamic (draft growth, dock cards), so measure the seat.
+  useEffect(() => {
+    const view = conversationViewRef.current
+    if (view === null) return
+    const seat = view.querySelector('[data-composer-seat]')
+    if (seat === null) return
+    const update = () => { setComposerHeight(seat.getBoundingClientRect().height) }
+    const observer = new ResizeObserver(update)
+    observer.observe(seat)
+    update()
+    return () => { observer.disconnect() }
+  }, [])
   const start = useCallback((panel: keyof typeof dragBase.current) => {
     dragBase.current[panel] = panels[panel]
     setDragging(true)
@@ -109,7 +125,7 @@ export function StudioFrame({ useStore, actions, renderSlot, SessionProvider }: 
     setters[panel](dragBase.current[panel] + dx)
   }, [actions])
   const cols = computeColumns(viewport, panels.navigation, panels.workspace, panels.conversation, panels.status)
-  const navigationWidth = navigationCollapsed ? 48 : cols.navigation
+  const navigationWidth = panels.navigationCollapsed ? 48 : cols.navigation
   const shared = { activeSection, onSectionChange: setActiveSection }
 
   return <div
@@ -117,29 +133,41 @@ export function StudioFrame({ useStore, actions, renderSlot, SessionProvider }: 
     className={css.frame}
     style={{ gridTemplateColumns: `${navigationWidth}px ${cols.workspace}px minmax(0, 1fr) ${cols.status}px` }}
     data-dragging={dragging || undefined}
-    data-navigation-collapsed={navigationCollapsed || undefined}
+    data-navigation-collapsed={panels.navigationCollapsed || undefined}
     data-section={activeSection}
   >
     <aside className={css.navigationCol}>
       {renderSlot('studio.navigation', shared, {
         fallback: <Navigation
           active={activeSection}
-          collapsed={navigationCollapsed}
+          collapsed={panels.navigationCollapsed}
           onChange={setActiveSection}
           onSettings={() => { setSettingsOpenRequest(request => request + 1) }}
-          onCollapse={() => { setNavigationCollapsed(collapsed => !collapsed) }}
+          onCollapse={() => { actions.setNavigationCollapsed(!panels.navigationCollapsed) }}
         />,
       })}
       {renderSlot('sidebar.settings', {
-        wide: !navigationCollapsed,
+        wide: !panels.navigationCollapsed,
         openRequest: settingsOpenRequest,
         triggerHidden: true,
       })}
     </aside>
     <aside className={css.workspaceCol}>
-      {renderSlot('studio.workspace', { activeSection })}
+      {renderSlot('studio.workspace', {
+        activeSection,
+        onPreview: (preview) => { actions.setPreview(preview) },
+        openPath: panels.preview?.path,
+      })}
     </aside>
-    <main className={css.conversationCol}>{renderSlot('conversation', {})}</main>
+    <main className={css.conversationCol} style={{ '--studio-composer-height': `${composerHeight}px` } as CSSProperties}>
+      <div ref={conversationViewRef} className={css.conversationView}>
+        {renderSlot('conversation', {})}
+      </div>
+      {panels.preview !== undefined && renderSlot('studio.center.editor', {
+        preview: panels.preview,
+        onClose: () => { actions.setPreview(undefined) },
+      })}
+    </main>
     <aside className={css.statusCol}><SessionProvider>{renderSlot('studio.workbench', { activeSection })}</SessionProvider></aside>
     <div className={css.overlayLayer} data-shell-overlay>{renderSlot('shell.overlay', {})}</div>
     <DragHandle side="workspace" left={navigationWidth + cols.workspace} onStart={() => { start('workspace') }} onDrag={(dx) => { drag('workspace', dx) }} onEnd={end} />

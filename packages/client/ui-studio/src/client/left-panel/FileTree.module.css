@@ -9,7 +9,7 @@
   border-top: 1px solid var(--studio-line);
   border-bottom: 1px solid rgba(164, 181, 184, 0.1);
   color: var(--studio-muted);
-  font: 400 13px/20px 'LXGW WenKai Mono GB', monospace;
+  font: 400 13px/20px 'YaHei Consolas Hybrid', monospace;
   text-align: center;
 }
 
@@ -61,7 +61,7 @@
   min-width: 0;
   overflow: hidden;
   color: inherit;
-  font: 400 14px/20px 'LXGW WenKai Mono GB', monospace;
+  font: 400 14px/20px 'YaHei Consolas Hybrid', monospace;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -75,7 +75,15 @@
   min-height: 30px;
   padding: 5px 8px;
   color: var(--studio-muted);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  text-align: left;
 }
+.fileRow:hover { color: var(--studio-ink); background: linear-gradient(90deg, rgba(156, 169, 164, 0.1), transparent 88%); }
+.fileRow:focus-visible { outline: 1px solid var(--studio-gold); outline-offset: -2px; }
+/* Resident tint for the file shown in the preview card, one step above hover. */
+.fileRow[data-open] { color: var(--studio-ink); background: linear-gradient(90deg, rgba(156, 169, 164, 0.16), transparent 88%); }
 
 .fileGlyph {
   flex: none;
@@ -102,7 +110,7 @@
   min-width: 0;
   overflow: hidden;
   color: inherit;
-  font: 400 14px/20px 'LXGW WenKai Mono GB', monospace;
+  font: 400 14px/20px 'YaHei Consolas Hybrid', monospace;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

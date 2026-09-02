@@ -7,7 +7,7 @@
   padding: 0 8px;
   isolation: isolate;
   color: var(--studio-ink, #d6dddc);
-  font-family: 'LXGW WenKai Mono GB', monospace;
+  font-family: 'YaHei Consolas Hybrid', monospace;
   transition: padding 320ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -345,7 +345,7 @@
 
 .wordmark {
   color: rgba(227, 233, 231, 0.9);
-  font: 600 20px/1.2 'LXGW WenKai Mono GB', monospace;
+  font: 600 20px/1.2 'YaHei Consolas Hybrid', monospace;
 }
 
 .atlasMark {

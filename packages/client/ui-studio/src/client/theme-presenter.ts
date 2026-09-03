@@ -1,27 +1,50 @@
-/** Applies the active client theme to the document and retracts only owned DOM state. */
+/**
+ * Global theme DOM applier: projects the resolved ThemeSnapshot onto the
+ * document — `html { color-scheme }` for native UA chrome (scrollbars, form
+ * controls), `body[data-ds-dark-theme]` for the token palette, the active
+ * theme's alias-token overrides as inline CSS variables on body, the content
+ * font-size axis (`--dsh-content-font-size`), and one presenter-owned
+ * `meta[name="theme-color"]` for surrounding browser UI. Pure DOM writes, no
+ * React involvement; the presenter only ever retracts what it wrote itself,
+ * so foreign attributes, metadata, and inline styles survive.
+ */
 import type { ThemeSnapshot } from '@deepseek-ai/dsh-client-ui-theme/client'
 
-/** Body attribute selecting the dark palette. */
+/** Body attribute selecting the dark base palette in the token stylesheets. */
 export const DARK_ATTRIBUTE = 'data-ds-dark-theme'
 
-/** Projects theme snapshots onto document-level browser styling. */
+/** Body variable carrying the user's content font size in px. */
+export const CONTENT_FONT_SIZE_VARIABLE = '--dsh-content-font-size'
+
+/** Applies theme snapshots to the document; one instance per plugin fiber. */
 export class ThemePresenter {
+  /** Token names this presenter wrote in the last apply (its retraction set). */
   private appliedTokens: string[] = []
+  /** The single metadata node this presenter inserts and removes. */
   private readonly themeColorMeta: HTMLMetaElement
 
-  /** Create the presenter-owned theme-color metadata node. */
+  /** Create the presenter-owned metadata node before the first snapshot arrives. */
   constructor() {
     this.themeColorMeta = document.createElement('meta')
     this.themeColorMeta.name = 'theme-color'
   }
 
-  /** Apply the resolved theme snapshot. @param snapshot - Theme to project. */
+  /**
+   * Project a snapshot onto the document: set root `color-scheme` and the body
+   * palette attribute from `active.colorScheme` (never the id — `system` is
+   * resolved upstream), publish the content font-size axis, then replace the
+   * previously applied token variables with `active.tokens`. Browser
+   * theme-color metadata follows the computed body background after those
+   * writes, so the rendered palette remains the color authority.
+   * @param snapshot - resolved theme snapshot from ctx.theme.
+   */
   apply(snapshot: ThemeSnapshot): void {
     const scheme = snapshot.active.colorScheme
     document.documentElement.style.colorScheme = scheme
     const body = document.body
     if (scheme === 'dark') body.setAttribute(DARK_ATTRIBUTE, '')
     else body.removeAttribute(DARK_ATTRIBUTE)
+    body.style.setProperty(CONTENT_FONT_SIZE_VARIABLE, `${snapshot.fontSize}px`)
     for (const name of this.appliedTokens) body.style.removeProperty(name)
     this.appliedTokens = []
     for (const [name, value] of Object.entries(snapshot.active.tokens)) {
@@ -32,11 +55,13 @@ export class ThemePresenter {
     if (!this.themeColorMeta.isConnected) document.head.append(this.themeColorMeta)
   }
 
-  /** Remove the document state owned by this presenter. */
+  /** Retract root color-scheme, the palette attribute, token variables, the font-size axis, and the owned metadata node. */
   dispose(): void {
     document.documentElement.style.removeProperty('color-scheme')
-    document.body.removeAttribute(DARK_ATTRIBUTE)
-    for (const name of this.appliedTokens) document.body.style.removeProperty(name)
+    const body = document.body
+    body.removeAttribute(DARK_ATTRIBUTE)
+    body.style.removeProperty(CONTENT_FONT_SIZE_VARIABLE)
+    for (const name of this.appliedTokens) body.style.removeProperty(name)
     this.appliedTokens = []
     this.themeColorMeta.remove()
   }

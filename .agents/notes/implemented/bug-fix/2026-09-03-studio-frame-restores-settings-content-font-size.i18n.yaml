@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-09-03-studio-frame-restores-settings-content-font-size.md
+2026-09-03-studio-frame-restores-settings-content-font-size.md: 161b14be765d578806e71010b0b50b18a185cbaa
+2026-09-03-studio-frame-restores-settings-content-font-size.zh.md: 33821a3572ba50b5bad277a17765d458c0254280

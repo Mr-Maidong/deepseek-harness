@@ -25,41 +25,11 @@
   --studio-motion: 320ms cubic-bezier(0.22, 1, 0.36, 1);
   --dsw-font-family: 'YaHei Consolas Hybrid', monospace;
   transition: grid-template-columns var(--studio-motion);
-  --dsh-conversation-fade-bg: var(--dsw-alias-bg-layer-2);
-  --dsh-conversation-scroll-bg: var(--studio-panel);
-  --dsh-conversation-turn-status-font: 500 14px/22px var(--dsw-font-family);
-  --dsh-conversation-turn-status-clock-font: 400 13px/20px var(--dsw-font-family);
-  --dsh-conversation-user-font-size: 15px;
-  --dsw-font-markdown-h1: 700 24px/34px var(--dsw-font-family);
-  --dsw-font-markdown-h1-font-family: var(--dsw-font-family);
-  --dsw-font-markdown-h2: 700 22px/32px var(--dsw-font-family);
-  --dsw-font-markdown-h2-font-family: var(--dsw-font-family);
-  --dsw-font-markdown-h3: 700 20px/30px var(--dsw-font-family);
-  --dsw-font-markdown-h3-font-family: var(--dsw-font-family);
-  --dsw-font-markdown-h4: 600 15px/28px var(--dsw-font-family);
-  --dsw-font-markdown-h4-font-family: var(--dsw-font-family);
-  --dsw-font-markdown-base: 15px/26px var(--dsw-font-family);
-  --dsw-font-markdown-base-font-family: var(--dsw-font-family);
-  --dsw-font-markdown-base-strong: 600 15px/26px var(--dsw-font-family);
-  --dsw-font-markdown-base-strong-font-family: var(--dsw-font-family);
-  --dsw-font-markdown-base-italic: italic 15px/26px var(--dsw-font-family);
-  --dsw-font-markdown-base-italic-font-family: var(--dsw-font-family);
-  --dsw-font-markdown-base-strong-italic: italic 600 15px/26px var(--dsw-font-family);
-  --dsw-font-markdown-base-strong-italic-font-family: var(--dsw-font-family);
-  --dsw-font-markdown-table: 15px/25px var(--dsw-font-family);
-  --dsw-font-markdown-table-font-family: var(--dsw-font-family);
-  --dsw-font-markdown-table-head: 500 15px/25px var(--dsw-font-family);
-  --dsw-font-markdown-table-head-font-family: var(--dsw-font-family);
-  --dsw-font-markdown-small: 14px/24px var(--dsw-font-family);
-  --dsw-font-markdown-small-font-family: var(--dsw-font-family);
-  --dsw-font-markdown-small-strong: 600 14px/24px var(--dsw-font-family);
-  --dsw-font-markdown-small-strong-font-family: var(--dsw-font-family);
-  --dsw-font-markdown-small-italic: italic 14px/24px var(--dsw-font-family);
-  --dsw-font-markdown-small-italic-font-family: var(--dsw-font-family);
-  --dsw-font-markdown-small-strong-italic: italic 600 14px/24px var(--dsw-font-family);
-  --dsw-font-markdown-small-strong-italic-font-family: var(--dsw-font-family);
-  --dsw-font-markdown-code: 14px/22px var(--dsw-font-family);
-  --dsw-font-markdown-code-block: 13px/22px var(--dsw-font-family);
+  /* No frozen markdown ladder or conversation font tokens here: the frame's
+     descendants (the conversation seat and workbench markdown) must resolve
+     the body-level adaptive ladder from ui-theme (gradient-shadow-text.css),
+     which derives from --dsh-content-font-size so the Settings font-size
+     preference keeps controlling conversation text. */
   --studio-line: rgba(164, 181, 184, 0.2);
   --studio-red: #a23f47;
   --studio-panel: rgb(20 32 41 / 40%);

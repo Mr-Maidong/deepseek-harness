@@ -97,22 +97,27 @@ export function createProjectTodoStore(): EngineStoreHandle<ProjectTodoState, Pr
       },
       updateTodoDetail: (draft, todoId, detail) => {
         const todo = findTodo(draft, todoId)
-        if (todo === undefined) return
+        // A completed todo is a terminal record: its detail is frozen.
+        if (todo === undefined || todo.status === 'completed') return
         todo.detail = detail
         todo.updatedAt = now()
       },
       updateTodoStatus: (draft, todoId, status) => {
         const todo = findTodo(draft, todoId)
-        if (todo === undefined) return
+        // Completion is terminal: a completed todo never leaves that state,
+        // and reaching it requires completeTodo (so a summary is attached).
+        if (todo === undefined || todo.status === 'completed' || status === 'completed') return
         const timestamp = now()
         todo.status = status
         todo.updatedAt = timestamp
         if (status === 'in_progress' && todo.startedAt === undefined) todo.startedAt = timestamp
-        if (status !== 'completed') delete todo.completedAt
+        if (todo.completedAt !== undefined) delete todo.completedAt
       },
       completeTodo: (draft, input) => {
         const todo = findTodo(draft, input.todoId)
-        if (todo === undefined) return
+        // First completion wins: replaying a recorded completion or a later
+        // re-completion never rewrites a terminal record.
+        if (todo === undefined || todo.status === 'completed') return
         const completedAt = input.completedAt
         todo.status = 'completed'
         todo.completedAt = completedAt
@@ -129,7 +134,11 @@ export function createProjectTodoStore(): EngineStoreHandle<ProjectTodoState, Pr
       removeTodo: (draft, todoId) => {
         for (const project of draft.projects) {
           const index = project.todos.findIndex(todo => todo.id === todoId)
-          if (index !== -1) project.todos.splice(index, 1)
+          // A completed todo is a terminal record: it is never deleted.
+          if (index === -1) continue
+          const todo = project.todos[index]
+          if (todo === undefined || todo.status === 'completed') continue
+          project.todos.splice(index, 1)
         }
       },
     },

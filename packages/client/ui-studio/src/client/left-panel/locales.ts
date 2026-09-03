@@ -48,6 +48,8 @@ export const zh = {
   'workbench.removeTodo': '删除灵光',
   'workbench.sendFailed': '发送失败，请重试。',
   'workbench.projectPrompt': '项目名称',
+  'workbench.markDone': '标记为已完成',
+  'workbench.done': '已完成',
 } as const
 
 /** English dictionary, key-identical to the Chinese source of truth. */
@@ -95,6 +97,8 @@ export const en: Record<LeftPanelKey, string> = {
   'workbench.removeTodo': 'Delete todo',
   'workbench.sendFailed': 'Could not send the todo. Try again.',
   'workbench.projectPrompt': 'Project name',
+  'workbench.markDone': 'Mark as done',
+  'workbench.done': 'Done',
 }
 
 /** Locale-key union for the left-panel namespace (from the Chinese source of truth). */

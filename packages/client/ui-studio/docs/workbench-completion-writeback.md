@@ -2,6 +2,8 @@
 
 > 目标：任务在对话中执行完成后，**一键**调用模型把执行总结（整体方案 / 实现路径 / 修改文件 / 验证结果）写回灵光池同一条待办的 `completion` 数据结构，并保证可回放、唯一权威来源、模型输入与日志一致。
 
+> 实现状态（2026-09-03）：已落地为「工作区 store 权威 + 会话投影作为 reconcile 触发」。`workbench.tsx` 不再把 `studioTodoCompletions` 投影叠加渲染；一个 `useEffect` 把绑定会话投影里的 completion 经 `actions.completeTodo` 折入工作区 store，渲染直接读 store 的 `todo.status` / `todo.completion`，因此同一工作区各会话看到的完成一致且刷新后仍在。完成是终态：store 拒绝把已完成任务重开/改详情/删除/重写，workbench 对已完成任务禁用复选框、编辑、发送、写回与删除；后续工作新建灵光。详见 Agent Note `2026-09-03-studio-todo-completion-workspace-persistence`。本文档其余部分保留为当时的方案推演与分阶段讨论。
+
 当前现状（已核实）：
 
 - 浏览器端 store `src/client/frame/project-todo-store.ts` 已实现 `TodoCompletion` 结构、`completeTodo` 原子写回的 action 与 `completedBy: 'model' | 'user'` 标记。

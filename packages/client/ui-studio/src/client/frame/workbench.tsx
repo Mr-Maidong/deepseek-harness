@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { PropsLocale, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
+import type { WorkbenchTodoCompletion } from '@deepseek-ai/dsh-tool-todo/client'
 import { NS } from '../left-panel/locales.ts'
-import type { createProjectTodoStore, ProjectTodo } from './project-todo-store.ts'
+import type { createProjectTodoStore, ProjectTodo, TodoCompletionInput } from './project-todo-store.ts'
 import css from './Workbench.module.css'
 
 /** Business operations supplied by the studio shell. */
@@ -22,7 +23,28 @@ const MARKDOWN_LABELS = {
   footnotes: 'Footnotes',
 } as const
 
-/** Render the session-persisted project todo workbench. */
+/**
+ * Fold model-written completions from the bound session's projection into the
+ * workspace todo store. Completions live durably in the workspace store; the
+ * session projection is only the channel that carries the model's
+ * `workbench_complete` result to this client. The store ignores completion of
+ * an already-completed todo, so replaying the same projection (mount under a
+ * session whose baseline already carries it, or a later duplicate event) is
+ * harmless. Runs on every projection change, including the initial mount.
+ */
+function reconcileCompletions(
+  projected: Record<string, WorkbenchTodoCompletion> | null | undefined,
+  completeTodo: (input: TodoCompletionInput) => void,
+): void {
+  if (projected === undefined || projected === null) return
+  // WorkbenchTodoCompletion is structurally a TodoCompletionInput
+  // (todoId + completedBy: 'model'), so the projection value folds as-is.
+  for (const completion of Object.values(projected)) {
+    completeTodo(completion)
+  }
+}
+
+/** Render the workspace-shared project todo workbench. */
 export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement {
   const { t, sendToChat, sessionId, actions } = props
   const projects = props.useStore(state => state.projects)
@@ -35,17 +57,15 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
   const [editingDetail, setEditingDetail] = useState('')
   const [error, setError] = useState<string>()
 
-  const visibleProjects = useMemo(() => projects.map(project => ({
-    ...project,
-    todos: project.todos.map((todo) => {
-      const completion = projectedCompletions?.[todo.id]
-      return completion === undefined ? todo : { ...todo, status: 'completed' as const, completedAt: completion.completedAt, updatedAt: completion.completedAt, completion }
-    }),
-  })), [projects, projectedCompletions])
+  // The projection is a write-through channel: fold each model completion into
+  // the workspace store once it is seen (mount baseline or live event).
+  useEffect(() => {
+    reconcileCompletions(projectedCompletions, actions.completeTodo)
+  }, [projectedCompletions, actions])
 
   const activeProject = useMemo(
-    () => visibleProjects.find(project => project.id === activeProjectId) ?? visibleProjects[0],
-    [visibleProjects, activeProjectId],
+    () => projects.find(project => project.id === activeProjectId) ?? projects[0],
+    [projects, activeProjectId],
   )
 
   const addTodo = (): void => {
@@ -63,11 +83,10 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
     setProjectDraftOpen(false)
   }
 
-  const toggleTodo = (todo: ProjectTodo): void => {
-    if (todo.status === 'completed') {
-      actions.updateTodoStatus(todo.id, 'pending')
-      return
-    }
+  const markDone = (todo: ProjectTodo): void => {
+    // Completion is terminal: checking an uncompleted todo freezes it with no
+    // model summary; a completed todo's checkbox is disabled and never toggles.
+    if (todo.status === 'completed') return
     const completedAt = new Date().toISOString()
     actions.completeTodo({
       todoId: todo.id,
@@ -82,7 +101,7 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
 
   const removeProject = (): void => {
     if (activeProject === undefined) return
-    const next = visibleProjects.find(project => project.id !== activeProject.id)
+    const next = projects.find(project => project.id !== activeProject.id)
     actions.removeProject(activeProject.id)
     setActiveProjectId(next?.id ?? '')
   }
@@ -126,6 +145,7 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
   }
 
   const writeBackTodo = async (todo: ProjectTodo): Promise<void> => {
+    if (todo.status === 'completed') return
     setError(undefined)
     try {
       await sendToChat('灵光任务（todoId: ' + todo.id + '）已执行。请调用 workbench_complete，将本次执行的整体方案、实现路径、修改文件与验证结果写回。不要重新执行任务。')
@@ -157,7 +177,7 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
     </header>
     <div className={css.projectBar}>
       <div className={css.projectTabs} role="tablist" aria-label="项目列表">
-        {visibleProjects.map(project => <button className={css.projectTab} key={project.id} type="button" role="tab" aria-selected={project.id === activeProject?.id} onClick={() => { setActiveProjectId(project.id); cancelEditingDetail(); setError(undefined) }}>{project.title}</button>)}
+        {projects.map(project => <button className={css.projectTab} key={project.id} type="button" role="tab" aria-selected={project.id === activeProject?.id} onClick={() => { setActiveProjectId(project.id); cancelEditingDetail(); setError(undefined) }}>{project.title}</button>)}
       </div>
       <div className={css.projectActions}>
         <button className={css.iconButton} type="button" aria-label={t('workbench.addProject')} title={t('workbench.addProject')} onClick={() => { setProjectDraftOpen(open => !open); setProjectTitle('') }}><span className={css.newIcon} aria-hidden="true" /></button>
@@ -172,8 +192,8 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
         {activeProject.todos.length === 0 && <div className={css.emptyState}><span className={css.emptyArtwork} aria-hidden="true" /></div>}
         {activeProject.todos.map(todo => <article className={css.todoCard} key={todo.id} data-done={todo.status === 'completed' || undefined}>
           <div className={css.todoCardHead}>
-            <label className={css.todoTitleRow}><input className={css.todoCheckbox} type="checkbox" checked={todo.status === 'completed'} onChange={() => { toggleTodo(todo) }} aria-label={todo.status === 'completed' ? '标记为未完成' : '标记为已完成'} /><span className={css.todoTitle}>{todo.title}</span></label>
-            <div className={css.todoActions}><button className={css.todoSend} type="button" disabled={todo.status === 'completed'} aria-label={t('workbench.sendOne')} title={t('workbench.sendOne')} onClick={() => { void sendTodo(todo) }}><span className={css.sendIcon} aria-hidden="true" /></button><button className={css.todoWriteBack} type="button" disabled={todo.sourceSessionId !== sessionId} aria-label={t('workbench.writeBack')} title={t('workbench.writeBack')} onClick={() => { void writeBackTodo(todo) }}><span className={css.summaryIcon} aria-hidden="true" /></button><button className={css.todoDelete} type="button" aria-label={t('workbench.removeTodo')} title={t('workbench.removeTodo')} onClick={() => { removeTodo(todo.id) }}><span className={css.deleteIcon} aria-hidden="true" /></button></div>
+            <label className={css.todoTitleRow}><input className={css.todoCheckbox} type="checkbox" checked={todo.status === 'completed'} disabled={todo.status === 'completed'} onChange={() => { markDone(todo) }} aria-label={todo.status === 'completed' ? t('workbench.done') : t('workbench.markDone')} /><span className={css.todoTitle}>{todo.title}</span></label>
+            <div className={css.todoActions}><button className={css.todoSend} type="button" disabled={todo.status === 'completed'} aria-label={t('workbench.sendOne')} title={t('workbench.sendOne')} onClick={() => { void sendTodo(todo) }}><span className={css.sendIcon} aria-hidden="true" /></button><button className={css.todoWriteBack} type="button" disabled={todo.status === 'completed' || todo.sourceSessionId !== sessionId} aria-label={t('workbench.writeBack')} title={t('workbench.writeBack')} onClick={() => { void writeBackTodo(todo) }}><span className={css.summaryIcon} aria-hidden="true" /></button><button className={css.todoDelete} type="button" disabled={todo.status === 'completed'} aria-label={t('workbench.removeTodo')} title={t('workbench.removeTodo')} onClick={() => { removeTodo(todo.id) }}><span className={css.deleteIcon} aria-hidden="true" /></button></div>
           </div>
           {editingTodoId === todo.id ? <div className={css.todoDetailEditor}><textarea className={css.todoDetailInput} value={editingDetail} onChange={(event) => { setEditingDetail(event.target.value) }} aria-label={t('workbench.editDetail')} rows={3} placeholder={t('workbench.todoDetailPrompt')} autoFocus /><div className={css.todoDetailActions}><button className={css.textButton} type="button" onClick={saveEditingDetail}>{t('workbench.saveDetail')}</button><button className={css.quietTextButton} type="button" onClick={cancelEditingDetail}>{t('workbench.cancelEdit')}</button></div></div> : <button className={css.todoDetail} type="button" onClick={() => { startEditingDetail(todo) }} disabled={todo.status === 'completed'} aria-label={t('workbench.editDetail')} title={t('workbench.editDetail')}>{todo.detail === '' ? t('workbench.todoDetailPrompt') : <MarkdownText text={todo.detail} labels={MARKDOWN_LABELS} />}</button>}
           {todo.completion?.summary !== undefined && todo.completion.summary !== '' && <div className={css.todoDetail} data-completion><MarkdownText text={todo.completion.summary} labels={MARKDOWN_LABELS} /></div>}

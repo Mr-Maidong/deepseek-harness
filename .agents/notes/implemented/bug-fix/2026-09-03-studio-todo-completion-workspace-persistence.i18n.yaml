@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-09-03-studio-todo-completion-workspace-persistence.md
+2026-09-03-studio-todo-completion-workspace-persistence.md: 612135bbedbf8e0785d7a76a0b74b2e488d525b8
+2026-09-03-studio-todo-completion-workspace-persistence.zh.md: 27761f3e3ce6309c2201cc3b30bbf23e6fbdc4fe

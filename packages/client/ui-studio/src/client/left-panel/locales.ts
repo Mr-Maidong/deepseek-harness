@@ -50,6 +50,15 @@ export const zh = {
   'workbench.projectPrompt': '项目名称',
   'workbench.markDone': '标记为已完成',
   'workbench.done': '已完成',
+  'workbench.summaryDivider': 'Summary',
+  'workbench.updatedNow': '刚刚更新',
+  'workbench.updatedAgo': '{t}更新',
+  'time.now': '刚刚',
+  'time.minutes': '{n}分钟',
+  'time.hours': '{n}小时',
+  'time.days': '{n}天',
+  'time.months': '{n}个月',
+  'time.years': '{n}年',
 } as const
 
 /** English dictionary, key-identical to the Chinese source of truth. */
@@ -99,6 +108,15 @@ export const en: Record<LeftPanelKey, string> = {
   'workbench.projectPrompt': 'Project name',
   'workbench.markDone': 'Mark as done',
   'workbench.done': 'Done',
+  'workbench.summaryDivider': 'Summary',
+  'workbench.updatedNow': 'Updated just now',
+  'workbench.updatedAgo': 'Updated {t} ago',
+  'time.now': 'now',
+  'time.minutes': '{n}min',
+  'time.hours': '{n}h',
+  'time.days': '{n}d',
+  'time.months': '{n}mo',
+  'time.years': '{n}y',
 }
 
 /** Locale-key union for the left-panel namespace (from the Chinese source of truth). */

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives'
+import { MarkdownText, relativeTime } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { PropsLocale, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
 import type { WorkbenchTodoCompletion } from '@deepseek-ai/dsh-tool-todo/client'
 import { NS } from '../left-panel/locales.ts'
@@ -22,6 +22,13 @@ const MARKDOWN_LABELS = {
   code: { copyLabel: 'Copy', copiedLabel: 'Copied' },
   footnotes: 'Footnotes',
 } as const
+
+/** Card footer label: bucket words from this namespace, wrapped in the update template. */
+function updatedLabel(updatedAt: string, now: number, t: StudioWorkbenchProps['t']): string {
+  const { unit, n } = relativeTime(Date.parse(updatedAt), now)
+  if (unit === 'now') return t('workbench.updatedNow')
+  return t('workbench.updatedAgo', { t: t(`time.${unit}`, { n }) })
+}
 
 /**
  * Fold model-written completions from the bound session's projection into the
@@ -62,6 +69,14 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
   useEffect(() => {
     reconcileCompletions(projectedCompletions, actions.completeTodo)
   }, [projectedCompletions, actions])
+
+  // Card footers date each todo with relative time; the tick refreshes the
+  // buckets while the panel stays mounted.
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const timer = setInterval(() => { setNow(Date.now()) }, 30_000)
+    return () => { clearInterval(timer) }
+  }, [])
 
   const activeProject = useMemo(
     () => projects.find(project => project.id === activeProjectId) ?? projects[0],
@@ -195,8 +210,16 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
             <label className={css.todoTitleRow}><input className={css.todoCheckbox} type="checkbox" checked={todo.status === 'completed'} disabled={todo.status === 'completed'} onChange={() => { markDone(todo) }} aria-label={todo.status === 'completed' ? t('workbench.done') : t('workbench.markDone')} /><span className={css.todoTitle}>{todo.title}</span></label>
             <div className={css.todoActions}><button className={css.todoSend} type="button" disabled={todo.status === 'completed'} aria-label={t('workbench.sendOne')} title={t('workbench.sendOne')} onClick={() => { void sendTodo(todo) }}><span className={css.sendIcon} aria-hidden="true" /></button><button className={css.todoWriteBack} type="button" disabled={todo.status === 'completed' || todo.sourceSessionId !== sessionId} aria-label={t('workbench.writeBack')} title={t('workbench.writeBack')} onClick={() => { void writeBackTodo(todo) }}><span className={css.summaryIcon} aria-hidden="true" /></button><button className={css.todoDelete} type="button" disabled={todo.status === 'completed'} aria-label={t('workbench.removeTodo')} title={t('workbench.removeTodo')} onClick={() => { removeTodo(todo.id) }}><span className={css.deleteIcon} aria-hidden="true" /></button></div>
           </div>
-          {editingTodoId === todo.id ? <div className={css.todoDetailEditor}><textarea className={css.todoDetailInput} value={editingDetail} onChange={(event) => { setEditingDetail(event.target.value) }} aria-label={t('workbench.editDetail')} rows={3} placeholder={t('workbench.todoDetailPrompt')} autoFocus /><div className={css.todoDetailActions}><button className={css.textButton} type="button" onClick={saveEditingDetail}>{t('workbench.saveDetail')}</button><button className={css.quietTextButton} type="button" onClick={cancelEditingDetail}>{t('workbench.cancelEdit')}</button></div></div> : <button className={css.todoDetail} type="button" onClick={() => { startEditingDetail(todo) }} disabled={todo.status === 'completed'} aria-label={t('workbench.editDetail')} title={t('workbench.editDetail')}>{todo.detail === '' ? t('workbench.todoDetailPrompt') : <MarkdownText text={todo.detail} labels={MARKDOWN_LABELS} />}</button>}
-          {todo.completion?.summary !== undefined && todo.completion.summary !== '' && <div className={css.todoDetail} data-completion><MarkdownText text={todo.completion.summary} labels={MARKDOWN_LABELS} /></div>}
+          <div className={css.todoCardBody}>
+            {editingTodoId === todo.id ? <div className={css.todoDetailEditor}><textarea className={css.todoDetailInput} value={editingDetail} onChange={(event) => { setEditingDetail(event.target.value) }} aria-label={t('workbench.editDetail')} rows={3} placeholder={t('workbench.todoDetailPrompt')} autoFocus /><div className={css.todoDetailActions}><button className={css.textButton} type="button" onClick={saveEditingDetail}>{t('workbench.saveDetail')}</button><button className={css.quietTextButton} type="button" onClick={cancelEditingDetail}>{t('workbench.cancelEdit')}</button></div></div> : <button className={css.todoDetail} type="button" onClick={() => { startEditingDetail(todo) }} disabled={todo.status === 'completed'} aria-label={t('workbench.editDetail')} title={t('workbench.editDetail')}>{todo.detail === '' ? t('workbench.todoDetailPrompt') : <MarkdownText text={todo.detail} labels={MARKDOWN_LABELS} />}</button>}
+            {todo.completion?.summary !== undefined && todo.completion.summary !== '' && <>
+              <div className={css.summaryDivider} role="separator" aria-label={t('workbench.summaryDivider')}><span>{t('workbench.summaryDivider')}</span></div>
+              <div className={css.todoDetail} data-completion><MarkdownText text={todo.completion.summary} labels={MARKDOWN_LABELS} /></div>
+            </>}
+          </div>
+          <div className={css.todoCardFoot}>
+            <span className={css.todoUpdated}>{updatedLabel(todo.updatedAt, now, t)}</span>
+          </div>
         </article>)}
       </div>
       {error !== undefined && <p className={css.error} role="alert">{error}</p>}

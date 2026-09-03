@@ -14,8 +14,12 @@ import type { WorkbenchTodoCompletion } from '@deepseek-ai/dsh-tool-todo/client'
 import { zh } from '../src/client/left-panel/locales.ts'
 import { createProjectTodoStore } from '../src/client/frame/project-todo-store.ts'
 import { StudioWorkbench, type StudioWorkbenchProps } from '../src/client/frame/workbench.tsx'
+import css from '../src/client/frame/Workbench.module.css'
 
 const t: StudioWorkbenchProps['t'] = makeTranslate(zh) as never
+
+const bodyClass = css.todoCardBody
+if (bodyClass === undefined) throw new Error('todoCardBody class missing from Workbench.module.css')
 
 beforeEach(() => { localStorage.clear() })
 afterEach(cleanup)
@@ -158,5 +162,51 @@ describe('StudioWorkbench completion reconcile', () => {
     expect(stored.status).toBe('completed')
     expect(stored.completion?.completedBy).toBe('user')
     expect((screen.getByRole('checkbox') as HTMLInputElement).disabled).toBe(true)
+  })
+
+  it('separates detail from summary with a localized Summary divider', () => {
+    const { store } = renderWorkbench()
+    const todoId = store.getSnapshot().projects[0]!.todos[0]!.id
+    act(() => {
+      store.actions.completeTodo({
+        todoId,
+        summary: 'Shipped the fold.',
+        implementationPath: [],
+        changedFiles: [],
+        verification: [],
+        completedAt: '2026-01-01T00:00:00.000Z',
+        completedBy: 'model',
+      })
+    })
+    const divider = screen.getByRole('separator', { name: 'Summary' })
+    expect(divider.textContent).toBe('Summary')
+    // Detail and summary render on the scrollable body between head and foot.
+    expect(divider.parentElement).toBe(screen.getByText('Keep it durable.').closest(`.${bodyClass}`))
+  })
+
+  it('dates each card footer with relative update time', () => {
+    vi.useFakeTimers()
+    try {
+      const { store } = renderWorkbench()
+      act(() => {
+        store.actions.updateTodoDetail(store.getSnapshot().projects[0]!.todos[0]!.id, 'Fresh detail.')
+      })
+      expect(screen.getByText('刚刚更新')).toBeTruthy()
+      // The tick keeps buckets fresh without store writes.
+      act(() => { vi.advanceTimersByTime(31_000) })
+      expect(screen.getByText('刚刚更新')).toBeTruthy()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('renders each card body as the scrollable container between head and foot', () => {
+    renderWorkbench()
+    const body = document.querySelector(`.${bodyClass}`) as HTMLElement
+    expect(body).toBeTruthy()
+    // Detail and summary live inside the scroll region; head and foot do not.
+    expect(screen.getByText('Keep it durable.').closest(`.${bodyClass}`)).toBe(body)
+    expect(body.querySelector('.todoCardFoot, [class*="todoCardFoot"]')).toBeNull()
+    expect(body.parentElement!.querySelector('[class*="todoCardFoot"]')).toBeTruthy()
   })
 })

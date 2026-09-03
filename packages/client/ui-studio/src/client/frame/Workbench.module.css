@@ -348,10 +348,6 @@ textarea:focus-visible {
   width: 100%;
   margin: 0;
   padding: 9px 0 0;
-  border-right: 0;
-  border-bottom: 0;
-  border-left: 0;
-  border-top: 1px solid rgba(164, 181, 184, 0.1);
   background: transparent;
   color: #b8c5c5;
   font: inherit;
@@ -455,11 +451,76 @@ textarea:focus-visible {
   border: 1px solid rgba(164, 181, 184, 0.15);
 }
 
+.todoCardBody {
+  display: grid;
+  position: relative;
+  z-index: 1;
+  gap: 4px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding-top: 9px;
+  border-top: 1px solid rgba(164, 181, 184, 0.1);
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.todoCardBody:hover,
+.todoCardBody:focus-within {
+  scrollbar-color: var(--studio-line) transparent;
+}
+
+.todoCardBody::-webkit-scrollbar { width: 6px; }
+.todoCardBody::-webkit-scrollbar-thumb { background: transparent; }
+.todoCardBody:hover::-webkit-scrollbar-thumb,
+.todoCardBody:focus-within::-webkit-scrollbar-thumb { background: var(--studio-line); }
+
+.summaryDivider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0;
+  color: rgba(200, 216, 211, 0.55);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.summaryDivider::before,
+.summaryDivider::after {
+  flex: 1;
+  height: 1px;
+  content: '';
+  background: rgba(164, 181, 184, 0.14);
+}
+
+.summaryDivider span {
+  flex: none;
+  text-transform: uppercase;
+}
+
+.todoCardFoot {
+  display: flex;
+  position: relative;
+  z-index: 1;
+  align-items: center;
+  min-height: 0;
+  padding-top: 9px;
+  border-top: 1px solid rgba(164, 181, 184, 0.08);
+}
+
+.todoUpdated {
+  overflow: hidden;
+  color: var(--studio-muted);
+  font-size: 11px;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .todoDetailEditor {
   position: relative;
   z-index: 1;
-  padding-top: 9px;
-  border-top: 1px solid rgba(164, 181, 184, 0.1);
+  padding-top: 0;
+  border-top: 0;
 }
 
 .todoDetailInput {
@@ -483,8 +544,11 @@ textarea:focus-visible {
   text-decoration-color: rgba(162, 63, 71, 0.56);
 }
 
-.todoCard[data-done] .todoDetail {
+.todoCard[data-done] .todoCardBody {
   border-top-color: rgba(162, 63, 71, 0.12);
+}
+
+.todoCard[data-done] .todoDetail {
   opacity: 0.5;
   cursor: default;
 }

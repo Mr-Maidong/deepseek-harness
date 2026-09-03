@@ -62,6 +62,7 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
   const [projectDraftOpen, setProjectDraftOpen] = useState(false)
   const [editingTodoId, setEditingTodoId] = useState<string>()
   const [editingDetail, setEditingDetail] = useState('')
+  const [collapsedTodoIds, setCollapsedTodoIds] = useState<ReadonlySet<string>>(new Set())
   const [error, setError] = useState<string>()
 
   // The projection is a write-through channel: fold each model completion into
@@ -141,6 +142,15 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
     setEditingDetail('')
   }
 
+  const toggleDetail = (todoId: string): void => {
+    setCollapsedTodoIds((ids) => {
+      const next = new Set(ids)
+      if (next.has(todoId)) next.delete(todoId)
+      else next.add(todoId)
+      return next
+    })
+  }
+
   const saveEditingDetail = (): void => {
     if (editingTodoId === undefined) return
     actions.updateTodoDetail(editingTodoId, editingDetail.trim())
@@ -210,7 +220,7 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
             <label className={css.todoTitleRow}><input className={css.todoCheckbox} type="checkbox" checked={todo.status === 'completed'} disabled={todo.status === 'completed'} onChange={() => { markDone(todo) }} aria-label={todo.status === 'completed' ? t('workbench.done') : t('workbench.markDone')} /><span className={css.todoTitle}>{todo.title}</span></label>
             <div className={css.todoActions}><button className={css.todoSend} type="button" disabled={todo.status === 'completed'} aria-label={t('workbench.sendOne')} title={t('workbench.sendOne')} onClick={() => { void sendTodo(todo) }}><span className={css.sendIcon} aria-hidden="true" /></button><button className={css.todoWriteBack} type="button" disabled={todo.status === 'completed' || todo.sourceSessionId !== sessionId} aria-label={t('workbench.writeBack')} title={t('workbench.writeBack')} onClick={() => { void writeBackTodo(todo) }}><span className={css.summaryIcon} aria-hidden="true" /></button><button className={css.todoDelete} type="button" disabled={todo.status === 'completed'} aria-label={t('workbench.removeTodo')} title={t('workbench.removeTodo')} onClick={() => { removeTodo(todo.id) }}><span className={css.deleteIcon} aria-hidden="true" /></button></div>
           </div>
-          <div className={css.todoCardBody}>
+          <div className={css.todoCardBody} data-collapsed={collapsedTodoIds.has(todo.id) || undefined}>
             {editingTodoId === todo.id ? <div className={css.todoDetailEditor}><textarea className={css.todoDetailInput} value={editingDetail} onChange={(event) => { setEditingDetail(event.target.value) }} aria-label={t('workbench.editDetail')} rows={3} placeholder={t('workbench.todoDetailPrompt')} autoFocus /><div className={css.todoDetailActions}><button className={css.textButton} type="button" onClick={saveEditingDetail}>{t('workbench.saveDetail')}</button><button className={css.quietTextButton} type="button" onClick={cancelEditingDetail}>{t('workbench.cancelEdit')}</button></div></div> : <button className={css.todoDetail} type="button" onClick={() => { startEditingDetail(todo) }} disabled={todo.status === 'completed'} aria-label={t('workbench.editDetail')} title={t('workbench.editDetail')}>{todo.detail === '' ? t('workbench.todoDetailPrompt') : <MarkdownText text={todo.detail} labels={MARKDOWN_LABELS} />}</button>}
             {todo.completion?.summary !== undefined && todo.completion.summary !== '' && <>
               <div className={css.summaryDivider} role="separator" aria-label={t('workbench.summaryDivider')}><span>{t('workbench.summaryDivider')}</span></div>
@@ -219,6 +229,7 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
           </div>
           <div className={css.todoCardFoot}>
             <span className={css.todoUpdated}>{updatedLabel(todo.updatedAt, now, t)}</span>
+            <button className={css.todoExpand} type="button" aria-expanded={!collapsedTodoIds.has(todo.id)} onClick={() => { toggleDetail(todo.id) }}>{collapsedTodoIds.has(todo.id) ? t('workbench.expandDetail') : t('workbench.collapseDetail')}</button>
           </div>
         </article>)}
       </div>

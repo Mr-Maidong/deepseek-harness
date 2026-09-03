@@ -209,4 +209,19 @@ describe('StudioWorkbench completion reconcile', () => {
     expect(body.querySelector('.todoCardFoot, [class*="todoCardFoot"]')).toBeNull()
     expect(body.parentElement!.querySelector('[class*="todoCardFoot"]')).toBeTruthy()
   })
+
+  it('collapses and expands the card detail from the footer button', () => {
+    renderWorkbench()
+    const body = document.querySelector(`.${bodyClass}`) as HTMLElement
+    const toggle = screen.getByRole('button', { name: '收起详情' })
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+    expect(screen.getByText('Keep it durable.')).toBeTruthy()
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    expect(screen.getByRole('button', { name: '展开详情' })).toBeTruthy()
+    expect(body.hasAttribute('data-collapsed')).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: '展开详情' }))
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+    expect(body.hasAttribute('data-collapsed')).toBe(false)
+  })
 })

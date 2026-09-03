@@ -214,7 +214,6 @@ textarea:focus-visible {
 .todoCard {
   position: relative;
   display: grid;
-  gap: 12px;
   overflow: hidden;
   padding: 13px 13px 14px;
   border: 1px solid rgba(191, 205, 201, 0.3);
@@ -347,7 +346,6 @@ textarea:focus-visible {
   z-index: 1;
   width: 100%;
   margin: 0;
-  padding: 9px 0 0;
   background: transparent;
   color: #b8c5c5;
   font: inherit;
@@ -355,6 +353,7 @@ textarea:focus-visible {
   line-height: 20px;
   text-align: left;
   overflow-wrap: anywhere;
+  border: 0px;
   appearance: none;
   cursor: text;
 }
@@ -502,6 +501,8 @@ textarea:focus-visible {
   position: relative;
   z-index: 1;
   align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   min-height: 0;
   padding-top: 9px;
   border-top: 1px solid rgba(164, 181, 184, 0.08);
@@ -514,6 +515,25 @@ textarea:focus-visible {
   line-height: 16px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.todoExpand {
+  flex: none;
+  border: none;
+  border-radius: 6px;
+  padding: 2px 8px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--studio-muted);
+}
+
+.todoExpand:hover {
+  color: #dfeef1;
+}
+
+.todoCardBody[data-collapsed] {
+  display: none;
 }
 
 .todoDetailEditor {

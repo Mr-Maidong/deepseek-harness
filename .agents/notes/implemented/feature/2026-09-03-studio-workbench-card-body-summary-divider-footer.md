@@ -12,7 +12,8 @@ A 灵光 card rendered the task detail and the model summary stacked directly in
 
 - **Summary divider**: between the task detail and the completion summary the workbench renders a separator labeled "Summary" (line—text—line). The word is locale copy (`workbench.summaryDivider`; the zh dictionary intentionally keeps the English word per the product look), the semantics are a `role="separator"` element.
 - **Scrollable body**: the detail editor/detail button and the summary block now live inside a `.todoCardBody` grid with `max-height: 260px` and `overflow-y: auto`. Overflowing content scrolls inside the card instead of stretching it. The scrollbar mirrors the file tree exactly (`scrollbar-width: thin`, transparent until hover/focus-within, 6px webkit thumb colored `var(--studio-line)`), which StudioFrame defines for its whole subtree.
-- **Footer status bar**: each card ends with `.todoCardFoot`, whose left corner shows the update time as compact relative time. The bucketing comes from the shared `relativeTime` in ui-primitives (same source as the workspace session rows) and the words live in this package's dictionary (`workbench.updatedNow`/`workbench.updatedAgo` wrapping the `time.*` bucket words). A 30-second interval re-renders the labels while the panel is mounted; the timestamp stays an ISO string in the store.
+- **Footer status bar**: each card ends with `.todoCardFoot`, whose left corner shows the update time as compact relative time. The bucketing comes from the shared `relativeTime` in ui-primitives (same source as the workspace session rows) and the words live in this package's dictionary (`workbench.updatedNow`/`workbench.updatedAgo` wrapping the `time.*` bucket words). A 30-second interval re-renders the labels while the panel is mounted; the timestamp stays an ISO string in the store. The zh `workbench.updatedAgo` template is `{t}前更新` so a day-old card reads "1天前更新".
+- **Expand/collapse**: the footer's right corner holds a text toggle (reusing the workspace's `aria-expanded` text-button pattern) that collapses the card body (`data-collapsed` hides it) and expands it back. The collapsed set is component-local state keyed by todo id.
 - The separator line previously drawn by `.todoDetail`'s `border-top` moved to `.todoCardBody` (and the completed-card variant to `[data-done] .todoCardBody`), so the line stays above the scroll region instead of scrolling with the content; the editor keeps no inner top border to avoid a double line.
 
 ## Alternatives considered
@@ -28,7 +29,7 @@ A 灵光 card rendered the task detail and the model summary stacked directly in
 - Cards have a bounded middle region: long details/summaries scroll, head and foot stay fixed.
 - The "Summary" divider appears only when a non-empty completion summary exists — a manually completed todo (empty summary) shows no divider.
 - Relative-time labels stay accurate while the workbench is mounted, refreshed by the 30-second tick; after a remount they re-bucket from `Date.now()`.
-- Locale keys grew by nine (`workbench.summaryDivider`, `workbench.updatedNow`, `workbench.updatedAgo`, six `time.*` buckets) in both zh and en dictionaries.
+- Locale keys grew by eleven (`workbench.summaryDivider`, `workbench.updatedNow`, `workbench.updatedAgo`, `workbench.expandDetail`, `workbench.collapseDetail`, six `time.*` buckets) in both zh and en dictionaries.
 
 ## Testing
 

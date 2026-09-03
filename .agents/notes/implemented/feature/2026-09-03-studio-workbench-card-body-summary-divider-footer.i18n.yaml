@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-03-studio-workbench-card-body-summary-divider-footer.md
-2026-09-03-studio-workbench-card-body-summary-divider-footer.md: e4d66f4fe7bd26d39e1f2017076168f1918945e0
-2026-09-03-studio-workbench-card-body-summary-divider-footer.zh.md: 8314fef0a9ebd00b8f5945bc13841894a220c082
+2026-09-03-studio-workbench-card-body-summary-divider-footer.md: 61778aa6a060afe7356fb89f50676716ad461c19
+2026-09-03-studio-workbench-card-body-summary-divider-footer.zh.md: 4db08b85a0bea8e871c52ec5eaf634c99c9e4f1e

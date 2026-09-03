@@ -22,6 +22,8 @@
 .close { flex: none; margin-left: auto; display: grid; width: 22px; height: 22px; place-items: center; padding: 0; border: 1px solid var(--studio-line); border-radius: 50%; color: var(--studio-muted); background: transparent; cursor: pointer; }
 .close:hover { color: var(--studio-gold); border-color: var(--studio-gold); }
 .code { flex: 1; margin: 0; padding: 14px; overflow: auto; white-space: pre; font: 13px/1.7 monospace; }
+/* Embed rendered artifacts (HTML previews, etc.) full-bleed below the header. */
+.iframe { flex: 1; width: 100%; border: 0; }
 /* Reuse the file-tree scrollbar: a thin bar that stays invisible until the
    surface is hovered or focused, then shows the studio line color. */
 .code { scrollbar-width: thin; scrollbar-color: transparent transparent; }

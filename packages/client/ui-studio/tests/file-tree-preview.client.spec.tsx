@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
 import { FileTree } from '../src/client/left-panel/FileTree.tsx'
-import { CodePreview } from '../src/client/preview/CodePreview.tsx'
+import { PreviewCard } from '../src/client/preview/PreviewCard.tsx'
 import { WorkBase } from '../src/client/left-panel/WorkBase.tsx'
 import { zh } from '../src/client/left-panel/locales.ts'
 import type { DirectoryListing } from '@deepseek-ai/dsh-api-remotes/client'
@@ -46,17 +46,17 @@ describe('FileTree', () => {
     render(<FileTree t={t} rootPath="/workspace" listDirectory={vi.fn(async () => listing)} readFile={vi.fn(() => new Promise((resolve) => { release = resolve }))} onPreview={onPreview} expandedPaths={[]} onToggleExpanded={vi.fn()} />)
     const file = await screen.findByRole('button', { name: 'main.ts' })
     fireEvent.click(file)
-    expect(onPreview).toHaveBeenCalledWith({ path: '/workspace/main.ts', status: 'loading' })
+    expect(onPreview).toHaveBeenCalledWith({ path: '/workspace/main.ts', status: 'loading', kind: 'code' })
     // The read settles later; the tree itself never shows a reading placeholder.
     release?.({ path: '/workspace/main.ts', content: 'export {}', language: 'typescript' })
-    await vi.waitFor(() => { expect(onPreview).toHaveBeenCalledWith({ path: '/workspace/main.ts', status: 'ready', content: 'export {}', language: 'typescript' }) })
+    await vi.waitFor(() => { expect(onPreview).toHaveBeenCalledWith({ path: '/workspace/main.ts', status: 'ready', content: 'export {}', language: 'typescript', kind: 'code' }) })
     expect(screen.getByRole('button', { name: 'main.ts' })).toBeTruthy()
     expect(screen.queryByText('正在读取文件…')).toBeNull()
   })
 
   it('renders the selected file as a floating card over the conversation column', () => {
     const onClose = vi.fn()
-    render(<CodePreview {...{ t, preview: { path: '/workspace/main.ts', status: 'ready', content: 'export {}', language: 'typescript' }, onClose } as never} />)
+    render(<PreviewCard {...{ t, preview: { path: '/workspace/main.ts', status: 'ready', content: 'export {}', language: 'typescript', kind: 'code' }, onClose } as never} />)
     expect(screen.getByRole('region', { name: '代码预览' })).toBeTruthy()
     expect(screen.getByText('/workspace/main.ts')).toBeTruthy()
     expect(screen.getByText('export {}')).toBeTruthy()
@@ -65,21 +65,51 @@ describe('FileTree', () => {
     expect(onClose).toHaveBeenCalled()
   })
 
+  it('opens rendered artifacts such as HTML in an embedded iframe card', async () => {
+    const onPreview = vi.fn()
+    const htmlListing: DirectoryListing = {
+      path: '/workspace', home: '/workspace', crumbs: [], truncated: false,
+      entries: [{ kind: 'file', name: 'index.html', path: '/workspace/index.html', hidden: false }],
+    }
+    render(<FileTree t={t} rootPath="/workspace" listDirectory={vi.fn(async () => htmlListing)} readFile={vi.fn(async () => ({ path: '/workspace/index.html', content: '<h1>hi</h1>', language: 'html' }))} onPreview={onPreview} expandedPaths={[]} onToggleExpanded={vi.fn()} />)
+    fireEvent.click(await screen.findByRole('button', { name: 'index.html' }))
+    expect(onPreview).toHaveBeenCalledWith({ path: '/workspace/index.html', status: 'loading', kind: 'iframe' })
+    await vi.waitFor(() => { expect(onPreview).toHaveBeenLastCalledWith({ path: '/workspace/index.html', status: 'ready', content: '<h1>hi</h1>', language: 'html', kind: 'iframe' }) })
+    // The card presents an iframe embedding the source instead of raw code.
+    const onClose = vi.fn()
+    render(<PreviewCard {...{ t, preview: { path: '/workspace/index.html', status: 'ready', content: '<h1>hi</h1>', language: 'html', kind: 'iframe' }, onClose } as never} />)
+    expect(screen.getByRole('region', { name: 'HTML 预览' })).toBeTruthy()
+    const frame = screen.getByTitle('/workspace/index.html')
+    expect(frame.tagName).toBe('IFRAME')
+    expect(frame.getAttribute('srcdoc')).toBe('<h1>hi</h1>')
+    // Scripts run in an opaque origin: produced HTML is embedded without access
+    // to the app origin, so allow-same-origin must stay off.
+    expect(frame.getAttribute('sandbox')).toContain('allow-scripts')
+    expect(frame.getAttribute('sandbox')).not.toContain('allow-same-origin')
+  })
+
+  it('still lists non-rendered code files as code previews', async () => {
+    const onPreview = vi.fn()
+    render(<FileTree t={t} rootPath="/workspace" listDirectory={vi.fn(async () => listing)} readFile={vi.fn(async () => ({ path: '/workspace/main.ts', content: 'export {}' }))} onPreview={onPreview} expandedPaths={[]} onToggleExpanded={vi.fn()} />)
+    fireEvent.click(await screen.findByRole('button', { name: 'main.ts' }))
+    await vi.waitFor(() => { expect(onPreview).toHaveBeenLastCalledWith({ path: '/workspace/main.ts', status: 'ready', content: 'export {}', kind: 'code' }) })
+  })
+
   it('shows the read failure inside the floating card while the tree stays', async () => {
     const onPreview = vi.fn()
     render(<FileTree t={t} rootPath="/workspace" listDirectory={vi.fn(async () => listing)} readFile={vi.fn(async () => { throw new Error('denied') })} onPreview={onPreview} expandedPaths={[]} onToggleExpanded={vi.fn()} />)
     fireEvent.click(await screen.findByRole('button', { name: 'main.ts' }))
     expect(await screen.findByRole('button', { name: 'main.ts' })).toBeTruthy()
-    expect(onPreview).toHaveBeenLastCalledWith({ path: '/workspace/main.ts', status: 'error' })
+    expect(onPreview).toHaveBeenLastCalledWith({ path: '/workspace/main.ts', status: 'error', kind: 'code' })
   })
 
   it('carries the reading and failure states inside the floating card', () => {
     const onClose = vi.fn()
-    const view = render(<CodePreview {...{ t, preview: { path: '/workspace/main.ts', status: 'loading' }, onClose } as never} />)
+    const view = render(<PreviewCard {...{ t, preview: { path: '/workspace/main.ts', status: 'loading', kind: 'code' }, onClose } as never} />)
     expect(view.getByText('正在读取文件…')).toBeTruthy()
-    view.rerender(<CodePreview {...{ t, preview: { path: '/workspace/main.ts', status: 'error' }, onClose } as never} />)
+    view.rerender(<PreviewCard {...{ t, preview: { path: '/workspace/main.ts', status: 'error', kind: 'code' }, onClose } as never} />)
     expect(view.getByText('无法读取此文件')).toBeTruthy()
-    view.rerender(<CodePreview {...{ t, preview: { path: '/workspace/main.ts', status: 'ready', content: 'export {}' }, onClose } as never} />)
+    view.rerender(<PreviewCard {...{ t, preview: { path: '/workspace/main.ts', status: 'ready', content: 'export {}', kind: 'code' }, onClose } as never} />)
     expect(view.getByText('纯文本')).toBeTruthy()
   })
 

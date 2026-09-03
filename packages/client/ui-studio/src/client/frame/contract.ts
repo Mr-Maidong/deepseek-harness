@@ -9,11 +9,14 @@ export interface StudioNavigationOwnerProps {
   onSectionChange: (section: Section) => void
 }
 
+/** How the floating card renders a ready preview: native previews (code, …) or an embedded iframe for rendered artifacts such as HTML. */
+export type StudioPreviewKind = 'code' | 'iframe'
+
 /** Read state of a workspace file as it travels from the tree click to the floating card. */
 export type StudioPreview =
-  | { path: string; status: 'loading' }
-  | { path: string; status: 'ready'; content: string; language?: string }
-  | { path: string; status: 'error' }
+  | { path: string; status: 'loading'; kind: StudioPreviewKind }
+  | { path: string; status: 'ready'; content: string; kind: StudioPreviewKind; language?: string }
+  | { path: string; status: 'error'; kind: StudioPreviewKind }
 
 /** Workspace and session switcher share. */
 export interface StudioWorkspaceOwnerProps {
@@ -38,7 +41,7 @@ export interface StudioStatusOwnerProps {
   activeSection: Section
 }
 
-/** Center editor share: a floating code-preview card over the conversation column. */
+/** Center editor share: a floating preview card over the conversation column. */
 export interface StudioCenterEditorOwnerProps {
   preview?: StudioPreview | undefined
   onClose: () => void

@@ -30,7 +30,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-theme/client'
 import type {} from '@deepseek-ai/dsh-tool-todo/client'
 import { en, NS, zh } from './left-panel/locales.ts'
 import { LeftPanelMain, type LeftPanelInjected } from './left-panel/LeftPanelMain.tsx'
-import { CodePreview } from './preview/CodePreview.tsx'
+import { PreviewCard } from './preview/PreviewCard.tsx'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
@@ -151,7 +151,7 @@ export function apply(ctx: ClientContext): void {
       listDirectory: (path, signal) => ctx.uiWorkspace.listDirectory(path, signal),
       readFile: path => ctx.uiWorkspace.readFile(path),
     })
-    const disposeEditorRegistration = ctx.slots.register({ name: 'studio.center.editor', locale: NS }, CodePreview)
+    const disposeEditorRegistration = ctx.slots.register({ name: 'studio.center.editor', locale: NS }, PreviewCard)
     const disposeWorkspaceRegistration = ctx.slots.register({
       name: 'studio.workspace',
       children: { 'studio.workspace.directoryFlow': { kind: 'single', scope: 'root' } },

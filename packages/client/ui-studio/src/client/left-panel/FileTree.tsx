@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { DirectoryListing } from '@deepseek-ai/dsh-api-remotes/client'
-import type { StudioPreview } from '../frame/contract.ts'
+import type { StudioPreview, StudioPreviewKind } from '../frame/contract.ts'
 import { ChevronIcon, FolderIcon } from './icons/icons.tsx'
 import { NS } from './locales.ts'
 import css from './FileTree.module.css'
@@ -41,13 +41,17 @@ export function FileTree(props: FileTreeProps): React.ReactElement {
   const [, setLoadedTick] = useState(0)
   const toggle = useCallback((path: string) => { onToggleExpanded(path) }, [onToggleExpanded])
   const onFile = useCallback((path: string) => {
+    // Rendered artifacts whose source should be embedded directly (e.g. HTML
+    // that the model produced) open in the iframe card; everything else shows
+    // as code. Default to code so unknown formats stay safe.
+    const kind: StudioPreviewKind = path.toLowerCase().endsWith('.html') || path.toLowerCase().endsWith('.htm') ? 'iframe' : 'code'
     // The card opens immediately in its loading state; the tree keeps
     // rendering while the read travels to the floating preview.
-    onPreview({ path, status: 'loading' })
+    onPreview({ path, status: 'loading', kind })
     void readFile(path).then(({ content, language }) => {
-      onPreview({ path, status: 'ready', content, ...(language === undefined ? {} : { language }) })
+      onPreview({ path, status: 'ready', content, kind, ...(language === undefined ? {} : { language }) })
     }).catch(() => {
-      onPreview({ path, status: 'error' })
+      onPreview({ path, status: 'error', kind })
     })
   }, [onPreview, readFile])
   useEffect(() => {

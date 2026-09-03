@@ -43,7 +43,7 @@ The package is loaded by the Web composition and has no user-configurable fields
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-The Host directory-picker browse capability validates and bounds text reads. The workspace Client service maps the result to a preview with an extension-derived language label. A file click publishes a status-carrying preview (`loading` → `ready`/`error`) through the owner callback, so the floating card shows the read state itself while the tree keeps rendering. StudioFrame owns preview state and renders CodePreview anchored above the composer bar through `studio.center.editor`. File rows use Host-listed paths unchanged.
+The Host directory-picker browse capability validates and bounds text reads. The workspace Client service maps the result to a preview with an extension-derived language label. A file click publishes a status-carrying preview (`loading` → `ready`/`error`) through the owner callback, so the floating card shows the read state itself while the tree keeps rendering. StudioFrame owns preview state and renders PreviewCard anchored above the composer bar through `studio.center.editor`; the card is a kind-driven universal container (`code` shows source, `iframe` embeds rendered artifacts such as produced HTML in a sandboxed frame). File rows use Host-listed paths unchanged.
 
 </details>
 

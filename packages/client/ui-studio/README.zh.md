@@ -43,7 +43,7 @@ Web 组合会加载此包，包本身没有用户可配置字段。生成的[配
 <details>
 <summary>实现细节——点击展开</summary>
 
-Host 的 directory-picker browse 能力负责校验并限制文本读取。workspace Client 服务将结果映射为预览，并根据扩展名生成语言标签。点击文件会通过 owner 回调发布带状态的预览（`loading` → `ready`/`error`），悬浮卡片自己展示读取状态，文件树保持渲染。StudioFrame 持有预览状态，并通过 `studio.center.editor` 将 CodePreview 渲染为锚定在输入栏上方的浮卡片。文件条目保持使用 Host 返回的完整路径。
+Host 的 directory-picker browse 能力负责校验并限制文本读取。workspace Client 服务将结果映射为预览，并根据扩展名生成语言标签。点击文件会通过 owner 回调发布带状态的预览（`loading` → `ready`/`error`），悬浮卡片自己展示读取状态，文件树保持渲染。StudioFrame 持有预览状态，并通过 `studio.center.editor` 将 PreviewCard 渲染为锚定在输入栏上方的浮卡片；该卡片是按 kind 驱动的万能容器（`code` 展示源码，`iframe` 在沙箱 frame 内嵌渲染产物，如产出的 HTML）。文件条目保持使用 Host 返回的完整路径。
 
 </details>
 

@@ -244,7 +244,7 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
           </div>
           <div className={css.todoCardFoot}>
             <span className={css.todoUpdated}>{updatedLabel(todo.updatedAt, now, t)}</span>
-            <button className={css.todoExpand} type="button" aria-expanded={!collapsedFor(todo)} aria-label={collapsedFor(todo) ? t('workbench.expandDetail') : t('workbench.collapseDetail')} title={collapsedFor(todo) ? t('workbench.expandDetail') : t('workbench.collapseDetail')} onClick={() => { toggleDetail(todo) }}><span className={collapsedFor(todo) ? css.expandIcon : css.collapseIcon} aria-hidden="true" /></button>
+            <button className={css.todoExpand} type="button" aria-expanded={!collapsedFor(todo)} aria-label={collapsedFor(todo) ? t('workbench.expandDetail') : t('workbench.collapseDetail')} title={collapsedFor(todo) ? t('workbench.expandDetail') : t('workbench.collapseDetail')} onClick={() => { toggleDetail(todo) }}><span className={css.todoExpandIcon} aria-hidden="true" /></button>
           </div>
         </article>)}
       </div>

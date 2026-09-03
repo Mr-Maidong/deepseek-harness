@@ -535,21 +535,32 @@ textarea:focus-visible {
   background: rgba(156, 169, 164, 0.05);
 }
 
-.expandIcon,
-.collapseIcon {
+/* Single right-arrow glyph, shared with the file tree's disclosure chevron:
+   collapsed points right, expanded rotates 90deg to point down. */
+.todoExpandIcon {
   display: block;
   width: 16px;
   height: 16px;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: contain;
+  background: url('../assets/icons/expand.webp') center / contain no-repeat;
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.expandIcon { background-image: url('../assets/icons/expand.webp'); }
-.collapseIcon { background-image: url('../assets/icons/collapse.webp'); }
+.todoExpand[aria-expanded='true'] .todoExpandIcon {
+  transform: rotate(90deg);
+}
+
+.todoCardBody {
+  transition:
+    max-height 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    padding-top 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-top-width 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
 
 .todoCardBody[data-collapsed] {
-  display: none;
+  max-height: 0;
+  padding-top: 0;
+  border-top-width: 0;
+  overflow: hidden;
 }
 
 .todoDetailEditor {

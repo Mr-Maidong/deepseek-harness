@@ -224,4 +224,26 @@ describe('StudioWorkbench completion reconcile', () => {
     expect(toggle.getAttribute('aria-expanded')).toBe('true')
     expect(body.hasAttribute('data-collapsed')).toBe(false)
   })
+
+  it('collapses a completed todo by default and expands it on demand', () => {
+    const { store } = renderWorkbench()
+    const todoId = store.getSnapshot().projects[0]!.todos[0]!.id
+    act(() => {
+      store.actions.completeTodo({
+        todoId,
+        summary: 'Shipped the fold.',
+        implementationPath: [],
+        changedFiles: [],
+        verification: [],
+        completedAt: '2026-01-01T00:00:00.000Z',
+        completedBy: 'model',
+      })
+    })
+    const body = document.querySelector(`.${bodyClass}`) as HTMLElement
+    expect(body.hasAttribute('data-collapsed')).toBe(true)
+    expect(screen.getByRole('button', { name: '展开详情' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: '展开详情' }))
+    expect(body.hasAttribute('data-collapsed')).toBe(false)
+    expect(screen.getByText('Shipped the fold.')).toBeTruthy()
+  })
 })

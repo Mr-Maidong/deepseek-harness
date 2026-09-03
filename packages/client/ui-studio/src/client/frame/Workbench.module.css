@@ -518,19 +518,35 @@ textarea:focus-visible {
 }
 
 .todoExpand {
+  display: flex;
   flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
   border: none;
   border-radius: 6px;
-  padding: 2px 8px;
+  padding: 0;
   background: transparent;
   cursor: pointer;
-  font-size: 11px;
-  color: var(--studio-muted);
 }
 
 .todoExpand:hover {
-  color: #dfeef1;
+  background: rgba(156, 169, 164, 0.05);
 }
+
+.expandIcon,
+.collapseIcon {
+  display: block;
+  width: 16px;
+  height: 16px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.expandIcon { background-image: url('../assets/icons/expand.webp'); }
+.collapseIcon { background-image: url('../assets/icons/collapse.webp'); }
 
 .todoCardBody[data-collapsed] {
   display: none;

@@ -13,7 +13,7 @@ Status: implemented
 - **Summary 分割线**：任务详情与完成总结之间渲染一条标有 "Summary" 的分隔线（线—文本—线）。该词是 locale 文案（`workbench.summaryDivider`；zh 字典按产品外观刻意保留英文原词），语义上是 `role="separator"` 元素。
 - **可滚动内容区**：详情编辑器/详情按钮与总结块现在位于 `.todoCardBody` 网格内，`max-height: 260px`、`overflow-y: auto`。溢出内容在卡片内滚动，不再撑高卡片。滚动条与文件树完全一致（`scrollbar-width: thin`、hover/focus-within 前透明、6px webkit thumb 用 `var(--studio-line)`），该变量由 StudioFrame 为其整棵子树定义。
 - **底部状态栏**：每张卡片以 `.todoCardFoot` 结尾，左下角显示紧凑相对时间的更新时间。分桶来自 ui-primitives 共享的 `relativeTime`（与工作区会话行同一来源），词汇放在本包字典（`workbench.updatedNow`/`workbench.updatedAgo` 包裹 `time.*` 桶词）。面板挂载期间每 30 秒刷新一次标签；时间戳在 store 中保持 ISO 字符串。zh 的 `workbench.updatedAgo` 模板为 `{t}前更新`，一天前的卡片显示「1天前更新」。
-- **展开/收起**：底栏右侧放一个文本切换按钮（复用工作区的 `aria-expanded` 文本按钮模式），收起卡片内容区（`data-collapsed` 隐藏）并可再展开。收起集合是按 todo id 键控的组件本地状态。
+- **展开/收起**：底栏右侧放一个图标切换按钮（`expand.webp`/`collapse.webp` 资产，与文件树相同的展开指示），收起卡片内容区（`data-collapsed` 隐藏）并可再展开。按钮保留 `aria-expanded` 与本地化 `aria-label`/`title`。完成的灵光默认收起、未完成的默认展开；收起/展开集合是按 todo id 键控的组件本地状态。
 - 分割线原先由 `.todoDetail` 的 `border-top` 画，现移到 `.todoCardBody`（完成态变体移到 `[data-done] .todoCardBody`），使这条线固定在滚动区上方而不随内容滚动；编辑器不再带内部上边框，避免双线。
 
 ## Alternatives considered

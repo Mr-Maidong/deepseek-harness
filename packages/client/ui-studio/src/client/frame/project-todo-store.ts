@@ -115,9 +115,12 @@ export function createProjectTodoStore(): EngineStoreHandle<ProjectTodoState, Pr
       },
       completeTodo: (draft, input) => {
         const todo = findTodo(draft, input.todoId)
-        // First completion wins: replaying a recorded completion or a later
-        // re-completion never rewrites a terminal record.
-        if (todo === undefined || todo.status === 'completed') return
+        if (todo === undefined) return
+        // Model completions may update an already-completed todo's summary
+        // (iterative refinement across turns); user completions are terminal
+        // and never overwritten. A duplicate model completion with identical
+        // content is harmless but still updates updatedAt.
+        if (todo.status === 'completed' && input.completedBy !== 'model') return
         const completedAt = input.completedAt
         todo.status = 'completed'
         todo.completedAt = completedAt

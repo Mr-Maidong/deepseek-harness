@@ -43,7 +43,7 @@ describe('project todo store', () => {
     expect(store.getSnapshot().projects).toEqual([])
   })
 
-  it('treats model completion as terminal: no reopen, no edit, no delete, no rewrite', () => {
+  it('freezes completed todos against user mutations but allows model summary updates', () => {
     const store = createProjectTodoStore().create('session-terminal')
     store.actions.addProject({ title: 'Studio' })
     const project = store.getSnapshot().projects[0]!
@@ -68,19 +68,19 @@ describe('project todo store', () => {
     // Deleting a completed todo is refused.
     store.actions.removeTodo(todoId)
     expect(store.getSnapshot().projects[0]!.todos).toHaveLength(1)
-    // A second (replayed or re-completed) completion does not rewrite the record.
+    // A later model completion updates the summary (iterative refinement).
     store.actions.completeTodo({
       todoId,
-      summary: 'Rewritten.',
-      implementationPath: [],
-      changedFiles: [],
-      verification: [],
+      summary: 'Refined with follow-up fixes.',
+      implementationPath: ['step', 'follow-up'],
+      changedFiles: [{ path: 'a.ts', purpose: 'impl' }, { path: 'b.ts', purpose: 'fix' }],
+      verification: [{ command: 'pnpm run test:gui', result: 'passed' }],
       completedAt: '2026-01-03T00:00:00.000Z',
       completedBy: 'model',
     })
-    const terminal = store.getSnapshot().projects[0]!.todos[0]!
-    expect(terminal.completion?.summary).toBe('Shipped.')
-    expect(terminal.completedAt).toBe('2026-01-02T00:00:00.000Z')
+    const updated = store.getSnapshot().projects[0]!.todos[0]!
+    expect(updated.completion?.summary).toBe('Refined with follow-up fixes.')
+    expect(updated.updatedAt).toBe('2026-01-03T00:00:00.000Z')
   })
 
   it('treats user completion as terminal too', () => {

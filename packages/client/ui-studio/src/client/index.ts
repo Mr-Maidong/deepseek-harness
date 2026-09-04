@@ -30,7 +30,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-theme/client'
 import type {} from '@deepseek-ai/dsh-tool-todo/client'
 import { en, NS, zh } from './left-panel/locales.ts'
 import { LeftPanelMain, type LeftPanelInjected } from './left-panel/LeftPanelMain.tsx'
-import { PreviewCard } from './preview/PreviewCard.tsx'
+import { PreviewCard, type PreviewCardInjected } from './preview/PreviewCard.tsx'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
@@ -151,7 +151,21 @@ export function apply(ctx: ClientContext): void {
       listDirectory: (path, signal) => ctx.uiWorkspace.listDirectory(path, signal),
       readFile: path => ctx.uiWorkspace.readFile(path),
     })
-    const disposeEditorRegistration = ctx.slots.register({ name: 'studio.center.editor', locale: NS }, PreviewCard)
+    // Editor seat is root-scoped, so the current session is resolved at call
+    // time (from the sessions list selection) rather than injected as a fixed id.
+    const editorInjected = (): PreviewCardInjected => ({
+      insertReference: (text: string) => {
+        const current = ctx.sessions.list.getSnapshot().current
+        if (current === undefined) return
+        const scoped = ctx.sessions.scope(current)
+        if (scoped === undefined) return
+        ctx.conversation.input.for(scoped).setDraft(text)
+      },
+    })
+    const disposeEditorRegistration = ctx.slots.register(
+      { name: 'studio.center.editor', inject: editorInjected, locale: NS },
+      PreviewCard,
+    )
     const disposeWorkspaceRegistration = ctx.slots.register({
       name: 'studio.workspace',
       children: { 'studio.workspace.directoryFlow': { kind: 'single', scope: 'root' } },

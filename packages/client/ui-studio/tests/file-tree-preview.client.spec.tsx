@@ -103,6 +103,37 @@ describe('FileTree', () => {
     expect(onPreview).toHaveBeenLastCalledWith({ path: '/workspace/main.ts', status: 'error', kind: 'code' })
   })
 
+  it('reveals an insert-reference bubble over a code selection and quotes file + line range', () => {
+    const onClose = vi.fn()
+    const insertReference = vi.fn()
+    const content = 'line1\nline2\nline3\nline4'
+    const { container } = render(<PreviewCard {...{ t, preview: { path: '/workspace/src/main.ts', status: 'ready', content, kind: 'code' }, onClose, insertReference } as never} />)
+    const pre = container.querySelector('pre')
+    expect(pre).not.toBeNull()
+    // Simulate a selection spanning line 2 through line 3. jsdom reports static
+    // client rects, so the bubble renders above the first selected line.
+    const code = pre!.querySelector('code')!
+    const text = code.firstChild!
+    const range = document.createRange()
+    range.setStart(text, 'line1\n'.length)
+    range.setEnd(text, 'line1\nline2\nline3'.length)
+    // jsdom reports no client rects for a static range; stub them so the card
+    // resolves a selection anchor for the bubble.
+    range.getClientRects = () => [{ left: 100, top: 50, bottom: 60 }] as unknown as DOMRectList
+    const selection = window.getSelection()!
+    selection.removeAllRanges()
+    selection.addRange(range)
+    fireEvent.mouseUp(pre!)
+    const bubble = screen.getByRole('button', { name: '引入' })
+    expect(bubble).toBeTruthy()
+    fireEvent.click(bubble)
+    expect(insertReference).toHaveBeenCalledWith('@"/workspace/src/main.ts" L2-L3')
+    selection.removeAllRanges()
+    expect(screen.queryByRole('button', { name: '引入' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: '关闭预览' }))
+    expect(onClose).toHaveBeenCalled()
+  })
+
   it('carries the reading and failure states inside the floating card', () => {
     const onClose = vi.fn()
     const view = render(<PreviewCard {...{ t, preview: { path: '/workspace/main.ts', status: 'loading', kind: 'code' }, onClose } as never} />)

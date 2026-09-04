@@ -14,6 +14,7 @@
     { "path": "../ui-theme" },
     { "path": "../ui-primitives" },
     { "path": "../ui-renderer" },
+    { "path": "../ui-conversation" },
     { "path": "../../todo/tool-todo" },
     { "path": "../../api/session-controller/tsconfig.client.json" },
     { "path": "../../api/workspace-controller/tsconfig.client.json" },

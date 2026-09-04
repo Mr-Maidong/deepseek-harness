@@ -13,6 +13,8 @@ Status: implemented
 - **选中气泡**。在 `code` 类预览中选中文本会浮现一个小"引入"按钮，锚定在选中末行（光标所在的那一行）下方约 8px 处。锚点基于 `.codeWrap` 定位祖先的矩形计算（而非外层 `.preview` 卡片矩形，后者包含标题栏会导致气泡偏下）。只有当选中确实存在且发生在代码内容内部时（用 `window.getSelection()` 与代码元素的 `Range.getClientRects()` 校验）才显示；选中坍缩或移到卡片外时消失。
 - **芯片 + 后缀插入**。点击按钮会在输入框光标处插入一个文件引用芯片（短文件名标签、`@"path"` 剪贴板文本、`appearance: 'file'`），后跟纯文本行区间后缀 `L<start>-L<end>`。芯片在输入框中渲染为标准 `@file` 标记样式，而非原始 `@"path"` 文本。`SessionInput` 契约新增 `insertReferenceAtCaret(ref, suffix?)`，内部解析光标 span 与版本号，先插入芯片加尾部空格，再追加后缀。
 - **结构化回调**。`PreviewCard` 增加一个可选的注入回调 `insertReference(ref: CodeReference)`，接受 `{ path, startLine, endLine }`。`studio.center.editor` 槽注册构建 `ReferenceInsert`（`source: 'reference'`、`ref: @"path"`、`label: shortName`、`appearance: 'file'`、`clipboardText: @"path"`）并调用 `input.insertReferenceAtCaret(ref, suffix)`。由于编辑器席位是 root 作用域，回调在点击时用 `sessions.list.getSnapshot().current` 解析当前会话，并经 `ctx.get('conversation')` 到达输入框。
+- **点击外部关闭**。文档级 `pointerdown` 监听器在点击代码区域和气泡按钮之外时关闭气泡。没有这个监听器的话，点击其他地方取消选中后气泡仍然可见，因为 `mouseUp`/`keyUp` 只在 `<pre>` 元素上触发。气泡按钮本身被排除在关闭逻辑之外，确保其 `onClick` 能在 `pointerdown` 之后正常触发。
+- **去除聚焦框**。`<pre>` 设置了 `tabIndex={0}` 以支持文本选中，但这会导致按 Shift 时浏览器显示 `focus-visible` 聚焦框。预览是只读的，`.code` 设置 `outline: none` 去除该框。
 - 可选注入 prop 让现有 `PreviewCard` 调用点（测试与 frame）无需改也能编译；回调缺失气泡不产生面向产品的行为变化。
 
 ## Alternatives considered
@@ -31,4 +33,4 @@ Status: implemented
 
 ## Testing
 
-`file-tree-preview.client.spec.tsx` 覆盖代码选中后气泡出现（锚定在选中末行底部）、结构化回调接收 `{ path, startLine, endLine }`、以及插入后气泡消失。`pnpm run test:gui` 保持绿色；两个无关的既有失败（`ui-chat/chat-stats`、`ui-trajectory/views` 的 tooltip 时机）不受影响。
+`file-tree-preview.client.spec.tsx` 覆盖代码选中后气泡出现（锚定在选中末行底部）、结构化回调接收 `{ path, startLine, endLine }`、插入后气泡消失、以及点击外部关闭气泡。`pnpm run test:gui` 保持绿色；两个无关的既有失败（`ui-chat/chat-stats`、`ui-trajectory/views` 的 tooltip 时机）不受影响。

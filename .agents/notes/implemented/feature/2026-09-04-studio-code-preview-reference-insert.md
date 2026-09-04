@@ -39,6 +39,15 @@ file, plus the selected line range, to the composer in one motion.
   root-scoped, the callback resolves the current session at click time from
   `sessions.list.getSnapshot().current` and reaches the composer's
   `conversation` service via `ctx.get('conversation')`.
+- **Click-outside dismiss.** A document-level `pointerdown` listener dismisses
+  the bubble when clicking outside both the code surface and the bubble button
+  itself. Without this, deselecting by clicking elsewhere left the bubble
+  visible because `mouseUp`/`keyUp` only fire on the `<pre>` element. The
+  bubble button is excluded from dismissal so its `onClick` handler fires
+  after `pointerdown`.
+- **Focus outline removed.** The `<pre>` has `tabIndex={0}` for selection
+  support, which causes a browser `focus-visible` ring on Shift key. Since the
+  preview is read-only, `.code` sets `outline: none`.
 - The optional injected prop keeps existing `PreviewCard` call sites (tests and
   the frame) compiling without it; the bubble simply does nothing product-facing
   when the callback is absent.
@@ -74,7 +83,7 @@ the user expects.
 
 `file-tree-preview.client.spec.tsx` covers the bubble appearing over a code
 selection (anchored at the bottom of the last selected line), the structured
-callback receiving `{ path, startLine, endLine }`, and the bubble hiding after
-insertion. `pnpm run test:gui` stays green; the two unrelated pre-existing
-failures (`ui-chat/chat-stats`, `ui-trajectory/views` tooltip timing) are
-unaffected.
+callback receiving `{ path, startLine, endLine }`, the bubble hiding after
+insertion, and click-outside dismissal. `pnpm run test:gui` stays green; the
+two unrelated pre-existing failures (`ui-chat/chat-stats`,
+`ui-trajectory/views` tooltip timing) are unaffected.

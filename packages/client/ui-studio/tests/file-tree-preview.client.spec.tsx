@@ -141,6 +141,27 @@ describe('FileTree', () => {
     expect(onClose).toHaveBeenCalled()
   })
 
+  it('dismisses the insert-reference bubble when clicking outside the code surface', () => {
+    const onClose = vi.fn()
+    const content = 'line1\nline2\nline3'
+    const { container } = render(<PreviewCard {...{ t, preview: { path: '/workspace/src/main.ts', status: 'ready', content, kind: 'code' }, onClose } as never} />)
+    const pre = container.querySelector('pre')!
+    const code = pre.querySelector('code')!
+    const text = code.firstChild!
+    const range = document.createRange()
+    range.setStart(text, 'line1\n'.length)
+    range.setEnd(text, 'line1\nline2'.length)
+    range.getClientRects = () => [{ left: 0, top: 0, bottom: 10 }] as unknown as DOMRectList
+    const selection = window.getSelection()!
+    selection.removeAllRanges()
+    selection.addRange(range)
+    fireEvent.mouseUp(pre)
+    expect(screen.getByRole('button', { name: '引入' })).toBeTruthy()
+    // Clicking outside the code surface (on the document body) dismisses.
+    fireEvent.pointerDown(document.body)
+    expect(screen.queryByRole('button', { name: '引入' })).toBeNull()
+  })
+
   it('carries the reading and failure states inside the floating card', () => {
     const onClose = vi.fn()
     const view = render(<PreviewCard {...{ t, preview: { path: '/workspace/main.ts', status: 'loading', kind: 'code' }, onClose } as never} />)

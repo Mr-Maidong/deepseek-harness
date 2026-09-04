@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { CloseIcon } from '../left-panel/icons/icons.tsx'
 import { NS } from '../left-panel/locales.ts'
@@ -35,6 +35,20 @@ export function PreviewCard({ preview, onClose, t, insertReference }: Props): Re
     setAnchor(undefined)
     setRange(undefined)
   }
+
+  // Dismiss the bubble when the user clicks outside the code surface.
+  // mouseUp/keyUp on the <pre> only fires for interactions *inside* it;
+  // clicking elsewhere deselects without reaching those handlers.
+  useEffect(() => {
+    if (anchor === undefined) return
+    const onPointerDown = (e: Event): void => {
+      const code = codeRef.current
+      if (code !== null && e.target instanceof Node && code.contains(e.target)) return
+      dismiss()
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => { document.removeEventListener('pointerdown', onPointerDown) }
+  }, [anchor])
 
   const handleSelect = (): void => {
     if (preview === undefined || preview.kind !== 'code' || preview.status !== 'ready') {

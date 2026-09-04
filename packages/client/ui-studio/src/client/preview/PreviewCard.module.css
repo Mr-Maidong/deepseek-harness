@@ -21,7 +21,7 @@
 .language { flex: none; color: var(--studio-gold); }
 .close { flex: none; margin-left: auto; display: grid; width: 22px; height: 22px; place-items: center; padding: 0; border: 1px solid var(--studio-line); border-radius: 50%; color: var(--studio-muted); background: transparent; cursor: pointer; }
 .close:hover { color: var(--studio-gold); border-color: var(--studio-gold); }
-.code { flex: 1; margin: 0; padding: 14px; overflow: auto; white-space: pre; font: 13px/1.7 monospace; }
+.code { flex: 1; margin: 0; padding: 14px; overflow: auto; white-space: pre; font: 13px/1.7 monospace; outline: none; }
 /* Wrapper that turns the scrollable code surface into the positioning context
    for the floating "insert reference" bubble revealed by a text selection. */
 .codeWrap { position: relative; flex: 1; display: flex; min-height: 0; }

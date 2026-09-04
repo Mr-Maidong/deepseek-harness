@@ -16,10 +16,11 @@ file, plus the selected line range, to the composer in one motion.
 ## Decision
 
 - **Selection bubble.** Selecting text in a `code`-kind preview reveals a small
-  floating "引入" button anchored above the first selected line. The button only
-  appears for a real, non-empty selection made inside the code content (verified
-  via `window.getSelection()` and the code element's `Range.getClientRects()`),
-  and disappears when the selection collapses or moves outside the card.
+  floating "引入" button anchored just below the last selected line (the resting
+  line under the cursor). The button only appears for a real, non-empty
+  selection made inside the code content (verified via `window.getSelection()`
+  and the code element's `Range.getClientRects()`), and disappears when the
+  selection collapses or moves outside the card.
 - **Draft reference format.** Clicking the button replaces the current session's
   composer draft with `@"<path>" L<start>-L<end>`, where the path is wrapped in
   double quotes exactly as the file-mention grammar's quoted form, and the range
@@ -31,7 +32,9 @@ file, plus the selected line range, to the composer in one motion.
   registration supplies it from the apply closure. Because the editor seat is
   root-scoped (its inject factory receives no session id), the callback resolves
   the current session at click time from `sessions.list.getSnapshot().current`
-  and reaches the composer via the injected `conversation` service:
+  and reaches the composer's `conversation` service via the service-store read
+  `ctx.get('conversation')` (not the `ctx.<name>` inject proxy, since
+  `conversation` is not one of this plugin's declared injections):
   `conversation.input.for(sessions.scope(current)).setDraft(text)`.
 - The optional injected prop keeps existing `PreviewCard` call sites (tests and
   the frame) compiling without it; the bubble simply does nothing product-facing
@@ -64,7 +67,7 @@ was to put the reference into the composer, not to append to a running draft.
 ## Testing
 
 `file-tree-preview.client.spec.tsx` covers the bubble appearing over a code
-selection, the composed draft `@"/workspace/src/main.ts" L2-L3`, and the bubble
-hiding after insertion. `pnpm run test:gui` stays green; the two unrelated
-pre-existing failures (`ui-chat/chat-stats`, `ui-trajectory/views` tooltip
-timing) are unaffected.
+selection (anchored at the bottom of the last selected line), the composed draft
+`@"/workspace/src/main.ts" L2-L3`, and the bubble hiding after insertion.
+`pnpm run test:gui` stays green; the two unrelated pre-existing failures
+(`ui-chat/chat-stats`, `ui-trajectory/views` tooltip timing) are unaffected.

@@ -111,7 +111,8 @@ describe('FileTree', () => {
     const pre = container.querySelector('pre')
     expect(pre).not.toBeNull()
     // Simulate a selection spanning line 2 through line 3. jsdom reports static
-    // client rects, so the bubble renders above the first selected line.
+    // client rects per line, so the bubble anchors just below the last selected
+    // line (the lower of the two lines spanned).
     const code = pre!.querySelector('code')!
     const text = code.firstChild!
     const range = document.createRange()
@@ -119,13 +120,19 @@ describe('FileTree', () => {
     range.setEnd(text, 'line1\nline2\nline3'.length)
     // jsdom reports no client rects for a static range; stub them so the card
     // resolves a selection anchor for the bubble.
-    range.getClientRects = () => [{ left: 100, top: 50, bottom: 60 }] as unknown as DOMRectList
+    range.getClientRects = () => [
+      { left: 100, top: 40, bottom: 50 },
+      { left: 100, top: 50, bottom: 60 },
+    ] as unknown as DOMRectList
     const selection = window.getSelection()!
     selection.removeAllRanges()
     selection.addRange(range)
     fireEvent.mouseUp(pre!)
     const bubble = screen.getByRole('button', { name: '引入' })
     expect(bubble).toBeTruthy()
+    // Anchored at the bottom of the last selected line (the lower rect's bottom).
+    expect(bubble.style.top).toBe('60px')
+    expect(bubble.style.left).toBe('100px')
     fireEvent.click(bubble)
     expect(insertReference).toHaveBeenCalledWith('@"/workspace/src/main.ts" L2-L3')
     selection.removeAllRanges()

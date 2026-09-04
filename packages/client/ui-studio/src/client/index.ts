@@ -159,7 +159,11 @@ export function apply(ctx: ClientContext): void {
         if (current === undefined) return
         const scoped = ctx.sessions.scope(current)
         if (scoped === undefined) return
-        ctx.conversation.input.for(scoped).setDraft(text)
+        // conversation is not a declared injection here, so reach it through
+        // the service store read (`get`) rather than the inject proxy (`ctx.<x>`).
+        const conversation = ctx.get('conversation')
+        if (conversation === undefined) return
+        conversation.input.for(scoped).setDraft(text)
       },
     })
     const disposeEditorRegistration = ctx.slots.register(

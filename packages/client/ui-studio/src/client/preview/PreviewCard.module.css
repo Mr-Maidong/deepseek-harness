@@ -26,14 +26,14 @@
    for the floating "insert reference" bubble revealed by a text selection. */
 .codeWrap { position: relative; flex: 1; display: flex; min-height: 0; }
 .codeWrap .code { flex: 1; width: 100%; }
-/* Floating insertion bubble anchored above the selected line: it rides the
-   code wrapper's coordinates (set inline from the selection rect) and hangs
-   above the selection via a translateY lift. */
+/* Floating insertion bubble anchored just below the last selected line: it
+   rides the code wrapper's coordinates (set inline from the selection rect)
+   and hangs under that line with a small gap. */
 .reference {
   position: absolute;
   left: 0;
   top: 0;
-  transform: translateY(-110%);
+  transform: translateY(4px);
   z-index: 13;
   padding: 4px 10px;
   border: 1px solid var(--studio-gold);

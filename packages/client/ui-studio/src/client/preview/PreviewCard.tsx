@@ -19,8 +19,8 @@ type Props = PropsRuntime<'studio.center.editor'> & PropsLocale<typeof NS> & Pre
  * inserted text quotes the file path and the selected line range.
  */
 export function PreviewCard({ preview, onClose, t, insertReference }: Props): React.ReactElement | null {
-  // Selection bubble anchor: {left, top} in card coordinates for the selected
-  // first line, or undefined hiding the bubble.
+  // Selection bubble anchor: {left, top} in card coordinates for the bottom of
+  // the last selected line (the cursor's resting line), or undefined hiding it.
   const [anchor, setAnchor] = useState<{ left: number; top: number } | undefined>()
   const [range, setRange] = useState<{ start: number; end: number } | undefined>()
   const codeRef = useRef<HTMLPreElement>(null)
@@ -48,8 +48,10 @@ export function PreviewCard({ preview, onClose, t, insertReference }: Props): Re
       dismiss()
       return
     }
-    const first = rects[0]
-    if (first === undefined) {
+    // Anchor the bubble just below the last selected line (rects are ordered
+    // top-to-bottom, so the final rect is the cursor's resting line).
+    const last = rects[rects.length - 1]
+    if (last === undefined) {
       dismiss()
       return
     }
@@ -67,7 +69,7 @@ export function PreviewCard({ preview, onClose, t, insertReference }: Props): Re
       return
     }
     setRange(rangeOfSelection)
-    setAnchor({ left: first.left - box.left, top: first.top - box.top })
+    setAnchor({ left: last.left - box.left, top: last.bottom - box.top })
   }
 
   const handleReference = (): void => {

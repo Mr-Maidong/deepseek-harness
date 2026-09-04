@@ -30,6 +30,7 @@ export function PreviewCard({ preview, onClose, t, insertReference }: Props): Re
   const [anchor, setAnchor] = useState<{ left: number; top: number } | undefined>()
   const [range, setRange] = useState<{ start: number; end: number } | undefined>()
   const codeRef = useRef<HTMLPreElement>(null)
+  const bubbleRef = useRef<HTMLButtonElement>(null)
 
   const dismiss = (): void => {
     setAnchor(undefined)
@@ -42,8 +43,13 @@ export function PreviewCard({ preview, onClose, t, insertReference }: Props): Re
   useEffect(() => {
     if (anchor === undefined) return
     const onPointerDown = (e: Event): void => {
+      const target = e.target
+      if (!(target instanceof Node)) return
+      // Keep the bubble open when clicking inside the code surface or on the
+      // bubble itself (so its onClick handler can fire after pointerdown).
       const code = codeRef.current
-      if (code !== null && e.target instanceof Node && code.contains(e.target)) return
+      const bubble = bubbleRef.current
+      if ((code !== null && code.contains(target)) || (bubble !== null && bubble.contains(target))) return
       dismiss()
     }
     document.addEventListener('pointerdown', onPointerDown)
@@ -122,6 +128,7 @@ export function PreviewCard({ preview, onClose, t, insertReference }: Props): Re
           </pre>
           {anchor !== undefined && range !== undefined && (
             <button
+              ref={bubbleRef}
               type="button"
               className={css.reference}
               style={{ left: anchor.left, top: anchor.top }}

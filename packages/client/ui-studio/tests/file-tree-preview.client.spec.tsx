@@ -134,7 +134,7 @@ describe('FileTree', () => {
     expect(bubble.style.top).toBe('60px')
     expect(bubble.style.left).toBe('100px')
     fireEvent.click(bubble)
-    expect(insertReference).toHaveBeenCalledWith('@"/workspace/src/main.ts" L2-L3')
+    expect(insertReference).toHaveBeenCalledWith({ path: '/workspace/src/main.ts', startLine: 2, endLine: 3 })
     selection.removeAllRanges()
     expect(screen.queryByRole('button', { name: '引入' })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: '关闭预览' }))

@@ -505,6 +505,16 @@ export class SessionInputShell implements SessionInput {
     return applied
   }
 
+  insertReferenceAtCaret(ref: ReferenceInsert, suffix?: string): boolean {
+    const span = this.caretSpan()
+    const applied = this.insertReference(ref, { ...span, draftRev: this.rev })
+    if (!applied || suffix === undefined || suffix === '') return applied
+    // After insertReference the editor has committed; re-read the caret to
+    // place the suffix right after the chip + trailing space.
+    const next = this.caretSpan()
+    return this.insertText(suffix, { ...next, draftRev: this.rev })
+  }
+
   /**
    * Consume one command token after business success (scoped consume-token
    * event listener body). Span guard: revision CAS then splice; bare-token

@@ -16,26 +16,29 @@ file, plus the selected line range, to the composer in one motion.
 ## Decision
 
 - **Selection bubble.** Selecting text in a `code`-kind preview reveals a small
-  floating "引入" button anchored just below the last selected line (the resting
-  line under the cursor). The button only appears for a real, non-empty
-  selection made inside the code content (verified via `window.getSelection()`
-  and the code element's `Range.getClientRects()`), and disappears when the
-  selection collapses or moves outside the card.
-- **Draft reference format.** Clicking the button replaces the current session's
-  composer draft with `@"<path>" L<start>-L<end>`, where the path is wrapped in
-  double quotes exactly as the file-mention grammar's quoted form, and the range
-  is the 1-based, inclusive first/last selected line. Example:
-  `@"src/a.ts" L10-L20`. The text is a machine-readable draft format, not UI
-  copy, so its literals live inline.
-- **Row/column wiring.** `PreviewCard` gains an optional injected
-  `insertReference(text)` callback, and the `studio.center.editor` slot
-  registration supplies it from the apply closure. Because the editor seat is
-  root-scoped (its inject factory receives no session id), the callback resolves
-  the current session at click time from `sessions.list.getSnapshot().current`
-  and reaches the composer's `conversation` service via the service-store read
-  `ctx.get('conversation')` (not the `ctx.<name>` inject proxy, since
-  `conversation` is not one of this plugin's declared injections):
-  `conversation.input.for(sessions.scope(current)).setDraft(text)`.
+  floating "引入" button anchored ≈8px below the last selected line (the resting
+  line under the cursor). The anchor is computed against the `.codeWrap`
+  positioned ancestor rect (not the outer `.preview` card rect, which includes
+  the header and would offset the bubble downward). The button only appears for
+  a real, non-empty selection made inside the code content (verified via
+  `window.getSelection()` and the code element's `Range.getClientRects()`), and
+  disappears when the selection collapses or moves outside the card.
+- **Chip + suffix insertion.** Clicking the button inserts a file-reference chip
+  (short file-name label, `@"path"` clipboard text, `appearance: 'file'`) at
+  the composer caret, followed by the line-range suffix `L<start>-L<end>` as
+  plain text. The chip renders as the standard `@file` marker style in the
+  composer rather than raw `@"path"` text. The `SessionInput` contract gains
+  `insertReferenceAtCaret(ref, suffix?)` which internally resolves the caret
+  span and revision, inserts the chip + trailing space, then appends the suffix.
+- **Structured callback.** `PreviewCard` gains an optional injected
+  `insertReference(ref: CodeReference)` callback accepting `{ path, startLine,
+  endLine }`. The `studio.center.editor` slot registration builds the
+  `ReferenceInsert` (`source: 'reference'`, `ref: @"path"`, `label: shortName`,
+  `appearance: 'file'`, `clipboardText: @"path"`) and calls
+  `input.insertReferenceAtCaret(ref, suffix)`. Because the editor seat is
+  root-scoped, the callback resolves the current session at click time from
+  `sessions.list.getSnapshot().current` and reaches the composer's
+  `conversation` service via `ctx.get('conversation')`.
 - The optional injected prop keeps existing `PreviewCard` call sites (tests and
   the frame) compiling without it; the bubble simply does nothing product-facing
   when the callback is absent.
@@ -47,18 +50,21 @@ declared `scope: 'root'`, so its inject factory gets no session argument;
 resolving the current session at click time matches the seat's actual scope and
 needs no declaration change.
 
-**Inserted an appended reference preserving the existing draft.** Rejected:
-`SessionInput.setDraft` replaces the whole draft and re-merges it, which is the
-established programmatic-composer path for a fresh reference; the requirement
-was to put the reference into the composer, not to append to a running draft.
+**Plain-text `setDraft` with scan-derived decoration.** Rejected: writing
+`@"path"` as raw text only produces a chip-family decoration when a matching
+lexicon entry exists; real chips require `insertReference` with a
+`ReferenceInsert`. The chip approach gives the standard short-file-marker style
+the user expects.
 
 ## Consequences
 
-- Selecting code and clicking 引入 drops `@"path" Lstart-Lend` straight into the
-  composer for the active session, ready to send.
-- The inserted draft reuses the existing `@"path"` mention grammar, so the
-  conversation's file-reference handling recognizes the quoted path; the line
-  suffix is the card's own data-plane extension.
+- Selecting code and clicking 引入 inserts a file-reference chip (short file
+  name marker) followed by `Lstart-Lend` into the composer for the active
+  session, ready to send.
+- The chip serializes via the `reference` source codec on submit (same path as
+  the `@file` trigger pick), so the model receives the file mention verbatim.
+- The bubble anchors against `.codeWrap` coordinates with an 8px gap, matching
+  the visual expectation regardless of the preview card header height.
 - The bubble is a visual affordance over the code surface; it does not alter the
   read-only preview or the file tree.
 - Locale dictionary gains one key pair (`preview.reference`: zh 引入 / en
@@ -67,7 +73,8 @@ was to put the reference into the composer, not to append to a running draft.
 ## Testing
 
 `file-tree-preview.client.spec.tsx` covers the bubble appearing over a code
-selection (anchored at the bottom of the last selected line), the composed draft
-`@"/workspace/src/main.ts" L2-L3`, and the bubble hiding after insertion.
-`pnpm run test:gui` stays green; the two unrelated pre-existing failures
-(`ui-chat/chat-stats`, `ui-trajectory/views` tooltip timing) are unaffected.
+selection (anchored at the bottom of the last selected line), the structured
+callback receiving `{ path, startLine, endLine }`, and the bubble hiding after
+insertion. `pnpm run test:gui` stays green; the two unrelated pre-existing
+failures (`ui-chat/chat-stats`, `ui-trajectory/views` tooltip timing) are
+unaffected.

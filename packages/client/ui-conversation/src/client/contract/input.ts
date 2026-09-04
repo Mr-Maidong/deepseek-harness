@@ -179,6 +179,15 @@ export interface InputTarget {
 
 /** Per-session input facade owned by the conversation wiring layer. */
 export interface SessionInput extends InputTarget {
+  /**
+   * Insert a reference chip at the current caret (document end when no
+   * selection), optionally appending suffix text after the chip's trailing
+   * space. Span CAS is handled internally against the live revision.
+   * @param ref - structured reference to mint as a chip.
+   * @param suffix - optional plain text appended after the chip + trailing space.
+   * @returns whether the chip was applied.
+   */
+  insertReferenceAtCaret(ref: ReferenceInsert, suffix?: string): boolean
   /** Replace the whole draft (persisted-draft seed and programmatic writes). */
   setDraft(text: string): void
   /** Append ordered browser-owned image ids; busy admission phases refuse. */

@@ -1,14 +1,20 @@
 import { useRef, useState } from 'react'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import { composeReferenceDraft } from './reference-draft.ts'
 import { CloseIcon } from '../left-panel/icons/icons.tsx'
 import { NS } from '../left-panel/locales.ts'
 import css from './PreviewCard.module.css'
 
+/** Structured code-selection reference passed to the composer. */
+export interface CodeReference {
+  readonly path: string
+  readonly startLine: number
+  readonly endLine: number
+}
+
 /** Injected editor callbacks: insert a code reference into the composer draft. */
 export interface PreviewCardInjected {
-  /** Replace the current session's composer draft with a code selection reference. */
-  insertReference?: (text: string) => void
+  /** Insert a file-reference chip followed by the selected line range. */
+  insertReference?: (ref: CodeReference) => void
 }
 
 type Props = PropsRuntime<'studio.center.editor'> & PropsLocale<typeof NS> & PreviewCardInjected
@@ -55,14 +61,15 @@ export function PreviewCard({ preview, onClose, t, insertReference }: Props): Re
       dismiss()
       return
     }
-    const card = code.closest(`.${css.preview}`)
-    if (!(card instanceof HTMLElement)) {
+    // The bubble's positioned parent is .codeWrap (position: relative), so
+    // compute the anchor against that rect, not the outer .preview card rect
+    // (which includes the header and would offset the bubble downward).
+    const wrap = code.closest(`.${css.codeWrap}`)
+    if (!(wrap instanceof HTMLElement)) {
       dismiss()
       return
     }
-    // Anchor the bubble to the card's own coordinate space; the card is
-    // position:absolute so offsetLeft/top are relative to the page.
-    const box = card.getBoundingClientRect()
+    const box = wrap.getBoundingClientRect()
     const rangeOfSelection = lineRange(code)
     if (rangeOfSelection === undefined) {
       dismiss()
@@ -77,7 +84,7 @@ export function PreviewCard({ preview, onClose, t, insertReference }: Props): Re
       dismiss()
       return
     }
-    insertReference(composeReferenceDraft(preview.path, range.start, range.end))
+    insertReference({ path: preview.path, startLine: range.start, endLine: range.end })
     dismiss()
     window.getSelection()?.removeAllRanges()
   }

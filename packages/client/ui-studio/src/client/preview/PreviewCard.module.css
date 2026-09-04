@@ -33,18 +33,19 @@
   position: absolute;
   left: 0;
   top: 0;
-  transform: translateY(4px);
+  transform: translateY(8px);
   z-index: 13;
   padding: 4px 10px;
   border: 1px solid var(--studio-gold);
   border-radius: 6px;
   color: var(--studio-ink);
   background: var(--studio-input);
+  backdrop-filter: blur(8px);
   font-size: 12px;
   cursor: pointer;
   white-space: nowrap;
 }
-.reference:hover { color: var(--studio-gold); background: var(--studio-gold-wash); }
+.reference:hover { color: var(--studio-gold); }
 /* Embed rendered artifacts (HTML previews, etc.) at a fixed 16:9 stage below
    the header, so the previewed document keeps a consistent aspect ratio. The
    frame must not shrink in the flex column, or the ratio would collapse. */

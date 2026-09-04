@@ -30,7 +30,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-theme/client'
 import type {} from '@deepseek-ai/dsh-tool-todo/client'
 import { en, NS, zh } from './left-panel/locales.ts'
 import { LeftPanelMain, type LeftPanelInjected } from './left-panel/LeftPanelMain.tsx'
-import { PreviewCard, type PreviewCardInjected } from './preview/PreviewCard.tsx'
+import { PreviewCard, type PreviewCardInjected, type CodeReference } from './preview/PreviewCard.tsx'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
@@ -154,7 +154,7 @@ export function apply(ctx: ClientContext): void {
     // Editor seat is root-scoped, so the current session is resolved at call
     // time (from the sessions list selection) rather than injected as a fixed id.
     const editorInjected = (): PreviewCardInjected => ({
-      insertReference: (text: string) => {
+      insertReference: (ref: CodeReference) => {
         const current = ctx.sessions.list.getSnapshot().current
         if (current === undefined) return
         const scoped = ctx.sessions.scope(current)
@@ -163,7 +163,15 @@ export function apply(ctx: ClientContext): void {
         // the service store read (`get`) rather than the inject proxy (`ctx.<x>`).
         const conversation = ctx.get('conversation')
         if (conversation === undefined) return
-        conversation.input.for(scoped).setDraft(text)
+        // Build the file mention (quoted form matching file-mention grammar).
+        const mention = `@"${ref.path}"`
+        const slash = ref.path.lastIndexOf('/')
+        const name = ref.path.slice(slash + 1)
+        const input = conversation.input.for(scoped)
+        input.insertReferenceAtCaret(
+          { source: 'reference', ref: mention, label: name, appearance: 'file', clipboardText: mention },
+          `L${ref.startLine}-L${ref.endLine}`,
+        )
       },
     })
     const disposeEditorRegistration = ctx.slots.register(

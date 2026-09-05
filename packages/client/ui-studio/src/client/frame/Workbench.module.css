@@ -215,22 +215,9 @@ textarea:focus-visible {
   position: relative;
   display: grid;
   overflow: hidden;
-  padding: 13px 13px 14px;
+  padding: 12px;
   border: 1px solid rgba(191, 205, 201, 0.3);
-  border-radius: 3px;
-}
-
-.todoCard::before {
-  position: absolute;
-  top: 9px;
-  right: -18px;
-  width: 60%;
-  height: 1px;
-  content: '';
-  background: rgba(112, 137, 140, 0.11);
-  box-shadow: -46px 17px 0 rgba(112, 137, 140, 0.06), -18px 34px 0 rgba(112, 137, 140, 0.05);
-  transform: rotate(-8deg);
-  pointer-events: none;
+  border-radius: 4px;
 }
 
 .todoCard[data-done] {
@@ -241,7 +228,7 @@ textarea:focus-visible {
   position: relative;
   z-index: 1;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
   min-width: 0;
 }
@@ -250,16 +237,16 @@ textarea:focus-visible {
   display: flex;
   min-width: 0;
   flex: 1;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
   cursor: pointer;
 }
 
 .todoCheckbox {
-  width: 15px;
-  height: 15px;
+  width: 14px;
+  height: 14px;
   flex: none;
-  margin: 3px 0 0;
+  margin: 0px 0 0;
   accent-color: #a23f47;
   cursor: pointer;
 }
@@ -269,7 +256,7 @@ textarea:focus-visible {
   color: #edf2f0;
   font-size: 14px;
   font-weight: 500;
-  line-height: 21px;
+  line-height: 1.8;
   overflow-wrap: anywhere;
 }
 
@@ -288,7 +275,6 @@ textarea:focus-visible {
   height: 24px;
   flex: none;
   place-items: center;
-  margin-top: -3px;
   padding: 0;
   border: 0;
   background: transparent;

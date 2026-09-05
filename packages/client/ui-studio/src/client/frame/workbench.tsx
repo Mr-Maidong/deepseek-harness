@@ -86,6 +86,12 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
     [projects, activeProjectId],
   )
 
+  // Cards list most-recently-updated first; equal timestamps keep store order.
+  const todos = useMemo(
+    () => [...(activeProject?.todos ?? [])].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt)),
+    [activeProject],
+  )
+
   const addTodo = (): void => {
     const title = draftTitle.trim()
     if (title === '' || activeProject === undefined) return
@@ -196,7 +202,7 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
 
   const sendProject = async (): Promise<void> => {
     if (activeProject === undefined) return
-    const pendingTodos = activeProject.todos.filter(todo => todo.status !== 'completed')
+    const pendingTodos = todos.filter(todo => todo.status !== 'completed')
     if (pendingTodos.length === 0) return
     setError(undefined)
     for (const todo of pendingTodos) actions.updateTodoStatus(todo.id, 'in_progress')
@@ -229,8 +235,8 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
     {activeProject === undefined && <div className={css.emptyState}><span className={css.emptyArtwork} aria-hidden="true" /></div>}
     {activeProject !== undefined && <>
       <div className={css.todoList}>
-        {activeProject.todos.length === 0 && <div className={css.emptyState}><span className={css.emptyArtwork} aria-hidden="true" /></div>}
-        {activeProject.todos.map(todo => <article className={css.todoCard} key={todo.id} data-done={todo.status === 'completed' || undefined}>
+        {todos.length === 0 && <div className={css.emptyState}><span className={css.emptyArtwork} aria-hidden="true" /></div>}
+        {todos.map(todo => <article className={css.todoCard} key={todo.id} data-done={todo.status === 'completed' || undefined}>
           <div className={css.todoCardHead}>
             <label className={css.todoTitleRow}><input className={css.todoCheckbox} type="checkbox" checked={todo.status === 'completed'} disabled={todo.status === 'completed'} onChange={() => { markDone(todo) }} aria-label={todo.status === 'completed' ? t('workbench.done') : t('workbench.markDone')} /><span className={css.todoTitle}>{todo.title}</span></label>
             <div className={css.todoActions}><button className={css.todoSend} type="button" disabled={todo.status === 'completed'} aria-label={t('workbench.sendOne')} title={t('workbench.sendOne')} onClick={() => { void sendTodo(todo) }}><span className={css.sendIcon} aria-hidden="true" /></button><button className={css.todoWriteBack} type="button" disabled={todo.status === 'completed' || todo.sourceSessionId !== sessionId} aria-label={t('workbench.writeBack')} title={t('workbench.writeBack')} onClick={() => { void writeBackTodo(todo) }}><span className={css.summaryIcon} aria-hidden="true" /></button><button className={css.todoDelete} type="button" disabled={todo.status === 'completed'} aria-label={t('workbench.removeTodo')} title={t('workbench.removeTodo')} onClick={() => { removeTodo(todo.id) }}><span className={css.deleteIcon} aria-hidden="true" /></button></div>

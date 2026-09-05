@@ -25,6 +25,17 @@ const t: StudioWorkbenchProps['t'] = makeTranslate(zh) as never
 const bodyClass = css.todoCardBody
 if (bodyClass === undefined) throw new Error('todoCardBody class missing from Workbench.module.css')
 
+const cardClass = css.todoCard
+if (cardClass === undefined) throw new Error('todoCard class missing from Workbench.module.css')
+
+const titleClass = css.todoTitle
+if (titleClass === undefined) throw new Error('todoTitle class missing from Workbench.module.css')
+
+/** Card titles in rendered (top-to-bottom) order. */
+function renderedCardTitles(): string[] {
+  return [...document.querySelectorAll(`.${cardClass} .${titleClass}`)].map(title => title.textContent ?? '')
+}
+
 beforeEach(() => { localStorage.clear() })
 afterEach(cleanup)
 
@@ -199,6 +210,59 @@ describe('StudioWorkbench completion reconcile', () => {
       // The tick keeps buckets fresh without store writes.
       act(() => { vi.advanceTimersByTime(31_000) })
       expect(screen.getByText('刚刚更新')).toBeTruthy()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('lists cards newest-updated first and reorders when an older card is touched', () => {
+    vi.useFakeTimers()
+    try {
+      const { store } = renderWorkbench()
+      const projectId = store.getSnapshot().projects[0]!.id
+      const oldest = store.getSnapshot().projects[0]!.todos[0]!.id
+      act(() => {
+        vi.advanceTimersByTime(1_000)
+        store.actions.addTodo({ projectId, title: 'Second task', detail: '' })
+        vi.advanceTimersByTime(1_000)
+        store.actions.addTodo({ projectId, title: 'Third task', detail: '' })
+      })
+      expect(renderedCardTitles()).toEqual(['Third task', 'Second task', 'Ship persistence'])
+      // A detail edit makes the oldest card the most recently updated one.
+      act(() => {
+        vi.advanceTimersByTime(1_000)
+        store.actions.updateTodoDetail(oldest, 'Revised detail.')
+      })
+      expect(renderedCardTitles()).toEqual(['Ship persistence', 'Third task', 'Second task'])
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('lists a completed card by its completion time, not its creation time', () => {
+    vi.useFakeTimers()
+    try {
+      const { store } = renderWorkbench()
+      const projectId = store.getSnapshot().projects[0]!.id
+      const first = store.getSnapshot().projects[0]!.todos[0]!.id
+      act(() => {
+        vi.advanceTimersByTime(1_000)
+        store.actions.addTodo({ projectId, title: 'Second task', detail: '' })
+      })
+      expect(renderedCardTitles()).toEqual(['Second task', 'Ship persistence'])
+      act(() => {
+        vi.advanceTimersByTime(1_000)
+        store.actions.completeTodo({
+          todoId: first,
+          summary: 'Shipped the fold.',
+          implementationPath: [],
+          changedFiles: [],
+          verification: [],
+          completedAt: new Date().toISOString(),
+          completedBy: 'model',
+        })
+      })
+      expect(renderedCardTitles()).toEqual(['Ship persistence', 'Second task'])
     } finally {
       vi.useRealTimers()
     }

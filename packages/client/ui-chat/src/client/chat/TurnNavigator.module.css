@@ -128,6 +128,7 @@
   border-radius: 10px;
   color: var(--dsw-alias-label-primary);
   background: var(--dsw-alias-bg-layer-1);
+  backdrop-filter: blur(8px);
   box-shadow: var(--dsw-shadow-lv2);
   pointer-events: none;
   animation: dsh-turn-preview-enter 120ms ease-out;

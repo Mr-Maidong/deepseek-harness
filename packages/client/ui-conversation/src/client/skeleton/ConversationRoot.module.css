@@ -217,7 +217,7 @@
   bottom: 0;
   z-index: 8;
   width: min(
-    40px,
+    24px,
     calc((100% - var(--dsh-chat-content-width)) / 2 - 24px - 24px)
   );
   cursor: col-resize;

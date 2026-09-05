@@ -8,6 +8,10 @@
  */
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+// The plugin entry carries the SlotMap/LocaleNamespaceMap declaration merges the
+// components' props resolve against; load it type-only so the aggregate client
+// tests project sees the same props as the package program.
+import type {} from '../src/client/index.ts'
 import { bindSnapshotSelector, makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
 import type { WorkbenchTodoCompletion } from '@deepseek-ai/dsh-tool-todo/client'
@@ -37,7 +41,7 @@ function completion(todoId: string, summary: string, completedAt: string): Workb
 }
 
 interface Harness {
-  store: ReturnType<typeof createProjectTodoStore.create>
+  store: ReturnType<ReturnType<typeof createProjectTodoStore>['create']>
   projection: ReturnType<typeof createSnapshotStore<{ value: Record<string, WorkbenchTodoCompletion> | null | undefined }>>
   rerender: (sessionId?: string) => void
   unmount: () => void

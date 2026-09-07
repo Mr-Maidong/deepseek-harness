@@ -22,7 +22,7 @@ kind: "package-group"
 <a id="packages"></a>
 ## 包
 
-七个包分别承担 Host 角色；各包的 README 拥有自己的约定与配置。
+八个包分别承担 Host 角色；各包的 README 拥有自己的约定与配置。
 
 | 包 | 职责 | ctx 键 |
 |---|---|---|
@@ -33,6 +33,7 @@ kind: "package-group"
 | [`directory-picker-browse/`](directory-picker-browse/README.zh.md) | 应用内目录浏览器后端，也服务于远程客户端 | 注册 `ctx.directoryPicker` |
 | [`directory-picker-auto/`](directory-picker-auto/README.zh.md) | 在启动时挂载匹配后端的宿主自适应选择器 | 挂载一个后端 |
 | [`plugin-inventory/`](plugin-inventory/README.zh.md) | 当前 Loader 条目的只读投影 | Remote `pluginInventory/list` |
+| [`git-summary/`](git-summary/README.zh.md) | 一个工作区目录的 Git 分支与未提交代码增减数 | `ctx.gitSummary` |
 
 -----
 

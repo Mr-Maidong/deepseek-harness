@@ -328,6 +328,7 @@
     { "path": "./packages/host/directory-picker-auto" },
     { "path": "./packages/host/directory-picker-browse" },
     { "path": "./packages/host/directory-picker-native" },
+    { "path": "./packages/host/git-summary" },
     { "path": "./packages/host/frontend-static" },
     { "path": "./packages/host/plugin-inventory" },
     { "path": "./packages/llm/plugin-package-inventory-deepseek" },

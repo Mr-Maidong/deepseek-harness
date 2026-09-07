@@ -273,6 +273,7 @@ export class FakeApiClient {
           payload,
           this.onWorkspaceArchiveSession(payload),
         ),
+        gitSummary: () => Promise.resolve(ok({ summary: null })),
         follow: signal => this.openWorkspace(signal),
       },
     }

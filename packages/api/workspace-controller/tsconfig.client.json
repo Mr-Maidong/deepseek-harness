@@ -18,6 +18,7 @@
     { "path": "../../client/store" },
     { "path": "../../core/session" },
     { "path": "../../host/directory-picker" },
+    { "path": "../../host/git-summary" },
     { "path": "../../typert/protocol" },
     { "path": "../../workspace/workspace" }
   ]

@@ -615,6 +615,15 @@ const SERVICE_ROLES: ServiceRole[] = [
     note: 'Discriminated interaction capability: the native backend opens one OS chooser on the host display, the browse backend serves listing/creation primitives for the in-app browser; dual-face backends fill ui-workspace directory-flow slots from their browser halves (no wire advertisement).',
   },
   {
+    key: 'gitSummary',
+    pkg: 'host-git-summary',
+    title: 'Workspace git-state read seam',
+    mode: 'seam',
+    implementations: ['host-git-summary'],
+    consumers: ['api-workspace-controller'],
+    note: 'One bounded read of branch and uncommitted change counts for a Host directory; the local provider spawns the git CLI through ctx.subprocess, and the Workspace Remote publishes the result to the Studio file tree.',
+  },
+  {
     key: 'webServer',
     pkg: 'host-webserver',
     title: 'HTTP route registration',

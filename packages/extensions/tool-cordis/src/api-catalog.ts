@@ -857,6 +857,12 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'the level\'s listing with its ancestry.',
       },
       {
+        signature: '@Remote(\'readText\') async readText(path: string, signal: AbortSignal): Promise<string>',
+        description: 'Read one bounded UTF-8 text file for a Remote caller\'s preview.',
+        parameters: [{ name: 'path', description: 'absolute file path returned by the Host directory listing.' }, { name: 'signal', description: 'caller lifetime; abort stops the pending filesystem read.' }],
+        returns: 'the file\'s UTF-8 content.',
+      },
+      {
         signature: '@Remote(\'createDirectory\') async createDirectory(path: string, name: string): Promise<string>',
         description: 'Create one child directory for a Remote caller\'s in-app browser.',
         parameters: [{ name: 'path', description: 'absolute existing parent directory.' }, { name: 'name', description: 'single non-blank path segment.' }],
@@ -1025,6 +1031,19 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Atomically edit literal text. When supplied, the version guard is checked before matching so stale content reports `FS_STALE_VERSION`; omission edits the current content without a freshness precondition.',
         parameters: [{ name: 'target', description: 'the resolved target to edit.' }, { name: 'edit', description: 'the literal search/replace request.' }, { name: 'expected', description: 'the version guard; omit for an unconditional edit.' }, { name: 'signal', description: 'aborts before atomic publication takes effect.' }, { name: 'sandboxPolicy', description: 'the per-call mode and workspace root this edit runs under; a sandboxing backend fences the edit by it, the bare backend ignores it. Omit to leave the backend its own default.' }],
         returns: 'the outcome, including the version the edit produced.',
+      },
+    ],
+  },
+  {
+    key: 'gitSummary',
+    summary: 'Abstract git-summary service.',
+    description: 'Abstract git-summary service. Subclass, implement summary, and load the subclass as a plugin — it registers as `ctx.gitSummary` (one implementation per context; loading a second throws per cordis duplicate- service behavior).',
+    methods: [
+      {
+        signature: 'abstract summary( path: string, signal?: AbortSignal, ): Promise<GitSummaryResult | null>',
+        description: 'Read the git state of one directory.',
+        parameters: [{ name: 'path', description: 'absolute directory to inspect.' }, { name: 'signal', description: 'caller lifetime; abort cancels pending git work.' }],
+        returns: 'the branch and change counts, or null when the directory is not inside a git repository.',
       },
     ],
   },
@@ -2882,6 +2901,12 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: 'signal', description: 'generation cancellation.' }],
         returns: 'baseline followed by ordered Workspace increments.',
       },
+      {
+        signature: '@Remote(\'gitSummary\') async gitSummary( request: WorkspaceGitSummaryRequest, signal?: AbortSignal, ): Promise<WorkspaceGitSummaryValue>',
+        description: 'Read git branch and uncommitted change counts for one Workspace\'s directory.',
+        parameters: [{ name: 'request', description: 'Workspace identity.' }, { name: 'signal', description: 'caller lifetime; abort cancels pending git work.' }],
+        returns: 'the git summary, or null when the directory is not a repository.',
+      },
     ],
   },
   {
@@ -3987,7 +4012,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'DirectoryEntry',
-    declaration: 'export interface DirectoryEntry {\n    name: string;\n    path: string;\n    hidden: boolean;\n}',
+    declaration: 'export interface DirectoryEntry {\n    name: string;\n    path: string;\n    hidden: boolean;\n    kind: \'directory\' | \'file\';\n}',
   },
   {
     name: 'DirectoryListing',
@@ -3995,7 +4020,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'DirectoryPickerBrowseCapability',
-    declaration: 'export interface DirectoryPickerBrowseCapability {\n    kind: \'browse\';\n    list(path?: string, signal?: AbortSignal): Promise<DirectoryListing>;\n    createDirectory(path: string, name: string): Promise<string>;\n}',
+    declaration: 'export interface DirectoryPickerBrowseCapability {\n    kind: \'browse\';\n    list(path?: string, signal?: AbortSignal): Promise<DirectoryListing>;\n    createDirectory(path: string, name: string): Promise<string>;\n    readText(path: string, signal?: AbortSignal): Promise<string>;\n}',
   },
   {
     name: 'DirectoryPickerCapabilities',
@@ -4007,7 +4032,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'DirectoryPickerNativeCapability',
-    declaration: 'export interface DirectoryPickerNativeCapability {\n    kind: \'native\';\n    pick(signal: AbortSignal): Promise<string | null>;\n}',
+    declaration: 'export interface DirectoryPickerNativeCapability {\n    kind: \'native\';\n    pick(signal: AbortSignal): Promise<string | null>;\n    list?(path?: string, signal?: AbortSignal): Promise<DirectoryListing>;\n}',
   },
   {
     name: 'DirectoryRegistrationHandle',
@@ -4196,6 +4221,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'GenericResultView',
     declaration: 'export interface GenericResultView {\n    card: \'generic\';\n    title?: string;\n    content?: ContentBlock[];\n}',
+  },
+  {
+    name: 'GitSummaryResult',
+    declaration: 'export interface GitSummaryResult {\n    readonly branch: string | null;\n    readonly detached: boolean;\n    readonly insertions: number;\n    readonly deletions: number;\n    readonly untrackedFiles: number;\n}',
   },
   {
     name: 'GoalActivation',
@@ -6312,6 +6341,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'WorkspaceFollowIncrement',
     declaration: 'export type WorkspaceFollowIncrement = {\n    readonly type: \'upsert\';\n    readonly workspace: WorkspaceView;\n} | {\n    readonly type: \'remove\';\n    readonly workspaceId: WorkspaceId;\n} | {\n    readonly type: \'order\';\n    readonly workspaceIds: readonly WorkspaceId[];\n} | {\n    readonly type: \'archived\';\n    readonly archivedSessionIds: readonly SessionId[];\n};',
+  },
+  {
+    name: 'WorkspaceGitSummaryRequest',
+    declaration: 'export interface WorkspaceGitSummaryRequest {\n    readonly workspaceId: WorkspaceId;\n}',
+  },
+  {
+    name: 'WorkspaceGitSummaryValue',
+    declaration: 'export interface WorkspaceGitSummaryValue {\n    readonly summary: GitSummaryResult | null;\n}',
   },
   {
     name: 'WorkspaceInsertBeforeRequest',

@@ -335,3 +335,43 @@ describe('WorkspaceController follow', () => {
     await expect(closing).resolves.toEqual({ done: true, value: undefined })
   })
 })
+
+describe('WorkspaceController gitSummary', () => {
+  it('refuses the read with a stable code when no provider is composed', async () => {
+    const { controller, root } = await harness()
+    const created = await controller.create({ path: stageDir(root, 'no-provider') })
+    await expect(controller.gitSummary({ workspaceId: created.workspace.workspaceId }))
+      .rejects.toMatchObject({ code: 'workspace/git-summary-unavailable' })
+  })
+
+  it('reports an unknown Workspace before consulting the capability', async () => {
+    const { controller, ctx } = await harness()
+    const summary = vi.fn()
+    ctx.provide('gitSummary', { summary } as never)
+    await expect(controller.gitSummary({ workspaceId: 'missing' as WorkspaceId }))
+      .rejects.toMatchObject({ code: 'workspace/not-found' })
+    expect(summary).not.toHaveBeenCalled()
+  })
+
+  it('summarizes the directory the registry resolved for that Workspace', async () => {
+    const { controller, ctx, root } = await harness()
+    const path = stageDir(root, 'repo')
+    const created = await controller.create({ path })
+    const result = { branch: 'main', detached: false, insertions: 12, deletions: 3, untrackedFiles: 1 }
+    const summary = vi.fn(async () => result)
+    ctx.provide('gitSummary', { summary } as never)
+    const caller = new AbortController()
+    const workspaceId = created.workspace.workspaceId
+
+    await expect(controller.gitSummary({ workspaceId }, caller.signal)).resolves.toEqual({ summary: result })
+    expect(summary).toHaveBeenCalledWith(path, caller.signal)
+  })
+
+  it('forwards a null summary for a Workspace whose directory is not a repository', async () => {
+    const { controller, ctx, root } = await harness()
+    const created = await controller.create({ path: stageDir(root, 'plain-dir') })
+    ctx.provide('gitSummary', { summary: async () => null } as never)
+    await expect(controller.gitSummary({ workspaceId: created.workspace.workspaceId }))
+      .resolves.toEqual({ summary: null })
+  })
+})

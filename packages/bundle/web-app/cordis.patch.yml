@@ -102,6 +102,10 @@
     - id: workspace-controller
       name: '@deepseek-ai/dsh-api-workspace-controller'
 
+    # Host git-summary capability (branch + uncommitted change counts).
+    - id: git-summary
+      name: '@deepseek-ai/dsh-host-git-summary'
+
     - id: cordis-host-runner
       name: '@deepseek-ai/dsh-cordis-host-runner'
 

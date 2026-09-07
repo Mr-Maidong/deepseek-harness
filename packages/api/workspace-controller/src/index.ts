@@ -1,7 +1,8 @@
 /** Host Workspace Remote owner: explicit commands and reconnect-safe state. */
 
 import { Context } from '@deepseek-ai/cordis'
-import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
+import { Remote, RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
+import type { GitSummaryRuntime } from '@deepseek-ai/dsh-host-git-summary'
 import { WorkspaceCommands } from './commands.ts'
 import { DirectoryPickerController } from './directory-picker.ts'
 import { WorkspaceFeed } from './feed.ts'
@@ -13,6 +14,8 @@ import type {
   WorkspaceDeleteRequest,
   WorkspaceDeleteValue,
   WorkspaceFollowFrame,
+  WorkspaceGitSummaryRequest,
+  WorkspaceGitSummaryValue,
   WorkspaceInsertBeforeRequest,
   WorkspaceInsertSessionBeforeRequest,
   WorkspaceOrderValue,
@@ -117,6 +120,37 @@ export class WorkspaceController extends TypertRemoteService {
   @Remote({ mode: 'stream' })
   follow(signal: AbortSignal): AsyncIterable<WorkspaceFollowFrame> {
     return this.feed.follow(signal)
+  }
+
+  /**
+   * Read git branch and uncommitted change counts for one Workspace's directory.
+   * @param request - Workspace identity.
+   * @param signal - caller lifetime; abort cancels pending git work.
+   * @returns the git summary, or null when the directory is not a repository.
+   */
+  @Remote('gitSummary')
+  async gitSummary(
+    request: WorkspaceGitSummaryRequest,
+    signal?: AbortSignal,
+  ): Promise<WorkspaceGitSummaryValue> {
+    const gitSummary: GitSummaryRuntime | undefined = this.ctx.get('gitSummary')
+    if (gitSummary === undefined) {
+      throw new RemoteError(
+        'workspace/git-summary-unavailable',
+        'The git-summary capability is not composed in this Host profile',
+        {},
+      )
+    }
+    const workspace = this.ctx.workspaceRegistry.get(request.workspaceId)
+    if (workspace === undefined) {
+      throw new RemoteError(
+        'workspace/not-found',
+        `Workspace "${request.workspaceId}" not found`,
+        { workspaceId: request.workspaceId },
+      )
+    }
+    const summary = await gitSummary.summary(workspace.path, signal)
+    return { summary }
   }
 }
 

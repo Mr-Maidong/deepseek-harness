@@ -26,6 +26,8 @@ import type {
   WorkspaceDeleteRequest,
   WorkspaceDeleteValue,
   WorkspaceFollowFrame,
+  WorkspaceGitSummaryRequest,
+  WorkspaceGitSummaryValue,
   WorkspaceInsertBeforeRequest,
   WorkspaceInsertSessionBeforeRequest,
   WorkspaceOrderValue,
@@ -140,6 +142,10 @@ class ScriptedWorkspaceRemote implements WorkspaceRemote {
     throw new Error('unused')
   }
 
+  gitSummary(_request: WorkspaceGitSummaryRequest): Promise<RemoteResult<WorkspaceGitSummaryValue>> {
+    throw new Error('unused')
+  }
+
   async *follow(signal = new AbortController().signal): AsyncIterable<WorkspaceFollowFrame> {
     const generation = this.generations[this.calls++]
     if (generation === undefined) throw new Error('no scripted Workspace generation')
@@ -179,6 +185,8 @@ class CommandWorkspaceRemote implements WorkspaceRemote {
   readonly archiveSession = vi.fn<WorkspaceRemote['archiveSession']>(request => Promise.resolve(remoteOk({
     archivedSessionIds: [request.sessionId],
   })))
+
+  readonly gitSummary = vi.fn<WorkspaceRemote['gitSummary']>(() => Promise.resolve(remoteOk({ summary: null })))
 
   async *follow(_signal?: AbortSignal): AsyncIterable<WorkspaceFollowFrame> {}
 }

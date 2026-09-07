@@ -22,7 +22,7 @@ The `host/` group provides the web GUI's plain HTTP server, the SPA dist server 
 <a id="packages"></a>
 ## Packages
 
-Seven packages play the host roles; each package README owns its contract and configuration.
+Eight packages play the host roles; each package README owns its contract and configuration.
 
 | Package | Role | ctx key |
 |---|---|---|
@@ -33,6 +33,7 @@ Seven packages play the host roles; each package README owns its contract and co
 | [`directory-picker-browse/`](directory-picker-browse/README.md) | In-app directory-browser backend, including for remote clients | registers `ctx.directoryPicker` |
 | [`directory-picker-auto/`](directory-picker-auto/README.md) | Host-adaptive chooser that mounts the matching backend at boot | mounts a backend |
 | [`plugin-inventory/`](plugin-inventory/README.md) | Read-only projection of current Loader entries | Remote `pluginInventory/list` |
+| [`git-summary/`](git-summary/README.md) | Git branch and uncommitted change counts for one workspace directory | `ctx.gitSummary` |
 
 -----
 

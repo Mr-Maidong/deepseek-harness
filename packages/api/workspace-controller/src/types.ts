@@ -7,9 +7,11 @@
 
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
+import type { GitSummaryResult } from '@deepseek-ai/dsh-host-git-summary/types'
 
 export type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
 export type { DirectoryEntry, DirectoryListing } from '@deepseek-ai/dsh-host-directory-picker/types'
+export type { GitSummaryResult }
 
 /** One durable Workspace projected for browser consumers. */
 export interface WorkspaceView {
@@ -46,6 +48,8 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     'directory-picker/exists': { readonly path: string }
     /** The parent is not fully qualified, the name is not one segment, or creation failed. */
     'directory-picker/create-failed': { readonly path: string }
+    /** The git-summary capability is not composed in this Host profile. */
+    'workspace/git-summary-unavailable': Record<string, never>
   }
 }
 
@@ -126,3 +130,13 @@ export type WorkspaceFollowIncrement =
 export type WorkspaceFollowFrame =
   | { readonly type: 'baseline'; readonly value: WorkspaceBaseline }
   | WorkspaceFollowIncrement
+
+/** Request to read git state for one Workspace's directory. */
+export interface WorkspaceGitSummaryRequest {
+  readonly workspaceId: WorkspaceId
+}
+
+/** Git state of one Workspace's directory, or null when not a repository. */
+export interface WorkspaceGitSummaryValue {
+  readonly summary: GitSummaryResult | null
+}

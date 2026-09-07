@@ -173,6 +173,14 @@ Host service backing the generated `ctx.remote.directoryPicker` namespace. The s
 @Remote('list') async list(path: string | undefined, signal: AbortSignal): Promise<DirectoryListing>
 
 /**
+ * Read one bounded UTF-8 text file for a Remote caller's preview.
+ * @param path - absolute file path returned by the Host directory listing.
+ * @param signal - caller lifetime; abort stops the pending filesystem read.
+ * @returns the file's UTF-8 content.
+ */
+@Remote('readText') async readText(path: string, signal: AbortSignal): Promise<string>
+
+/**
  * Create one child directory for a Remote caller's in-app browser.
  * @param path - absolute existing parent directory.
  * @param name - single non-blank path segment.
@@ -182,6 +190,25 @@ Host service backing the generated `ctx.remote.directoryPicker` namespace. The s
 ```
 
 Source: [`packages/api/workspace-controller/src/directory-picker.ts`](../../packages/api/workspace-controller/src/directory-picker.ts)
+
+<a id="ctxgitsummary--gitsummaryruntime-abstract-seam"></a>
+
+### `ctx.gitSummary` — `GitSummaryRuntime` (abstract seam)
+
+Abstract git-summary service. Subclass, implement summary, and load the subclass as a plugin — it registers as `ctx.gitSummary` (one implementation per context; loading a second throws per cordis duplicate- service behavior).
+
+```ts cordis-catalog
+/**
+ * Read the git state of one directory.
+ * @param path - absolute directory to inspect.
+ * @param signal - caller lifetime; abort cancels pending git work.
+ * @returns the branch and change counts, or null when the directory is not
+ *   inside a git repository.
+ */
+abstract summary( path: string, signal?: AbortSignal, ): Promise<GitSummaryResult | null>
+```
+
+Source: [`packages/host/git-summary/src/service.ts`](../../packages/host/git-summary/src/service.ts)
 
 <a id="ctxworkspacecontroller--workspacecontroller"></a>
 
@@ -238,6 +265,14 @@ Host service backing the generated `ctx.remote.workspace` namespace.
  * @returns baseline followed by ordered Workspace increments.
  */
 @Remote({ mode: 'stream' }) follow(signal: AbortSignal): AsyncIterable<WorkspaceFollowFrame>
+
+/**
+ * Read git branch and uncommitted change counts for one Workspace's directory.
+ * @param request - Workspace identity.
+ * @param signal - caller lifetime; abort cancels pending git work.
+ * @returns the git summary, or null when the directory is not a repository.
+ */
+@Remote('gitSummary') async gitSummary( request: WorkspaceGitSummaryRequest, signal?: AbortSignal, ): Promise<WorkspaceGitSummaryValue>
 ```
 
 Source: [`packages/api/workspace-controller/src/index.ts`](../../packages/api/workspace-controller/src/index.ts)

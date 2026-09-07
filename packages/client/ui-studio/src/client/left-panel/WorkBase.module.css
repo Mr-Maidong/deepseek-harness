@@ -120,7 +120,7 @@
 .workspaceToggle {
   flex: 1 1 auto;
   min-height: var(--workbase-row-height);
-  padding: 5px 6px 5px 4px;
+  padding: 2px 6px 2px 4px;
 }
 
 .workspaceHeader:hover,
@@ -195,6 +195,9 @@
 .sessionListContent {
   min-height: 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .emptyHint {
@@ -224,8 +227,7 @@
 
 .sessionButton {
   flex: 1 1 auto;
-  min-height: var(--workbase-row-height);
-  padding: 6px 6px;
+  padding: 0px 6px;
 }
 
 .sessionListContent > :first-child .sessionButton {

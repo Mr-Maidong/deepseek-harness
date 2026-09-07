@@ -232,22 +232,57 @@
 .sectionBody:hover::-webkit-scrollbar-thumb,
 .sectionBody:focus-within::-webkit-scrollbar-thumb { background: var(--studio-line); }
 
-/* Git summary chip in the file tree section header. */
+/* Git summary row at the foot of the file-tree section; click re-reads it. */
 .gitFooter {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 6px;
   flex: none;
-  min-height: 30px;
+  min-height: 32px;
+  margin-top: -1px;
   padding: 0 12px;
   border: 0;
   border-top: 1px solid rgba(164, 181, 184, 0.12);
   background: rgba(14, 23, 31, 0.24);
   color: var(--studio-muted);
-  font: 500 12px/16px 'YaHei Consolas Hybrid', monospace;
+  font: 500 13px/16px 'YaHei Consolas Hybrid', monospace;
   text-align: left;
   cursor: pointer;
+  overflow: hidden;
   transition: color 160ms ease, background-color 160ms ease;
+}
+
+/* Request-life-cycle fill behind the git summary: its width is the refresh
+   request's own progress (--git-refresh-progress), not scanned repository work. */
+.gitRefreshProgress {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--git-refresh-progress, 0%);
+  background-color: var(--studio-gold-wash);
+  pointer-events: none;
+  transition: width 120ms ease-out;
+}
+
+.gitFooter[aria-busy='true'] .gitRefreshProgress {
+  background-image: linear-gradient(90deg, transparent, var(--studio-line), transparent);
+  background-repeat: no-repeat;
+  background-size: 200% 100%;
+  animation: git-refresh-sheen 900ms linear infinite;
+}
+
+@keyframes git-refresh-sheen {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+.gitFooterContent {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .gitFooter:hover {
@@ -309,6 +344,9 @@
   .sectionChevron,
   .addWorkspace,
   .gitFooter { transition: none; }
+
+  /* The fill still tracks the request, it just stops easing and sheening. */
+  .gitRefreshProgress { transition: none; animation: none; }
 
   .addingSpinner { animation: none; }
 }

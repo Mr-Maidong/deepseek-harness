@@ -62,7 +62,10 @@ export class DirectoryPickerController extends TypertRemoteService {
   }
 
   /**
-   * List one directory level for a Remote caller's in-app browser.
+   * List one directory level for a Remote caller's in-app browser. The browse
+   * interaction always lists; a native backend may also list when it implements
+   * the optional `list` member, so the verb serves whichever interaction offers
+   * a listing rather than demanding the browse kind.
    * @param path - absolute directory to list; absent lists the home directory.
    * @param signal - caller lifetime; abort stops the backend's scan instead of
    *   letting it outlive a disconnected caller.
@@ -70,25 +73,60 @@ export class DirectoryPickerController extends TypertRemoteService {
    */
   @Remote('list')
   async list(path: string | undefined, signal: AbortSignal): Promise<DirectoryListing> {
-    const capability = this.requireCapability('browse', 'list')
-    try {
-      return await capability.list(path, signal)
-    } catch (error: unknown) {
-      throw cancellableFailure(error, signal, 'directory listing was aborted')
+    const capability = this.ctx.directoryPicker.capability()
+    switch (capability.kind) {
+      case 'browse':
+      case 'native': {
+        if (capability.list === undefined) break
+        try {
+          return await capability.list(path, signal)
+        } catch (error: unknown) {
+          throw cancellableFailure(error, signal, 'directory listing was aborted')
+        }
+      }
+      default:
+        break
     }
+    // The capability union is merge-extensible: an interaction shape without a
+    // listing (a native backend that never implemented `list`, or a future
+    // kind) is refused rather than approximated.
+    throw new RemoteError(
+      'directory-picker/unavailable',
+      `directoryPicker.list needs a listing capability; the composed picker serves "${capability.kind}"`,
+      { capability: capability.kind },
+    )
   }
 
   /**
-   * Read one bounded UTF-8 text file for a Remote caller's preview.
+   * Read one bounded UTF-8 text file for a Remote caller's preview. The browse
+   * interaction always reads; a native backend may also read when it implements
+   * the optional `readText` member, so the verb serves whichever interaction
+   * offers a read rather than demanding the browse kind.
    * @param path - absolute file path returned by the Host directory listing.
    * @param signal - caller lifetime; abort stops the pending filesystem read.
    * @returns the file's UTF-8 content.
    */
   @Remote('readText')
   async readText(path: string, signal: AbortSignal): Promise<string> {
-    const capability = this.requireCapability('browse', 'readText')
-    try { return await capability.readText(path, signal) }
-    catch (error: unknown) { throw cancellableFailure(error, signal, 'file read was aborted') }
+    const capability = this.ctx.directoryPicker.capability()
+    switch (capability.kind) {
+      case 'browse':
+      case 'native': {
+        if (capability.readText === undefined) break
+        try {
+          return await capability.readText(path, signal)
+        } catch (error: unknown) {
+          throw cancellableFailure(error, signal, 'file read was aborted')
+        }
+      }
+      default:
+        break
+    }
+    throw new RemoteError(
+      'directory-picker/unavailable',
+      `directoryPicker.readText needs a read capability; the composed picker serves "${capability.kind}"`,
+      { capability: capability.kind },
+    )
   }
 
   /**

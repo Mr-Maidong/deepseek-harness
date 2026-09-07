@@ -32,6 +32,14 @@ export interface DirectoryPickerNativeCapability {
    * @returns the level's listing with breadcrumb ancestry.
    */
   list?(path?: string, signal?: AbortSignal): Promise<DirectoryListing>
+  /**
+   * Read one bounded UTF-8 text file for a file-preview consumer when supported.
+   * @param path - absolute file path from the listing; callers must not construct it from user segments.
+   * @param signal - caller lifetime; abort stops the pending read.
+   * @returns the complete UTF-8 file content within the backend's fixed bound.
+   * @throws {DirectoryPickerError} `directory-unreadable` for non-files, oversized files, invalid paths, and read failures.
+   */
+  readText?(path: string, signal?: AbortSignal): Promise<string>
 }
 
 /**

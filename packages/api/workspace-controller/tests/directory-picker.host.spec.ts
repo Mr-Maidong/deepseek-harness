@@ -112,12 +112,34 @@ describe('directoryPicker readText Remote', () => {
 
   it('reports unavailable capability and cancellation', async () => {
     const native = await harness()
-    await expect(refused(native.readText('/tmp/x', new AbortController().signal))).resolves.toMatchObject({ code: 'directory-picker-unavailable' })
+    await expect(refused(native.readText('/tmp/x', new AbortController().signal))).resolves.toMatchObject({ code: 'directory-picker/unavailable' })
     const abort = new AbortController()
     const picker = await harness({ ...BROWSE_STUB, readText: (_path, signal) => new Promise<string>((_resolve, reject) => { signal?.addEventListener('abort', () => { reject(new Error('read aborted')) }, { once: true }) }) })
     const pending = refused(picker.readText('/tmp/x', abort.signal))
     abort.abort()
-    await expect(pending).resolves.toMatchObject({ code: 'cancelled' })
+    await expect(pending).resolves.toMatchObject({ code: 'gateway/cancelled' })
+  })
+
+  it('serves a read through a native capability that implements readText', async () => {
+    const picker = await harness({
+      kind: 'native',
+      pick: async () => null,
+      readText: async path => `contents of ${path}`,
+    })
+    const signal = new AbortController().signal
+    await expect(picker.readText('/home/user/project.ts', signal)).resolves.toBe('contents of /home/user/project.ts')
+  })
+
+  it('maps a native read failure onto the seam wire codes', async () => {
+    const picker = await harness({
+      kind: 'native',
+      pick: async () => null,
+      readText: async () => {
+        throw new DirectoryPickerError('directory-unreadable', '/home/user/secret', 'file is not a readable preview')
+      },
+    })
+    const failure = await refused(picker.readText('/home/user/secret', new AbortController().signal))
+    expect(failure).toMatchObject({ code: 'directory-picker/unreadable', details: { path: '/home/user/secret' } })
   })
 })
 
@@ -183,5 +205,35 @@ describe('directoryPicker browse Remotes', () => {
       .toMatchObject({ code: 'directory-picker/unavailable', details: { capability: 'native' } })
     expect(await refused(picker.createDirectory('/x', 'y')))
       .toMatchObject({ code: 'directory-picker/unavailable', details: { capability: 'native' } })
+  })
+
+  it('serves a listing through a native capability that implements list', async () => {
+    const picker = await harness({
+      kind: 'native',
+      pick: async () => null,
+      list: async (path) => {
+        const target = path ?? '/home/user'
+        return {
+          path: target,
+          home: '/home/user',
+          crumbs: [{ name: '/', path: '/', hidden: false, kind: 'directory' }],
+          entries: [{ name: 'projects', path: `${target}/projects`, hidden: false, kind: 'directory' }],
+          truncated: false,
+        }
+      },
+    })
+    const signal = new AbortController().signal
+    expect(await picker.list(undefined, signal)).toMatchObject({ path: '/home/user', home: '/home/user' })
+    expect(await picker.list('/home/user/projects', signal)).toMatchObject({ path: '/home/user/projects' })
+  })
+
+  it('refuses listing and reading for an interaction shape the verbs do not serve', async () => {
+    // The capability union is merge-extensible: a backend merged from a newer
+    // package can advertise a kind this controller has never seen.
+    const picker = await harness({ kind: 'remote-stream' } as unknown as DirectoryPickerCapability)
+    expect(await refused(picker.list(undefined, new AbortController().signal)))
+      .toMatchObject({ code: 'directory-picker/unavailable', details: { capability: 'remote-stream' } })
+    expect(await refused(picker.readText('/tmp/x', new AbortController().signal)))
+      .toMatchObject({ code: 'directory-picker/unavailable', details: { capability: 'remote-stream' } })
   })
 })

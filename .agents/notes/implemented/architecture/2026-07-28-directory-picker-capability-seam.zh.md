@@ -10,7 +10,7 @@ web GUI 的「打开本地文件夹」流程被焊死在一种交互上：`host.
 
 ## 决策
 
-在 `packages/host/` 落一个三包能力 seam——`directory-picker`（Service Definition）、`directory-picker-native`、`directory-picker-browse`（后端）——唯一约定方法 `capability()` 返回**可辨识联合**：`{ kind: 'native', pick(signal) }` 或 `{ kind: 'browse', list(path?), createDirectory(path, name) }`。`dsh-api-workspace-controller` 中的 `DirectoryPickerController` 注入 `directoryPicker`，提供匹配的生成 Remote 方法，另一种 kind 的调用以 `directory-picker-unavailable` 应答。联合之所以可辨识，是因为后端差异在**交互形态**——压平成统一方法集会逼每个后端伪装另一方的形态。
+在 `packages/host/` 落一个三包能力 seam——`directory-picker`（Service Definition）、`directory-picker-native`、`directory-picker-browse`（后端）——唯一约定方法 `capability()` 返回**可辨识联合**：`{ kind: 'native', pick(signal), list?, readText? }` 或 `{ kind: 'browse', list(path?), createDirectory(path, name), readText(path) }`。native 后端可补充只读的 `list`/`readText` 成员：自适应组合在有人值守的 loopback 主机上解析为 native，文件树的预览链路在那里也必须可用；子目录创建仍仅限 browse。`dsh-api-workspace-controller` 中的 `DirectoryPickerController` 注入 `directoryPicker`，按 kind 上实际存在的成员提供每个生成的 Remote 动词——而非仅凭 kind 名，因为该联合可由声明合并扩展，未来的 kind 可能携带此控制器不认识的成员——当该 kind 没有此动词的成员时以 `directory-picker/unavailable` 应答（details 携带 kind）。联合之所以可辨识，是因为后端差异在**交互形态**——压平成统一方法集会逼每个后端伪装另一方的形态。
 
 **client 侧靠 slot 组合，而非按广播分支。** ui-workspace 的两个触发表层各自声明一个 `single` 目录流洞（`conversation.hero.workspace.directoryFlow`／`sidebar.workspaces.directoryFlow`；之所以是两个 key，是因为一个洞只有一个声明它的 slot entry——owner 约定相同、占用者相同）。后端包是**双面包**：浏览器一侧把匹配的交互注册进两个洞——`-native` 是驱动 `directoryPicker/pick` 的无渲染占用者，`-browse` 是应用内的选择工作区目录对话框。洞的 owner 会话（`open`/`busy`/`onPicked`/`onCancel`/`onError`）承载整个交换：ui-workspace 保留触发（菜单入口仅在洞被占用时渲染）与接纳（`createWorkspace({path})`、可重试的错误对话框、重新选择），占用者持有从 `open` 到所选路径之间的一切。因此一行 `cordis.yml` 同时切换宿主能力与 client 流程；错配在构造上不可能，同时挂两个流程包会在 client 加载期失败（`single` 洞）。早先的 `host.describe.directoryPicker` 广播与客户端 kind 分支被删除——组合已经接好两侧后，供客户端分支用的 wire 事实不再有任何消费者。洞注册表（`ctx.slots.entries`）取而代之，成为每次打开菜单的占用读取。
 
@@ -43,6 +43,6 @@ web GUI 的「打开本地文件夹」流程被焊死在一种交互上：`host.
 ## 后果
 
 - `cordis.yml` 决定交互形态；`apps/cli` 挂 [`-auto` 选择器](../feature/2026-07-29-directory-picker-adaptive-default.zh.md)，它在启动时判定宿主处境并自行挂载 `-native` 或 `-browse`，一行仍同时切换后端与 UI；直接组合某个后端行即固定交互。
-- 协议公开生成的 `directoryPicker/list` 与 `directoryPicker/createDirectory` 方法及四个错误码；Connection fixture 提供确定性浏览树与 `directoryPicker/pick` 结果供无密钥组装测试使用。
+- 协议公开生成的 `directoryPicker/list`、`directoryPicker/readText` 与 `directoryPicker/createDirectory` 方法及 seam 的 `directory-picker/*` 各错误码，另有 `gateway/bad-request`、`gateway/cancelled`、`gateway/internal`；Connection fixture 提供确定性浏览树与 `directoryPicker/pick` 结果供无密钥组装测试使用。
 - 未来的新交互（或提供 `native` 交互的 Electron 提供方）只是一个双面后端包——无需网关手术，也不动 ui-workspace。
 - `ApiProxyDefaults.pickDirectory`（仅测试注入）删除；测试像提供其他服务一样提供 stub `ctx.directoryPicker`。

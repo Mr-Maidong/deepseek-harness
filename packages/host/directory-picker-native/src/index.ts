@@ -9,10 +9,10 @@
  * @module @deepseek-ai/dsh-host-directory-picker-native
  */
 
-import { readdir, stat } from 'node:fs/promises'
+import { lstat, readFile, readdir, stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { basename, dirname, resolve } from 'node:path'
-import { DirectoryPicker } from '@deepseek-ai/dsh-host-directory-picker'
+import { DirectoryPicker, DirectoryPickerError } from '@deepseek-ai/dsh-host-directory-picker'
 import type { DirectoryEntry, DirectoryPickerCapability } from '@deepseek-ai/dsh-host-directory-picker'
 
 function ancestry(target: string): DirectoryEntry[] {
@@ -24,6 +24,11 @@ function ancestry(target: string): DirectoryEntry[] {
     if (parent === current) return crumbs
     current = parent
   }
+}
+
+function messageOf(error: unknown): string {
+  /* v8 ignore next -- node:fs rejects with Error instances; the String arm only satisfies the unknown narrowing. */
+  return error instanceof Error ? error.message : String(error)
 }
 import { pickNativeDirectory } from './native-picker.ts'
 
@@ -49,9 +54,30 @@ export default class NativeDirectoryPicker extends DirectoryPicker {
           name: entry.name,
           path: resolve(target, entry.name),
           hidden: entry.name.startsWith('.'),
-          kind: entry.isDirectory() || (entry.isSymbolicLink() && (await stat(resolve(target, entry.name))).isDirectory()) ? 'directory' as const : 'file' as const,
+          // A broken symlink's stat probe fails; it stays a file row rather
+          // than making the whole level unreadable.
+          kind: entry.isDirectory() || (entry.isSymbolicLink() && await stat(resolve(target, entry.name)).then(info => info.isDirectory(), () => false)) ? 'directory' as const : 'file' as const,
         }))),
         truncated: false,
+      }
+    },
+    readText: async (path, signal) => {
+      signal?.throwIfAborted()
+      const target = resolve(path)
+      const info = await lstat(target).catch((error: unknown) => {
+        signal?.throwIfAborted()
+        throw new DirectoryPickerError('directory-unreadable', target, messageOf(error))
+      })
+      if (!info.isFile() || info.isSymbolicLink() || info.size > 1024 * 1024) {
+        throw new DirectoryPickerError('directory-unreadable', target, 'file is not a readable preview')
+      }
+      try {
+        return await readFile(target, 'utf8')
+      } catch (error: unknown) {
+        /* v8 ignore start -- an inode replaced between lstat and read is not producible; the controller spec pins the wire failure. */
+        signal?.throwIfAborted()
+        throw new DirectoryPickerError('directory-unreadable', target, messageOf(error))
+        /* v8 ignore stop */
       }
     },
   }

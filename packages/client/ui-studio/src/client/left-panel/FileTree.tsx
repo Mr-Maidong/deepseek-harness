@@ -118,7 +118,7 @@ type DirRowProps = {
 function DirRow({ path, name, depth, expanded, onToggle, listings, onFile, openPath }: DirRowProps): React.ReactElement {
   const children = listings.get(path)
   const open = expanded.has(path)
-  return <div className={css.row} style={{ paddingLeft: depth * 6 }}>
+  return <div className={css.row} style={{ paddingLeft: depth * 0 }}>
     <button type="button" className={css.dirButton} onClick={() => { onToggle(path) }} aria-expanded={open}>
       <ChevronIcon open={open} className={css.chevron} />
       <FolderIcon open={open} className={css.dirIcon} />
@@ -136,7 +136,7 @@ function DirRow({ path, name, depth, expanded, onToggle, listings, onFile, openP
 
 type FileRowProps = { path: string; name: string; depth: number; onFile: (path: string) => void; openPath?: string | undefined }
 function FileRow({ path, name, depth, onFile, openPath }: FileRowProps): React.ReactElement {
-  return <div className={css.row} style={{ paddingLeft: depth * 6 }}>
+  return <div className={css.row} style={{ paddingLeft: depth * 0 }}>
     <button type="button" className={css.fileRow} data-open={path === openPath || undefined} onClick={() => { onFile(path) }}>
       <span className={css.fileGlyph} aria-hidden="true" /><span className={css.fileName}>{name}</span>
     </button>

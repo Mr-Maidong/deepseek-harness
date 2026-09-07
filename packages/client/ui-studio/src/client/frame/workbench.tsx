@@ -150,7 +150,33 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
     setEditingDetail('')
   }
 
+  /** Scroll a just-expanded card into view after the body height transition
+   *  completes. Computes the target scrollTop explicitly so the card's bottom
+   *  edge lands above the list's bottom padding, keeping its border visible. */
+  const scrollTodoIntoView = (todoId: string): void => {
+    setTimeout(() => {
+      const card = document.querySelector(`article[data-todoid="${CSS.escape(todoId)}"]`) as HTMLElement | null
+      // Card is a direct child of the scrollable list; parentElement is stable
+      // across CSS Module hash changes and avoids an extra data-attribute seam.
+      const list = card?.parentElement as HTMLElement | null
+      if (!card || !list) return
+      const listRect = list.getBoundingClientRect()
+      const cardRect = card.getBoundingClientRect()
+      // Bottom padding of .todoList is the visual gutter we must preserve;
+      // read it live so CSS changes stay in sync without a magic constant.
+      const bottomGutter = parseFloat(getComputedStyle(list).paddingBottom) || 0
+      const cardBottomInList = cardRect.bottom - listRect.top + list.scrollTop
+      const minScrollToRevealBottom = cardBottomInList - list.clientHeight + bottomGutter
+      // Only scroll when the card's bottom is clipped by the viewport or the
+      // gutter; never scroll upward just to satisfy an alignment heuristic.
+      if (minScrollToRevealBottom > list.scrollTop) {
+        list.scrollTo({ top: minScrollToRevealBottom, behavior: 'smooth' })
+      }
+    }, 220)
+  }
+
   const toggleDetail = (todo: ProjectTodo): void => {
+    const expanding = collapsedFor(todo)
     if (todo.status === 'completed') {
       setExpandedTodoIds((ids) => {
         const next = new Set(ids)
@@ -166,6 +192,7 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
         return next
       })
     }
+    if (expanding) scrollTodoIntoView(todo.id)
   }
 
   // Completed todos default to collapsed; uncompleted ones default to expanded.
@@ -236,7 +263,7 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
     {activeProject !== undefined && <>
       <div className={css.todoList}>
         {todos.length === 0 && <div className={css.emptyState}><span className={css.emptyArtwork} aria-hidden="true" /></div>}
-        {todos.map(todo => <article className={css.todoCard} key={todo.id} data-done={todo.status === 'completed' || undefined}>
+        {todos.map(todo => <article className={css.todoCard} key={todo.id} data-todoid={todo.id} data-done={todo.status === 'completed' || undefined}>
           <div className={css.todoCardHead}>
             <label className={css.todoTitleRow}><input className={css.todoCheckbox} type="checkbox" checked={todo.status === 'completed'} disabled={todo.status === 'completed'} onChange={() => { markDone(todo) }} aria-label={todo.status === 'completed' ? t('workbench.done') : t('workbench.markDone')} /><span className={css.todoTitle}>{todo.title}</span></label>
             <div className={css.todoActions}><button className={css.todoSend} type="button" disabled={todo.status === 'completed'} aria-label={t('workbench.sendOne')} title={t('workbench.sendOne')} onClick={() => { void sendTodo(todo) }}><span className={css.sendIcon} aria-hidden="true" /></button><button className={css.todoWriteBack} type="button" disabled={todo.status === 'completed' || todo.sourceSessionId !== sessionId} aria-label={t('workbench.writeBack')} title={t('workbench.writeBack')} onClick={() => { void writeBackTodo(todo) }}><span className={css.summaryIcon} aria-hidden="true" /></button><button className={css.todoDelete} type="button" disabled={todo.status === 'completed'} aria-label={t('workbench.removeTodo')} title={t('workbench.removeTodo')} onClick={() => { removeTodo(todo.id) }}><span className={css.deleteIcon} aria-hidden="true" /></button></div>

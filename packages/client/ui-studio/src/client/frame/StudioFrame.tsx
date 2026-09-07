@@ -99,16 +99,39 @@ export function StudioFrame({ useStore, actions, renderSlot, SessionProvider }: 
   const [composerHeight, setComposerHeight] = useState(0)
   // Anchor the floating code-preview card above the resident composer bar: the
   // bar's height is dynamic (draft growth, dock cards), so measure the seat.
+  // The seat node is replaced when the active session changes, so we track it
+  // with a MutationObserver on the stable container and rebind the
+  // ResizeObserver whenever the seat identity changes.
   useEffect(() => {
     const view = conversationViewRef.current
     if (view === null) return
-    const seat = view.querySelector('[data-composer-seat]')
-    if (seat === null) return
-    const update = () => { setComposerHeight(seat.getBoundingClientRect().height) }
-    const observer = new ResizeObserver(update)
-    observer.observe(seat)
-    update()
-    return () => { observer.disconnect() }
+    let resizeObserver: ResizeObserver | null = null
+    let currentSeat: Element | null = null
+    const bindSeat = (seat: Element | null): void => {
+      if (seat === currentSeat) return
+      if (resizeObserver !== null) {
+        resizeObserver.disconnect()
+        resizeObserver = null
+      }
+      currentSeat = seat
+      if (seat === null) {
+        setComposerHeight(0)
+        return
+      }
+      const update = (): void => { setComposerHeight(seat.getBoundingClientRect().height) }
+      resizeObserver = new ResizeObserver(update)
+      resizeObserver.observe(seat)
+      update()
+    }
+    bindSeat(view.querySelector('[data-composer-seat]'))
+    const mutationObserver = new MutationObserver(() => {
+      bindSeat(view.querySelector('[data-composer-seat]'))
+    })
+    mutationObserver.observe(view, { childList: true, subtree: true })
+    return () => {
+      mutationObserver.disconnect()
+      if (resizeObserver !== null) resizeObserver.disconnect()
+    }
   }, [])
   const start = useCallback((panel: keyof typeof dragBase.current) => {
     dragBase.current[panel] = panels[panel]
@@ -131,6 +154,7 @@ export function StudioFrame({ useStore, actions, renderSlot, SessionProvider }: 
   return <div
     ref={frameRef}
     className={css.frame}
+    data-dsh-ui="studio"
     style={{ gridTemplateColumns: `${navigationWidth}px ${cols.workspace}px minmax(0, 1fr) ${cols.status}px` }}
     data-dragging={dragging || undefined}
     data-navigation-collapsed={panels.navigationCollapsed || undefined}

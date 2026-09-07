@@ -47,8 +47,7 @@
 
 .iconButton:focus-visible,
 .workspaceToggle:focus-visible,
-.sessionButton:focus-visible,
-.addWorkspace:focus-visible {
+.sessionButton:focus-visible {
   outline: 1px solid var(--workbase-accent);
   outline-offset: -2px;
 }
@@ -96,7 +95,6 @@
   display: flex;
   align-items: center;
   min-width: 0;
-  min-height: var(--workbase-row-height);
   border-radius: 3px;
   transition: background 150ms ease;
 }
@@ -261,26 +259,6 @@
   outline: none;
 }
 
-.addWorkspace {
-  display: inline-grid;
-  width: 28px;
-  height: 28px;
-  place-items: center;
-  align-self: flex-end;
-  margin: 4px 10px 10px;
-  padding: 0;
-  border: 1px solid rgba(156, 169, 164, 0.18);
-  border-radius: 3px;
-  background: rgba(156, 169, 164, 0.03);
-  color: var(--studio-muted);
-  cursor: pointer;
-}
-
-.addWorkspace:hover {
-  background: var(--workbase-surface);
-  color: var(--workbase-accent);
-}
-
 .addRow {
   display: flex;
   align-items: center;
@@ -291,8 +269,6 @@
   border-top: 1px solid var(--workbase-divider);
   color: var(--studio-muted);
 }
-
-.addingHint { font: 400 13px/18px 'YaHei Consolas Hybrid', monospace; }
 
 .operationError {
   margin: 2px 8px 0;

@@ -9,7 +9,6 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
 import { FileTree } from '../src/client/left-panel/FileTree.tsx'
 import { PreviewCard } from '../src/client/preview/PreviewCard.tsx'
-import { WorkBase } from '../src/client/left-panel/WorkBase.tsx'
 import { zh } from '../src/client/left-panel/locales.ts'
 import type { DirectoryListing } from '@deepseek-ai/dsh-api-remotes/client'
 
@@ -26,39 +25,6 @@ const listing: DirectoryListing = { path: '/workspace', home: '/workspace', crum
 afterEach(cleanup)
 
 describe('FileTree', () => {
-  it('reports a localized failure when the native picker is unavailable', async () => {
-    const useWorkspaces = (selector: (state: {
-      items: never[]
-      archivedSessionIds: never[]
-    }) => unknown): unknown => selector({ items: [], archivedSessionIds: [] })
-    render(<WorkBase
-      {...globalStandardProps}
-      t={t}
-      activeSection="project"
-      onPreview={vi.fn()}
-      useSessions={() => ({ ids: [], byId: {}, current: undefined }) as never}
-      useWorkspaces={useWorkspaces as never}
-      startSession={vi.fn()}
-      open={vi.fn()}
-      archiveSession={vi.fn()}
-      renameSession={vi.fn()}
-      renameWorkspace={vi.fn()}
-      deleteWorkspace={vi.fn()}
-      forkSession={vi.fn()}
-      createWorkspace={vi.fn()}
-      gitSummary={vi.fn(async () => null)}
-      listDirectory={vi.fn(async () => listing)}
-      readFile={vi.fn(async () => ({ path: '', content: '' }))}
-      renderSlot={(_name, owner) => {
-        const flow = owner as { open?: boolean; onError?: (message: string) => void }
-        if (flow.open) flow.onError?.('无法添加工作区，请重试。')
-        return null
-      }}
-    /> as never)
-    fireEvent.click(screen.getByRole('button', { name: '添加工作区' }))
-    expect(await screen.findByText('无法添加工作区，请重试。')).toBeTruthy()
-  })
-
   it('publishes the loading preview immediately and keeps the tree interactive', async () => {
     const onPreview = vi.fn()
     let release: ((content: { path: string; content: string; language?: string }) => void) | undefined

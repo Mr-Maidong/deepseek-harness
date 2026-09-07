@@ -28,7 +28,7 @@
 .workBase {
   position: relative;
   flex: 0 1 auto;
-  max-height: 30%;
+  max-height: 310px;
 }
 
 .workBase .sectionBody {
@@ -60,34 +60,64 @@
   flex: 1 1 0;
 }
 
-.sectionTitle {
-  position: relative;
+/* Section header row: the title toggle, the section's own actions, then the expand chevron. */
+.sectionHeader {
   display: flex;
   align-items: center;
-  gap: 9px;
-  width: 100%;
-  min-height: 44px;
-  margin: 0;
-  padding: 10px 14px 8px;
-  border: 0;
+  gap: 6px;
+  flex: none;
+  padding: 6px 8px 6px 14px;
   border-bottom: 1px solid rgba(164, 181, 184, 0.12);
   background: rgba(14, 23, 31, 0.24);
   color: var(--studio-muted);
   font: 500 15px/20px 'YaHei Consolas Hybrid', monospace;
   letter-spacing: 0.12em;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
   text-align: left;
   cursor: pointer;
-  transition: color 160ms ease, background 160ms ease;
+  transition: color 160ms ease;
 }
 
 .sectionTitle:hover {
-  background: rgba(156, 169, 164, 0.07);
   color: var(--studio-ink);
 }
 
 .sectionTitle:focus-visible {
   outline: 1px solid var(--studio-gold);
   outline-offset: -2px;
+}
+
+/* Expand/collapse affordance over the chevron, duplicating the title toggle; the
+   title button carries the section's accessible expansion state. */
+.sectionToggle {
+  display: inline-grid;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+
+.sectionToggle:hover {
+  background: rgba(156, 169, 164, 0.12);
 }
 
 .sectionTitle > span:first-child,
@@ -111,7 +141,6 @@
 .sectionChevron {
   width: 16px;
   height: 16px;
-  margin-left: auto;
   background-image: url('../assets/icons/expand.webp');
   background-repeat: no-repeat;
   background-position: center;
@@ -122,6 +151,60 @@
 .sectionChevron:global(.studio-icon-open) {
   transform: rotate(90deg);
 }
+
+/* Add workspace: left of the section chevron. It raises the directory flow,
+   which the workspace list below renders and reports failures against. */
+.addWorkspace {
+  display: inline-grid;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  padding: 0;
+  border: 0px solid rgba(156, 169, 164, 0.18);
+  border-radius: 3px;
+  background: rgba(156, 169, 164, 0);
+  color: inherit;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.addWorkspace:hover:not(:disabled) {
+  background: var(--studio-gold-wash);
+  color: var(--studio-gold);
+}
+
+.addWorkspace:disabled {
+  color: var(--studio-gold);
+  cursor: default;
+}
+
+.addWorkspace:focus-visible {
+  outline: 1px solid var(--studio-gold);
+  outline-offset: -2px;
+}
+
+.addIcon {
+  width: 16px;
+  height: 16px;
+  background-image: url('../assets/icons/new.webp');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+
+/* The picked path is being adopted; the flow may already be closed (native chooser). */
+.addingSpinner {
+  width: 12px;
+  height: 12px;
+  border: 1px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  corner-shape: round;
+  animation: studio-add-spin 700ms linear infinite;
+}
+
+@keyframes studio-add-spin { to { transform: rotate(360deg); } }
 
 .sectionBody {
   flex: 1 1 auto;
@@ -177,8 +260,10 @@
   outline-offset: -2px;
 }
 
-/* The collapsed section clips to its header, and a clipped button would stay reachable by Tab. */
-.fileTreeCollapsed .gitFooter {
+/* The collapsed section clips to its header, and a clipped button would stay reachable by Tab.
+   The add trigger follows: the list it adds to is hidden, so its entry point is too. */
+.fileTreeCollapsed .gitFooter,
+.workBaseCollapsed .addWorkspace {
   display: none;
 }
 
@@ -220,6 +305,10 @@
   .fileTreeCollapsed,
   .sectionBody,
   .sectionTitle,
+  .sectionToggle,
   .sectionChevron,
+  .addWorkspace,
   .gitFooter { transition: none; }
+
+  .addingSpinner { animation: none; }
 }

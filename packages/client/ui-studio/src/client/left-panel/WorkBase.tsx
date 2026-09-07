@@ -1,9 +1,9 @@
 /**
- * WorkBase: the studio's own WorkBase view — a card list of the
- * registered Host workspaces with the sessions under each, plus New Session
- * and Add workspace (path prompt). Deliberately lighter than ui-workspace's
- * WorkspaceBrowser: no grouping modes, drag reorder, or inline search — the
- * rail's job here is navigation, not management.
+ * WorkBase: the studio's own WorkBase view — a card list of the registered Host
+ * workspaces with the sessions under each, plus New Session per card and the
+ * directory flow behind the section header's Add workspace trigger.
+ * Deliberately lighter than ui-workspace's WorkspaceBrowser: no grouping modes,
+ * drag reorder, or inline search — the rail's job here is navigation, not management.
  */
 import { useEffect, useState } from 'react'
 import type { PropsLocale, PropsRenderSlots, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
@@ -19,7 +19,12 @@ import type { LeftPanelInjected } from './LeftPanelMain.tsx'
 import css from './WorkBase.module.css'
 
 /** Full composed props for the workspace view. */
-export type WorkBaseProps = PropsRuntime<'studio.workspace'> & PropsRenderSlots<'studio.workspace.directoryFlow'> & PropsLocale<typeof NS> & LeftPanelInjected
+export type WorkBaseProps = PropsRuntime<'studio.workspace'> & PropsRenderSlots<'studio.workspace.directoryFlow'> & PropsLocale<typeof NS> & LeftPanelInjected & {
+  /** The Add workspace conversation, raised by the section header's trigger. */
+  addFlow: DirectoryFlowOwnerProps
+  /** Failure of the last Add workspace attempt, shown under the card list. */
+  addError: string | undefined
+}
 
 /** The dependency slice cards and rows read (locale + injected verbs). */
 type WorkBaseDeps = Pick<WorkBaseProps, keyof LeftPanelInjected | 't' | 'useSessions' | 'useWorkspaces'>
@@ -142,7 +147,7 @@ function SessionRow({ sessionId, title, current, archiving, onArchive, deps }: {
   )
 }
 
-/** The workspace view body: New Session bar, workspace cards, Add prompt, delete confirm. */
+/** The workspace view body: workspace cards, the Add workspace flow, delete confirm. */
 export function WorkBase(props: WorkBaseProps): React.ReactElement {
   const { t } = props
   const workspaces = props.useWorkspaces((s: WorkspaceSnapshot) => s.items, Object.is)
@@ -156,9 +161,6 @@ export function WorkBase(props: WorkBaseProps): React.ReactElement {
     const activeWorkspace = workspaces.find(workspace => workspace.sessionIds.includes(current))
     if (activeWorkspace !== undefined) setExpanded(activeWorkspace.workspaceId)
   }, [current, workspaces])
-  const [adding, setAdding] = useState(false)
-  const [flowOpen, setFlowOpen] = useState(false)
-  const [addError, setAddError] = useState<string | undefined>(undefined)
   const [confirmDelete, setConfirmDelete] = useState<WorkspaceView | undefined>(undefined)
   const [archiveTarget, setArchiveTarget] = useState<SessionId | undefined>(undefined)
   const [archivingSessionIds, setArchivingSessionIds] = useState<ReadonlySet<SessionId>>(new Set())
@@ -228,37 +230,8 @@ export function WorkBase(props: WorkBaseProps): React.ReactElement {
           </div>
         )}
       </div>
-      {adding ? (
-        <div className={css.addRow}>
-          <span className={css.loadingSpinner} aria-hidden="true" />
-          <span className={css.addingHint}>{t('workspace.add')}</span>
-        </div>
-      ) : (
-        <button type="button" className={css.addWorkspace} aria-label={t('workspace.add')} title={t('workspace.add')} onClick={() => {
-          setAddError(undefined)
-          setFlowOpen(true)
-        }}>
-          <span className={css.newIcon} aria-hidden="true" />
-        </button>
-      )}
-      {props.renderSlot('studio.workspace.directoryFlow', {
-        open: flowOpen,
-        busy: adding,
-        onPicked: (path) => {
-          setAdding(true)
-          void props.createWorkspace({ path }).then(() => {
-            setFlowOpen(false)
-          }).catch(() => {
-            setAddError(t('workspace.addFailed'))
-          }).finally(() => { setAdding(false) })
-        },
-        onCancel: () => { setFlowOpen(false) },
-        onError: (message) => {
-          setFlowOpen(false)
-          setAddError(message)
-        },
-      } satisfies DirectoryFlowOwnerProps)}
-      {addError !== undefined && <div className={css.operationError} role="status">{addError}</div>}
+      {props.renderSlot('studio.workspace.directoryFlow', props.addFlow)}
+      {props.addError !== undefined && <div className={css.operationError} role="status">{props.addError}</div>}
       {archiveError !== undefined && <div className={css.operationError} role="status">{archiveError}</div>}
       {archiveTarget !== undefined && (
         <Modal

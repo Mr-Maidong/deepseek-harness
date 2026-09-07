@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PropsLocale, PropsRenderSlots, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { GitSummaryResult, WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-api-workspace-controller/client'
+import type { DirectoryFlowOwnerProps } from '@deepseek-ai/dsh-client-ui-workspace/client'
 import { ChevronIcon, FileTreeIcon, GitBranchIcon, WorkBaseIcon } from './icons/icons.tsx'
 import { WorkBase } from './WorkBase.tsx'
 import { FileTree } from './FileTree.tsx'
@@ -77,34 +78,87 @@ export function LeftPanelMain(props: LeftPanelMainProps): React.ReactElement {
   const rootPath = rootWorkspace?.path
   const { expandedPaths, sections } = props.useStore(s => s)
   const { result: git, error: gitError, refresh: refreshGit } = useGitSummary(props.gitSummary, rootWorkspace?.workspaceId)
+  const [adding, setAdding] = useState(false)
+  const [flowOpen, setFlowOpen] = useState(false)
+  const [addError, setAddError] = useState<string | undefined>(undefined)
+  const addFlow: DirectoryFlowOwnerProps = {
+    open: flowOpen,
+    busy: adding,
+    onPicked: (path) => {
+      setAddError(undefined)
+      setAdding(true)
+      void props.createWorkspace({ path }).then(() => {
+        setFlowOpen(false)
+      }).catch(() => {
+        setAddError(props.t('workspace.addFailed'))
+      }).finally(() => { setAdding(false) })
+    },
+    onCancel: () => { setFlowOpen(false) },
+    onError: (message) => {
+      setFlowOpen(false)
+      setAddError(message)
+    },
+  }
   return (
     <div className={css.main}>
       <section className={sections.workBase ? css.workBase : css.workBaseCollapsed} aria-labelledby="studio-workbase-title">
-        <button
-          type="button"
-          id="studio-workbase-title"
-          className={css.sectionTitle}
-          aria-expanded={sections.workBase}
-          onClick={() => { props.actions.toggleSection('workBase') }}
-        >
-          <WorkBaseIcon className={css.workspaceIcon} />
-          <span>{props.t('workBase.title')}</span>
-          <ChevronIcon open={sections.workBase} className={css.sectionChevron} />
-        </button>
-        <div className={css.sectionBody}><WorkBase {...props} /></div>
+        <div className={css.sectionHeader}>
+          <button
+            type="button"
+            id="studio-workbase-title"
+            className={css.sectionTitle}
+            aria-expanded={sections.workBase}
+            onClick={() => { props.actions.toggleSection('workBase') }}
+          >
+            <WorkBaseIcon className={css.workspaceIcon} />
+            <span>{props.t('workBase.title')}</span>
+          </button>
+          <button
+            type="button"
+            className={css.addWorkspace}
+            aria-label={props.t('workspace.add')}
+            title={props.t('workspace.add')}
+            disabled={adding}
+            onClick={() => { setAddError(undefined); setFlowOpen(true) }}
+          >
+            {adding ? <span className={css.addingSpinner} aria-hidden="true" /> : <span className={css.addIcon} aria-hidden="true" />}
+          </button>
+          {/* Decorative duplicate of the title toggle: the chevron marks the
+              section's expansion state and stays clickable in place. */}
+          <button
+            type="button"
+            className={css.sectionToggle}
+            aria-hidden="true"
+            tabIndex={-1}
+            onClick={() => { props.actions.toggleSection('workBase') }}
+          >
+            <ChevronIcon open={sections.workBase} className={css.sectionChevron} />
+          </button>
+        </div>
+        <div className={css.sectionBody}><WorkBase {...props} addFlow={addFlow} addError={addError} /></div>
       </section>
       <section className={sections.fileTree ? css.fileTree : css.fileTreeCollapsed} aria-labelledby="studio-filetree-title">
-        <button
-          type="button"
-          id="studio-filetree-title"
-          className={css.sectionTitle}
-          aria-expanded={sections.fileTree}
-          onClick={() => { props.actions.toggleSection('fileTree') }}
-        >
-          <FileTreeIcon className={css.fileTreeIcon} />
-          <span>{props.t('fileTree.title')}</span>
-          <ChevronIcon open={sections.fileTree} className={css.sectionChevron} />
-        </button>
+        <div className={css.sectionHeader}>
+          <button
+            type="button"
+            id="studio-filetree-title"
+            className={css.sectionTitle}
+            aria-expanded={sections.fileTree}
+            onClick={() => { props.actions.toggleSection('fileTree') }}
+          >
+            <FileTreeIcon className={css.fileTreeIcon} />
+            <span>{props.t('fileTree.title')}</span>
+          </button>
+          <button
+            type="button"
+            className={css.sectionToggle}
+            aria-hidden="true"
+            tabIndex={-1}
+            onClick={() => { props.actions.toggleSection('fileTree') }}
+          >
+            <ChevronIcon open={sections.fileTree} className={css.sectionChevron} />
+          </button>
+        </div>
         <div className={css.sectionBody}>
           <FileTree
             {...props}

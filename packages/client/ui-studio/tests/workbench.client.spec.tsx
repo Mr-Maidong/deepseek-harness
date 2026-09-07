@@ -149,6 +149,37 @@ describe('StudioWorkbench completion reconcile', () => {
     expect(stored.completion?.summary).toBe('Baseline summary.')
   })
 
+  it('renders an arbitrarily long todo title in one title node without dropping the controls', () => {
+    // jsdom cannot measure text-overflow, but the styling contract is that a
+    // long title stays one nowrap span (clipped with an ellipsis in the real
+    // browser) and the checkbox/actions row keeps its layout.
+    const longTitle = '灵光任务标题'.repeat(40)
+    const store = createProjectTodoStore().create('workspace-1')
+    store.actions.addProject({ title: 'Studio' })
+    const projectId = store.getSnapshot().projects[0]!.id
+    store.actions.addTodo({ projectId, title: longTitle, detail: '' })
+    const projection = createSnapshotStore<{ value: Record<string, WorkbenchTodoCompletion> | null | undefined }>({ value: undefined })
+    const useProjection = (_key: string, selector?: (v: unknown) => unknown) =>
+      bindSnapshotSelector(projection)(s => (selector ?? (v => v))(s.value))
+    const props: StudioWorkbenchProps = {
+      sessionId: 'session-a' as never,
+      sendToChat: vi.fn(async () => {}),
+      t,
+      useStore: bindSnapshotSelector(store),
+      actions: store.actions,
+      useProjection: useProjection as StudioWorkbenchProps['useProjection'],
+    } as unknown as StudioWorkbenchProps
+    render(<StudioWorkbench {...props} />)
+    const titles = [...document.querySelectorAll(`.${titleClass}`)]
+    expect(titles).toHaveLength(1)
+    expect(titles[0]!.textContent).toBe(longTitle)
+    // The checkbox (title row) and the three actions all stay rendered.
+    const card = titles[0]!.closest(`.${cardClass}`)!
+    expect(card.querySelector('input[type="checkbox"]')).toBeTruthy()
+    // Three action buttons plus the detail and expand buttons in the foot.
+    expect(card.querySelectorAll('button')).toHaveLength(5)
+  })
+
   it('does not reopen a store-completed todo when the projection changes away', () => {
     const { store, projection } = renderWorkbench()
     const todoId = store.getSnapshot().projects[0]!.todos[0]!.id

@@ -91,7 +91,7 @@ h2 {
   max-width: 150px;
   flex: none;
   overflow: hidden;
-  padding: 6px 8px;
+  padding: 2px 8px;
   border-bottom: 1px solid transparent;
   background: transparent;
   color: #edf2f0a1;
@@ -203,18 +203,33 @@ textarea:focus-visible {
 }
 
 .todoList {
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
   min-height: 0;
   gap: 10px;
   overflow: auto;
   padding: 2px 2px 8px 0;
   scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
 }
+
+.todoList:hover,
+.todoList:focus-within {
+  scrollbar-color: var(--studio-line) transparent;
+}
+
+.todoList::-webkit-scrollbar { width: 6px; }
+.todoList::-webkit-scrollbar-thumb { background: transparent; }
+.todoList:hover::-webkit-scrollbar-thumb,
+.todoList:focus-within::-webkit-scrollbar-thumb { background: var(--studio-line); }
 
 .todoCard {
   position: relative;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
+  flex: none;
   padding: 12px;
   border: 1px solid rgba(191, 205, 201, 0.3);
   border-radius: 4px;
@@ -231,6 +246,7 @@ textarea:focus-visible {
   align-items: center;
   gap: 8px;
   min-width: 0;
+  padding-bottom: 2px;
 }
 
 .todoTitleRow {
@@ -252,12 +268,15 @@ textarea:focus-visible {
 }
 
 .todoTitle {
+  flex: 1;
   min-width: 0;
   color: #edf2f0;
   font-size: 14px;
   font-weight: 500;
   line-height: 1.8;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .todoActions {
@@ -440,8 +459,10 @@ textarea:focus-visible {
   display: grid;
   position: relative;
   z-index: 1;
+  flex: 0 0 auto;
   gap: 4px;
-  max-height: 260px;
+  max-height: 40vh;
+  min-height: 0;
   overflow-y: auto;
   padding-top: 9px;
   border-top: 1px solid rgba(164, 181, 184, 0.1);

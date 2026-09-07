@@ -6,6 +6,11 @@
   font-display: swap;
 }
 
+/* The elastic bounce lives on the root scroller (the viewport): `.frame`
+   itself has overflow hidden and never scrolls, so the property only has an
+   effect on html. Suppressing root overscroll stops the whole layout from
+   rubber-banding when a wheel gesture chains past a finished inner scroller,
+   and leaves document scrollability otherwise untouched. */
 .frame {
   position: relative;
   display: grid;
@@ -19,6 +24,7 @@
     url('../assets/illustrations/0.webp') center / cover no-repeat,
     #111a22;
   font-family: 'YaHei Consolas Hybrid', monospace;
+  overscroll-behavior: none;
   --studio-ink: #d6dddc;
   --studio-muted: #b2bdc2;
   --studio-gold: #f0dfbc;

@@ -43,7 +43,7 @@ The package is loaded by the Web composition and has no user-configurable fields
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-The Host directory-picker browse capability validates and bounds text reads. The workspace Client service maps the result to a preview with an extension-derived language label. A file click publishes a status-carrying preview (`loading` → `ready`/`error`) through the owner callback, so the floating card shows the read state itself while the tree keeps rendering. StudioFrame owns preview state and renders PreviewCard anchored above the composer bar through `studio.center.editor`; the card is a kind-driven universal container (`code` shows source, `iframe` embeds rendered artifacts such as produced HTML in a sandboxed frame). File rows use Host-listed paths unchanged.
+The Host directory-picker browse capability validates and bounds text reads. The workspace Client service maps the result to a preview with an extension-derived language label. A file click publishes a status-carrying preview (`loading` → `ready`/`error`) through the owner callback, so the floating card shows the read state itself while the tree keeps rendering. StudioFrame owns preview state and renders PreviewCard anchored above the composer bar through `studio.center.editor`; the card is a kind-driven universal container (`code` shows source, `iframe` embeds rendered artifacts such as produced HTML in a sandboxed frame). File rows use Host-listed paths unchanged. Expanding a folder re-reads it, and opening one re-reads every folder still held open beneath it, so a collapsed subtree comes back with the directory's current contents; a failed re-read keeps the rows already on screen.
 
 </details>
 
@@ -83,6 +83,7 @@ The preview is intentionally read-only and bounded; it does not edit, search, or
 
 - **No editing** — users can inspect content but must use another tool to modify files.
 - **Extension labels are limited** — unknown extensions display as plain text.
+- **Directory listings refresh on expand** — opening a folder re-reads it and everything still open beneath it, but a folder that stays open while its contents change keeps showing what it had when it opened, because the browse path has no filesystem watch.
 
 <a id="dev-note"></a>
 ### Dev Note

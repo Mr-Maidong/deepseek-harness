@@ -19,26 +19,43 @@ export type FileTreeProps = PropsRuntime<'studio.workspace'> & PropsLocale<typeo
   openPath?: string | undefined
 }
 
-function useRoot(listDirectory: FileTreeProps['listDirectory'], rootPath: string | undefined): DirectoryListing | null | undefined {
-  const [listing, setListing] = useState<DirectoryListing | null | undefined>()
-  useEffect(() => {
-    if (rootPath === undefined) { setListing(undefined); return }
-    const controller = new AbortController()
-    setListing(undefined)
-    void listDirectory(rootPath, controller.signal).then(setListing).catch(() => {
-      if (!controller.signal.aborted) setListing(null)
-    })
-    return () => { controller.abort() }
-  }, [listDirectory, rootPath])
-  return listing
-}
-
+/**
+ * The workspace directory tree. A folder is listed when it opens — including
+ * when it re-opens after a collapse — and opening one re-lists every folder
+ * still held open beneath it, so a collapsed subtree never comes back with
+ * stale entries. Expansion itself is owned by the caller through the
+ * workspace store.
+ * @param props the locale seat plus the injected directory reads and the store-owned expansion.
+ * @returns the tree for the open workspace, or the prompt to pick one.
+ */
 export function FileTree(props: FileTreeProps): React.ReactElement {
   const { listDirectory, rootPath, t, readFile, onPreview, expandedPaths, onToggleExpanded, openPath } = props
-  const listing = useRoot(listDirectory, rootPath)
   const expanded = useMemo(() => new Set(expandedPaths), [expandedPaths])
   const listings = useRef(new Map<string, DirectoryListing>())
+  /** Paths with a read in flight; a second request for one of them is redundant. */
+  const pending = useRef(new Set<string>())
+  /** The expanded set as of the previous effect run, to tell a fresh open from a re-render. */
+  const openDirs = useRef<ReadonlySet<string>>(new Set())
   const [, setLoadedTick] = useState(0)
+  // The root's failure is the only panel-level state: a directory that has never
+  // been listed leaves its own row empty.
+  const [rootFailed, setRootFailed] = useState(false)
+  const read = useCallback((path: string, signal?: AbortSignal): Promise<void> => {
+    if (pending.current.has(path)) return Promise.resolve()
+    pending.current.add(path)
+    return listDirectory(path, signal).then(
+      (listing) => {
+        listings.current.set(path, listing)
+        if (path === rootPath) setRootFailed(false)
+        setLoadedTick(tick => tick + 1)
+      },
+      () => {
+        // A cancelled or failed read keeps whatever listing is already on screen.
+        if (signal?.aborted) return
+        if (path === rootPath && !listings.current.has(path)) setRootFailed(true)
+      },
+    ).finally(() => { pending.current.delete(path) })
+  }, [listDirectory, rootPath])
   const toggle = useCallback((path: string) => { onToggleExpanded(path) }, [onToggleExpanded])
   const onFile = useCallback((path: string) => {
     // Rendered artifacts whose source should be embedded directly (e.g. HTML
@@ -55,21 +72,28 @@ export function FileTree(props: FileTreeProps): React.ReactElement {
     })
   }, [onPreview, readFile])
   useEffect(() => {
+    if (rootPath === undefined) return
+    const controller = new AbortController()
+    setRootFailed(false)
+    void read(rootPath, controller.signal)
+    return () => { controller.abort() }
+  }, [read, rootPath])
+  useEffect(() => {
+    // A folder is re-read when it opens again or was never listed, and opening
+    // one re-reads every folder still held open under it: a collapsed subtree
+    // must not come back with the entries it had before the collapse.
+    const reopened = [...expanded].filter(path => !openDirs.current.has(path) || !listings.current.has(path))
+    openDirs.current = expanded
     for (const path of expanded) {
-      if (listings.current.has(path)) continue
-      void listDirectory(path).then((result) => {
-        listings.current.set(path, result)
-        setLoadedTick(tick => tick + 1)
-      }).catch(() => {})
+      if (reopened.some(root => path === root || path.startsWith(`${root}/`))) void read(path)
     }
-  }, [expanded, listDirectory])
-  if (listing !== undefined && listing !== null) listings.current.set(listing.path, listing)
+  }, [expanded, read])
   if (rootPath === undefined) return <div className={css.empty}>{t('fileTree.empty')}</div>
-  if (listing === undefined) return <div className={css.empty}>{t('fileTree.loading')}</div>
-  if (listing === null) return <div className={css.empty}>{t('fileTree.error')}</div>
+  const listing = listings.current.get(rootPath)
+  if (listing === undefined) return <div className={css.empty}>{rootFailed ? t('fileTree.error') : t('fileTree.loading')}</div>
   return <div className={css.tree}>
     <DirRow
-      path={listing.path}
+      path={rootPath}
       name={listing.path}
       depth={0}
       expanded={expanded}

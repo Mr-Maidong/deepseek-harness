@@ -14,7 +14,7 @@ Local-only state with no persistence was the status quo and the defect itself. P
 
 ## Decision
 
-The tree's expansion becomes a root-scoped persisted store declared on the `studio.workspace` entry (`createFileTreeStore`, key `dsh.studio.file-tree-expanded.v1`). It holds `expandedPaths: string[]` in toggle order — a JSON-serializable array, because a `Set` would not survive `attachPersistence`'s whole-value JSON write. `LeftPanelMain` reads the paths through `useStore` and writes through `actions.toggleExpanded`; `FileTree` becomes a controlled component receiving `expandedPaths` and `onToggleExpanded` as plain props. Child listings stay in the component's ref cache, keyed by path, so an already-loaded directory renders immediately on re-expansion without a second network read.
+The tree's expansion becomes a root-scoped persisted store declared on the `studio.workspace` entry (`createFileTreeStore`, key `dsh.studio.file-tree-expanded.v1`). It holds `expandedPaths: string[]` in toggle order — a JSON-serializable array, because a `Set` would not survive `attachPersistence`'s whole-value JSON write. `LeftPanelMain` reads the paths through `useStore` and writes through `actions.toggleExpanded`; `FileTree` becomes a controlled component receiving `expandedPaths` and `onToggleExpanded` as plain props. Child listings stay in the component's ref cache, keyed by path, so an open folder renders the children it already has; re-opening a folder re-reads it, as decided in [the expand-refresh note](2026-09-06-file-tree-expand-refresh.md).
 
 ## Consequences
 

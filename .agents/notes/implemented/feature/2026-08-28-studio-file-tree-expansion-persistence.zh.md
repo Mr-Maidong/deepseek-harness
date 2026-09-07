@@ -14,7 +14,7 @@ Studio 文件树把文件夹展开状态放在组件本地 `useState` 中，因�
 
 ## 决策
 
-文件树的展开状态成为 `studio.workspace` 入口声明的 root 作用域持久化 store（`createFileTreeStore`，key 为 `dsh.studio.file-tree-expanded.v1`）。它以 toggle 顺序保存 `expandedPaths: string[]`——JSON 可序列化的数组，因为 `Set` 无法通过 `attachPersistence` 的整值 JSON 写入持久化。`LeftPanelMain` 通过 `useStore` 读取路径、通过 `actions.toggleExpanded` 写入；`FileTree` 变为受控组件，通过普通 props 接收 `expandedPaths` 和 `onToggleExpanded`。子目录列表仍留在组件的 ref 缓存中（按路径为键），因此已加载的目录在重新展开时无需二次网络读取即可立即渲染。
+文件树的展开状态成为 `studio.workspace` 入口声明的 root 作用域持久化 store（`createFileTreeStore`，key 为 `dsh.studio.file-tree-expanded.v1`）。它以 toggle 顺序保存 `expandedPaths: string[]`——JSON 可序列化的数组，因为 `Set` 无法通过 `attachPersistence` 的整值 JSON 写入持久化。`LeftPanelMain` 通过 `useStore` 读取路径、通过 `actions.toggleExpanded` 写入；`FileTree` 变为受控组件，通过普通 props 接收 `expandedPaths` 和 `onToggleExpanded`。子目录列表仍留在组件的 ref 缓存中（按路径为键），因此保持展开的文件夹能立刻渲染它已知的子项；重新展开一个文件夹会把它再读一次，见[展开即刷新这篇 Agent Note](2026-09-06-file-tree-expand-refresh.zh.md)。
 
 ## 结果
 

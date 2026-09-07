@@ -46,6 +46,9 @@ describe('FileTree', () => {
       deleteWorkspace={vi.fn()}
       forkSession={vi.fn()}
       createWorkspace={vi.fn()}
+      gitSummary={vi.fn(async () => null)}
+      listDirectory={vi.fn(async () => listing)}
+      readFile={vi.fn(async () => ({ path: '', content: '' }))}
       renderSlot={(_name, owner) => {
         const flow = owner as { open?: boolean; onError?: (message: string) => void }
         if (flow.open) flow.onError?.('无法添加工作区，请重试。')

@@ -65,10 +65,10 @@ describe('file-tree workspace following', () => {
     await screen.findByText('/workspace')
     expect(listDirectory).toHaveBeenLastCalledWith('/workspace', expect.any(AbortSignal))
 
-    view.rerender(<LeftPanelMain {...{
+    view.rerender(<LeftPanelMain {...({
       ...props,
       useSessions: (selector: (state: unknown) => unknown) => selector({ ids: ['session-1', 'session-2'], byId: {}, current: 'session-2' }),
-    }} />)
+    } as LeftPanelMainProps)} />)
     await screen.findByText('/other')
     expect(listDirectory).toHaveBeenLastCalledWith('/other', expect.any(AbortSignal))
   })

@@ -149,6 +149,70 @@
 .sectionBody:hover::-webkit-scrollbar-thumb,
 .sectionBody:focus-within::-webkit-scrollbar-thumb { background: var(--studio-line); }
 
+/* Git summary chip in the file tree section header. */
+.gitFooter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-top: 1px solid rgba(164, 181, 184, 0.12);
+  background: rgba(14, 23, 31, 0.24);
+  color: var(--studio-muted);
+  font: 500 12px/16px 'YaHei Consolas Hybrid', monospace;
+  text-align: left;
+  cursor: pointer;
+  transition: color 160ms ease, background-color 160ms ease;
+}
+
+.gitFooter:hover {
+  background-color: rgba(156, 169, 164, 0.07);
+  color: var(--studio-ink);
+}
+
+.gitFooter:focus-visible {
+  outline: 1px solid var(--studio-gold);
+  outline-offset: -2px;
+}
+
+/* The collapsed section clips to its header, and a clipped button would stay reachable by Tab. */
+.fileTreeCollapsed .gitFooter {
+  display: none;
+}
+
+.gitFooterIcon {
+  flex: none;
+  opacity: 0.82;
+}
+
+.gitBranch {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gitChanges {
+  display: inline-flex;
+  gap: 6px;
+  flex: none;
+}
+
+.gitAdd {
+  color: var(--dsw-alias-state-success-primary);
+}
+
+.gitDel {
+  color: var(--dsw-alias-state-error-primary);
+}
+
+.gitUntracked {
+  color: var(--studio-gold);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .workBase,
   .fileTree,
@@ -156,5 +220,6 @@
   .fileTreeCollapsed,
   .sectionBody,
   .sectionTitle,
-  .sectionChevron { transition: none; }
+  .sectionChevron,
+  .gitFooter { transition: none; }
 }

@@ -31,9 +31,9 @@ export function AddWorkspaceIcon(props: IconProps): ReactElement {
   return <Icon {...props}><path d="M2.5 4.25A1.25 1.25 0 0 1 3.75 3h3l1.35 1.5h4.15a1.25 1.25 0 0 1 1.25 1.25v3.1" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" /><path d="M2.5 6.25v4.5A1.25 1.25 0 0 0 3.75 12h5.1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /><path d="M11.5 9v4M9.5 11h4" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" /></Icon>
 }
 
-/** Circular refresh action icon. */
-export function RefreshIcon(props: IconProps): ReactElement {
-  return <Icon {...props}><path d="M12.5 5.5A5 5 0 1 0 13 9" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" /><path d="M12.5 2.75v2.9H9.6" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" /></Icon>
+/** Git branch glyph: two nodes on a trunk with one node branching in. */
+export function GitBranchIcon(props: IconProps): ReactElement {
+  return <Icon {...props}><path d="M4.5 5.2v5.6" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" /><circle cx="4.5" cy="3.6" r="1.6" stroke="currentColor" strokeWidth="1.25" /><circle cx="4.5" cy="12.4" r="1.6" stroke="currentColor" strokeWidth="1.25" /><circle cx="11.5" cy="4.4" r="1.6" stroke="currentColor" strokeWidth="1.25" /><path d="M11.5 6v1.4a2.6 2.6 0 0 1-2.6 2.6H7.4" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" /></Icon>
 }
 
 /** Folder outline icon. */

@@ -1,9 +1,9 @@
 /** Studio workspace content: WorkBase above FileTree, with no tab switching. */
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PropsLocale, PropsRenderSlots, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { GitSummaryResult, WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-api-workspace-controller/client'
-import { ChevronIcon, FileTreeIcon, GitBranchIcon, RefreshIcon, WorkBaseIcon } from './icons/icons.tsx'
+import { ChevronIcon, FileTreeIcon, GitBranchIcon, WorkBaseIcon } from './icons/icons.tsx'
 import { WorkBase } from './WorkBase.tsx'
 import { FileTree } from './FileTree.tsx'
 import { NS } from './locales.ts'
@@ -37,20 +37,34 @@ export type LeftPanelMainProps = PropsRuntime<'studio.workspace'>
 function useGitSummary(
   gitSummary: LeftPanelInjected['gitSummary'],
   workspaceId: WorkspaceId | undefined,
-): { result: GitSummaryResult | null | undefined; refresh: () => void } {
+): { result: GitSummaryResult | null | undefined; error: string | undefined; refresh: () => void } {
   const [result, setResult] = useState<GitSummaryResult | null | undefined>(undefined)
-  const [tick, setTick] = useState(0)
-  useEffect(() => {
-    if (workspaceId === undefined) { setResult(undefined); return }
+  const [error, setError] = useState<string | undefined>(undefined)
+  const requestRef = useRef<AbortController | undefined>(undefined)
+  const read = useCallback(() => {
+    if (workspaceId === undefined) return
+    requestRef.current?.abort()
     const controller = new AbortController()
+    requestRef.current = controller
     setResult(undefined)
-    void gitSummary(workspaceId, controller.signal).then(setResult).catch(() => {
-      if (!controller.signal.aborted) setResult(null)
-    })
-    return () => { controller.abort() }
-  }, [gitSummary, workspaceId, tick])
-  const refresh = useCallback(() => { setTick(t => t + 1) }, [])
-  return { result, refresh }
+    setError(undefined)
+    try {
+      void gitSummary(workspaceId, controller.signal).then((value) => {
+        if (!controller.signal.aborted) setResult(value)
+      }).catch((reason) => {
+        // Keep transport/provider failures distinct from a valid non-Git directory.
+        if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : String(reason))
+      })
+    } catch (reason) {
+      // A missing Client Remote fails before the carrier can create a request.
+      if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : String(reason))
+    }
+  }, [gitSummary, workspaceId])
+  useEffect(() => {
+    read()
+    return () => { requestRef.current?.abort() }
+  }, [read])
+  return { result, error, refresh: read }
 }
 
 /** Render WorkBase and FileTree concurrently for the current session's workspace. */
@@ -62,7 +76,7 @@ export function LeftPanelMain(props: LeftPanelMainProps): React.ReactElement {
     : workspaces.items.find(workspace => workspace.sessionIds.includes(currentSessionId)) ?? workspaces.items[0]
   const rootPath = rootWorkspace?.path
   const { expandedPaths, sections } = props.useStore(s => s)
-  const { result: git, refresh: refreshGit } = useGitSummary(props.gitSummary, rootWorkspace?.workspaceId)
+  const { result: git, error: gitError, refresh: refreshGit } = useGitSummary(props.gitSummary, rootWorkspace?.workspaceId)
   return (
     <div className={css.main}>
       <section className={sections.workBase ? css.workBase : css.workBaseCollapsed} aria-labelledby="studio-workbase-title">
@@ -101,25 +115,35 @@ export function LeftPanelMain(props: LeftPanelMainProps): React.ReactElement {
             openPath={props.openPath}
           />
         </div>
-        {git !== undefined && git !== null && (
-          <button
-            type="button"
-            className={css.gitFooter}
-            aria-label={props.t('fileTree.gitRefresh')}
-            title={props.t('fileTree.gitRefresh')}
-            onClick={refreshGit}
-          >
-            <GitBranchIcon size={13} className={css.gitFooterIcon} />
-            <span className={css.gitBranch}>{git.branch ?? props.t('fileTree.gitDetached')}</span>
-            {(git.insertions > 0 || git.deletions > 0) && (
-              <span className={css.gitChanges}>
-                {git.insertions > 0 && <span className={css.gitAdd}>+{git.insertions}</span>}
-                {git.deletions > 0 && <span className={css.gitDel}>−{git.deletions}</span>}
-              </span>
-            )}
-            <RefreshIcon size={12} className={css.gitRefresh} />
-          </button>
-        )}
+        <button
+          type="button"
+          className={css.gitFooter}
+          aria-label={props.t('fileTree.gitRefresh')}
+          title={gitError === undefined
+            ? props.t('fileTree.gitRefresh')
+            : props.t('fileTree.gitUnavailableDetail', { message: gitError })}
+          onClick={refreshGit}
+        >
+          <GitBranchIcon size={13} className={css.gitFooterIcon} />
+          <span className={css.gitBranch}>
+            {rootWorkspace === undefined
+              ? props.t('fileTree.gitNoWorkspace')
+              : gitError !== undefined
+                ? props.t('fileTree.gitUnavailable')
+                : git === undefined
+                  ? props.t('fileTree.loading')
+                  : git === null
+                    ? props.t('fileTree.gitUninitialized')
+                    : (git.branch ?? props.t('fileTree.gitDetached'))}
+          </span>
+          {git !== null && git !== undefined && (git.insertions > 0 || git.deletions > 0 || git.untrackedFiles > 0) && (
+            <span className={css.gitChanges}>
+              {git.insertions > 0 && <span className={css.gitAdd}>+{git.insertions}</span>}
+              {git.deletions > 0 && <span className={css.gitDel}>−{git.deletions}</span>}
+              {git.untrackedFiles > 0 && <span className={css.gitUntracked}>{props.t('fileTree.gitUntracked', { n: git.untrackedFiles })}</span>}
+            </span>
+          )}
+        </button>
       </section>
     </div>
   )

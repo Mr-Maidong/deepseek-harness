@@ -80,7 +80,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 }
 
 /** Required services (cordis fiber inject — the loader passes all module exports as an object plugin). */
-export const inject = ['slots', 'theme', 'locale', 'sessions', 'workspaces', 'uiWorkspace']
+export const inject = ['slots', 'theme', 'locale', 'sessions', 'workspaces', 'uiWorkspace', 'remote', 'remote.workspace']
 
 /**
  * Client plugin body: provide ctx.layout, seat the theme presenter, and one
@@ -150,6 +150,11 @@ export function apply(ctx: ClientContext): void {
       createWorkspace: input => ctx.workspaces.create(input),
       listDirectory: (path, signal) => ctx.uiWorkspace.listDirectory(path, signal),
       readFile: path => ctx.uiWorkspace.readFile(path),
+      gitSummary: async (workspaceId, signal) => {
+        const result = await ctx.remote.workspace.gitSummary({ workspaceId }, signal)
+        if (!result.ok) throw new Error(result.error.message)
+        return result.value.summary
+      },
     })
     // Editor seat is root-scoped, so the current session is resolved at call
     // time (from the sessions list selection) rather than injected as a fixed id.

@@ -95,6 +95,15 @@ describe('HeaderSearch', () => {
     expect(document.activeElement).toBe(trigger)
   })
 
+  it('placeholder the panel body with a hint while the query is empty', () => {
+    renderSearch()
+    const input = openPanel()
+    const hint = screen.getByText(zh['search.emptyQuery'])
+    expect(hint.closest('[class*="_placeholder_"]')).toBeTruthy()
+    fireEvent.change(input, { target: { value: 'h' } })
+    expect(screen.queryByText(zh['search.emptyQuery'])).toBeNull()
+  })
+
   it('debounces the query and renders the bounded result', async () => {
     const { searchWorkspace } = renderSearch()
     const input = openPanel()

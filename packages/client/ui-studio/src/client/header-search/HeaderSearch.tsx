@@ -177,6 +177,16 @@ export function HeaderSearch(props: HeaderSearchProps): React.ReactElement {
   // The results list is content-stable while open; the panel keeps its scroll
   // position across re-renders because the portal node identity never changes.
   const resultsBody = (): React.ReactNode => {
+    // An empty query always carries cleared result/error/searching state
+    // (onChange and run reset all three), so the hint owns the panel body.
+    if (query.trim() === '') {
+      return (
+        <div className={css.placeholder}>
+          <span className={css.placeholderIcon} aria-hidden="true"><IconSearchOutline16 size={22} /></span>
+          <span className={css.placeholderText}>{t('search.emptyQuery')}</span>
+        </div>
+      )
+    }
     if (result !== undefined && result.matchCount === 0 && !searching) {
       return <div className={css.empty}>{t('search.noResults')}</div>
     }

@@ -44,6 +44,7 @@ export function clampWidth(px: number, min: number, max: number): number {
 }
 
 /**
+ * Resolve the frame's four column widths from the viewport and the saved preferences.
  * @param viewport - Available frame width in pixels.
  * @param navigation - Navigation preference in pixels.
  * @param workspace - Workspace preference in pixels.

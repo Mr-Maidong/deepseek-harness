@@ -37,6 +37,31 @@ export function PreviewCard({ preview, onClose, t, insertReference }: Props): Re
     setRange(undefined)
   }
 
+  // Scroll the code surface to the focused line when a search jump opens a
+  // ready preview. The <pre> is the scroll container; the focused line's
+  // offset is measured by counting the newlines before it, then the surface
+  // scrolls so that line sits near the vertical center. The line is briefly
+  // highlighted via a temporary class on the <pre>.
+  useEffect(() => {
+    if (preview === undefined || preview.status !== 'ready' || preview.kind !== 'code' || preview.focus === undefined) return
+    const code = codeRef.current
+    if (code === null) return
+    const line = Math.max(1, preview.focus.line)
+    const lines = preview.content.split('\n')
+    const target = Math.min(line, lines.length)
+    // Approximate the line's pixel offset from the number of lines above it.
+    const lineHeight = 22
+    const targetTop = (target - 1) * lineHeight
+    const viewport = code.clientHeight
+    code.scrollTop = Math.max(0, targetTop - viewport / 2)
+    const focusClass = css.focusLine
+    if (focusClass !== undefined) {
+      code.classList.add(focusClass)
+      const timer = setTimeout(() => { code.classList.remove(focusClass) }, 1600)
+      return () => { clearTimeout(timer) }
+    }
+  }, [preview])
+
   // Dismiss the bubble when the user clicks outside the code surface.
   // mouseUp/keyUp on the <pre> only fires for interactions *inside* it;
   // clicking elsewhere deselects without reaching those handlers.

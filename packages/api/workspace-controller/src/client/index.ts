@@ -18,6 +18,7 @@ export type {
 export { WorkspaceController, WorkspaceCreateError } from './service.ts'
 export type { IWorkspaces, WorkspaceSource } from './service.ts'
 export type { GitSummaryResult, WorkspaceId, WorkspaceView } from '../types.ts'
+export type { WorkspaceSearchFile, WorkspaceSearchMatch, WorkspaceSearchResult } from '../types.ts'
 
 type WorkspaceBaselineFrame = Extract<WorkspaceFollowFrame, { type: 'baseline' }>
 

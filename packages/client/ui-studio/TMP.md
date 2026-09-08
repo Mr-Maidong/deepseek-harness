@@ -70,7 +70,7 @@ type ProjectTodo = {
 
 模型不应直接修改 React 组件状态，而应调用待办存储层的完成操作：
 
-```ts
+```ts ignore-check
 type TodoCompletionInput = {
   todoId: string
   summary: string
@@ -99,7 +99,7 @@ Workbench UI
 
 建议的 store actions：
 
-```ts
+```ts ignore-check
 type TodoActions = {
   addProject(input: { title: string }): void
   removeProject(projectId: string): void

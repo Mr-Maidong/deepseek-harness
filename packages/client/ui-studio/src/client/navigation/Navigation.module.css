@@ -158,6 +158,7 @@
 
 .sectionMark_project {
   border-radius: 50%;
+  corner-shape: round;
 }
 
 .sectionMark_project::before {
@@ -177,6 +178,7 @@
 
 .sectionMark_team {
   border-radius: 50% 50% 3px 3px;
+  corner-shape: round;
   transform: scale(0.82);
 }
 
@@ -186,6 +188,7 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
+  corner-shape: round;
   box-shadow: -5px 3px 0 -1px currentColor, 5px 3px 0 -1px currentColor;
 }
 
@@ -285,6 +288,7 @@
   padding: 0;
   border: 0;
   border-radius: 50%;
+  corner-shape: round;
   background: transparent;
   color: var(--studio-muted, #84939a);
   cursor: pointer;

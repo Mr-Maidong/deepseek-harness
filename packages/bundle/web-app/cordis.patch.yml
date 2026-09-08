@@ -106,6 +106,10 @@
     - id: git-summary
       name: '@deepseek-ai/dsh-host-git-summary'
 
+    # Host workspace-search capability (plain-text search over a workspace dir).
+    - id: workspace-search
+      name: '@deepseek-ai/dsh-host-workspace-search'
+
     - id: cordis-host-runner
       name: '@deepseek-ai/dsh-cordis-host-runner'
 

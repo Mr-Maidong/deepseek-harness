@@ -22,6 +22,11 @@ export interface AnchoredPositionOptions {
   panelRef: RefObject<HTMLElement | null>
   /** Which anchor edge the panel hangs from: below it (`bottom`, the default) or above it (`top`). */
   side?: 'top' | 'bottom'
+  /**
+   * How the panel aligns with the anchor along the inline axis: its left edges
+   * line up (`start`, the default) or its right edges line up (`end`).
+   */
+  align?: 'start' | 'end'
   /** Distance kept between the anchor edge named by `side` and the panel. */
   gap: number
   /** Distance kept between the panel and each viewport edge. */
@@ -30,11 +35,11 @@ export interface AnchoredPositionOptions {
 
 /**
  * Track an anchor and return the panel's fixed coordinates.
- * @param options - the open state, the two refs, the placement side, and the gap/margin distances.
+ * @param options - the open state, the two refs, the placement side and inline alignment, and the gap/margin distances.
  * @returns `left`/`top` for the panel, or `null` before the first measurement.
  */
 export function useAnchoredPosition(options: AnchoredPositionOptions): CSSProperties | null {
-  const { open, anchorRef, panelRef, side = 'bottom', gap, margin } = options
+  const { open, anchorRef, panelRef, side = 'bottom', align = 'start', gap, margin } = options
   const [position, setPosition] = useState<CSSProperties | null>(null)
   useLayoutEffect(() => {
     if (!open) {
@@ -50,7 +55,7 @@ export function useAnchoredPosition(options: AnchoredPositionOptions): CSSProper
       const panel = panelRef.current
       const width = panel?.offsetWidth ?? 0
       const height = panel?.offsetHeight ?? 0
-      let left = rect.left
+      let left = align === 'end' ? rect.right - width : rect.left
       let top = side === 'top' ? rect.top - gap - height : rect.bottom + gap
       if (width > 0) left = Math.min(Math.max(left, margin), window.innerWidth - width - margin)
       if (height > 0) top = Math.min(Math.max(top, margin), window.innerHeight - height - margin)
@@ -78,6 +83,6 @@ export function useAnchoredPosition(options: AnchoredPositionOptions): CSSProper
       window.removeEventListener('scroll', place, true)
       window.removeEventListener('resize', place)
     }
-  }, [open, anchorRef, panelRef, side, gap, margin])
+  }, [open, anchorRef, panelRef, side, align, gap, margin])
   return position
 }

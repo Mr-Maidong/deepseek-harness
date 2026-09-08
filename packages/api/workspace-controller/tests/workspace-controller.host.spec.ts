@@ -375,3 +375,51 @@ describe('WorkspaceController gitSummary', () => {
       .resolves.toEqual({ summary: null })
   })
 })
+
+describe('WorkspaceController search', () => {
+  it('refuses the read with a stable code when no provider is composed', async () => {
+    const { controller, root } = await harness()
+    const created = await controller.create({ path: stageDir(root, 'no-provider') })
+    await expect(controller.search({ workspaceId: created.workspace.workspaceId, query: 'hello' }))
+      .rejects.toMatchObject({ code: 'workspace/search-unavailable' })
+  })
+
+  it('reports an unknown Workspace before consulting the capability', async () => {
+    const { controller, ctx } = await harness()
+    const search = vi.fn()
+    ctx.provide('workspaceSearch', { search } as never)
+    await expect(controller.search({ workspaceId: 'missing' as WorkspaceId, query: 'hello' }))
+      .rejects.toMatchObject({ code: 'workspace/not-found' })
+    expect(search).not.toHaveBeenCalled()
+  })
+
+  it('searches the directory the registry resolved for that Workspace', async () => {
+    const { controller, ctx, root } = await harness()
+    const path = stageDir(root, 'repo')
+    const created = await controller.create({ path })
+    const result = {
+      files: [{ path: 'a.ts', matches: [{ line: 1, column: 1, preview: 'hello\n', matchStart: 0, matchLength: 5 }] }],
+      fileCount: 1,
+      matchCount: 1,
+      truncated: false,
+      durationMs: 3,
+    }
+    const search = vi.fn(async () => result)
+    ctx.provide('workspaceSearch', { search } as never)
+    const caller = new AbortController()
+    const workspaceId = created.workspace.workspaceId
+
+    await expect(controller.search({ workspaceId, query: 'hello' }, caller.signal))
+      .resolves.toEqual({ result })
+    expect(search).toHaveBeenCalledWith(path, 'hello', caller.signal)
+  })
+
+  it('forwards a bounded result for a Workspace whose directory has no matches', async () => {
+    const { controller, ctx, root } = await harness()
+    const created = await controller.create({ path: stageDir(root, 'plain-dir') })
+    const result = { files: [], fileCount: 0, matchCount: 0, truncated: false, durationMs: 1 }
+    ctx.provide('workspaceSearch', { search: async () => result } as never)
+    await expect(controller.search({ workspaceId: created.workspace.workspaceId, query: 'zzz' }))
+      .resolves.toEqual({ result })
+  })
+})

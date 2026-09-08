@@ -18,7 +18,7 @@
 .header { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--studio-line); color: var(--studio-muted); font-size: 12px; }
 .path { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .language { flex: none; color: var(--studio-gold); }
-.close { flex: none; margin-left: auto; display: grid; width: 22px; height: 22px; place-items: center; padding: 0; border: 1px solid var(--studio-line); border-radius: 50%; color: var(--studio-muted); background: transparent; cursor: pointer; }
+.close { flex: none; margin-left: auto; display: grid; width: 22px; height: 22px; place-items: center; padding: 0; border: 1px solid var(--studio-line); border-radius: 50%; corner-shape: round; color: var(--studio-muted); background: transparent; cursor: pointer; }
 .close:hover { color: var(--studio-gold); border-color: var(--studio-gold); }
 .code { flex: 1; margin: 0; padding: 14px; overflow: auto; white-space: pre; font: 13px/1.7 monospace; outline: none; }
 /* Wrapper that turns the scrollable code surface into the positioning context
@@ -58,3 +58,5 @@
 .code::-webkit-scrollbar-thumb { background: transparent; }
 .code:hover::-webkit-scrollbar-thumb,
 .code:focus-within::-webkit-scrollbar-thumb { background: var(--studio-line); }
+/* Brief highlight on the code surface after a search jump scrolls to a line. */
+.focusLine { background: rgba(212, 175, 55, 0.06); }

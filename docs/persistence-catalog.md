@@ -740,6 +740,23 @@ Source: [`packages/core/session/src/types.ts:280`](../packages/core/session/src/
 
 Source: [`packages/core/session/src/types.ts:278`](../packages/core/session/src/types.ts)
 
+### `studio/*`
+
+<a id="studiotodo-complete--log-only"></a>
+
+#### `studio/todo-complete` — log-only
+
+```ts persistence-catalog
+/**
+ * Model-written completion for one Studio work item. The latest event for a
+ * todo id is its rendered completion.
+ * @param data - stable work-item id and structured execution result.
+ */
+'studio/todo-complete': WorkbenchTodoCompletion
+```
+
+Source: [`packages/todo/tool-todo/src/types.ts:70`](../packages/todo/tool-todo/src/types.ts)
+
 ### `subagent/*`
 
 <a id="subagentdescriptor--log-only"></a>
@@ -850,7 +867,7 @@ Source: [`packages/experimental/agent-team/src/types.ts:223`](../packages/experi
 
 Types: [TodoItem](subsystems/todo.md)
 
-Source: [`packages/todo/tool-todo/src/types.ts:31`](../packages/todo/tool-todo/src/types.ts)
+Source: [`packages/todo/tool-todo/src/types.ts:42`](../packages/todo/tool-todo/src/types.ts)
 
 ### `tool/*`
 

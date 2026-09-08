@@ -15,7 +15,15 @@ export type StudioPreviewKind = 'code' | 'iframe'
 /** Read state of a workspace file as it travels from the tree click to the floating card. */
 export type StudioPreview =
   | { path: string; status: 'loading'; kind: StudioPreviewKind }
-  | { path: string; status: 'ready'; content: string; kind: StudioPreviewKind; language?: string }
+  | {
+    path: string
+    status: 'ready'
+    content: string
+    kind: StudioPreviewKind
+    language?: string
+    /** 1-based line/column to scroll the card to when it opens (search jump). */
+    focus?: { line: number; column: number }
+  }
   | { path: string; status: 'error'; kind: StudioPreviewKind }
 
 /** Workspace and session switcher share. */

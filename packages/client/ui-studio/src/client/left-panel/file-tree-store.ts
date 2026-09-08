@@ -18,6 +18,7 @@ type FileTreeActions = {
  * panel's section toggles. Directory paths are kept as a JSON-serializable
  * array (a Set would not survive persistence); toggle order is preserved so
  * the same paths come back in the same order.
+ * @returns the store handle.
  */
 export function createFileTreeStore(): EngineStoreHandle<FileTreeState, FileTreeActions> {
   return defineStore({

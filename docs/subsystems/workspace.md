@@ -164,7 +164,10 @@ Host service backing the generated `ctx.remote.directoryPicker` namespace. The s
 @Remote('pick') async pick(signal: AbortSignal): Promise<string | null>
 
 /**
- * List one directory level for a Remote caller's in-app browser.
+ * List one directory level for a Remote caller's in-app browser. The browse
+ * interaction always lists; a native backend may also list when it implements
+ * the optional `list` member, so the verb serves whichever interaction offers
+ * a listing rather than demanding the browse kind.
  * @param path - absolute directory to list; absent lists the home directory.
  * @param signal - caller lifetime; abort stops the backend's scan instead of
  *   letting it outlive a disconnected caller.
@@ -173,7 +176,10 @@ Host service backing the generated `ctx.remote.directoryPicker` namespace. The s
 @Remote('list') async list(path: string | undefined, signal: AbortSignal): Promise<DirectoryListing>
 
 /**
- * Read one bounded UTF-8 text file for a Remote caller's preview.
+ * Read one bounded UTF-8 text file for a Remote caller's preview. The browse
+ * interaction always reads; a native backend may also read when it implements
+ * the optional `readText` member, so the verb serves whichever interaction
+ * offers a read rather than demanding the browse kind.
  * @param path - absolute file path returned by the Host directory listing.
  * @param signal - caller lifetime; abort stops the pending filesystem read.
  * @returns the file's UTF-8 content.
@@ -273,6 +279,14 @@ Host service backing the generated `ctx.remote.workspace` namespace.
  * @returns the git summary, or null when the directory is not a repository.
  */
 @Remote('gitSummary') async gitSummary( request: WorkspaceGitSummaryRequest, signal?: AbortSignal, ): Promise<WorkspaceGitSummaryValue>
+
+/**
+ * Search one Workspace's directory for a plain-text query.
+ * @param request - Workspace identity and plain-text query.
+ * @param signal - caller lifetime; abort cancels pending search work.
+ * @returns the bounded one-shot search result.
+ */
+@Remote('search') async search( request: WorkspaceSearchRequest, signal?: AbortSignal, ): Promise<WorkspaceSearchValue>
 ```
 
 Source: [`packages/api/workspace-controller/src/index.ts`](../../packages/api/workspace-controller/src/index.ts)
@@ -353,4 +367,24 @@ async resolveByPath(path: string): Promise<Workspace | undefined>
 Types: [SessionId](core.md)
 
 Source: [`packages/workspace/workspace/src/index.ts`](../../packages/workspace/workspace/src/index.ts)
+
+<a id="ctxworkspacesearch--workspacesearchruntime-abstract-seam"></a>
+
+### `ctx.workspaceSearch` — `WorkspaceSearchRuntime` (abstract seam)
+
+Abstract workspace-search service. Subclass, implement search, and load the subclass as a plugin — it registers as `ctx.workspaceSearch` (one implementation per context; loading a second throws per cordis duplicate- service behavior).
+
+```ts cordis-catalog
+/**
+ * Search one directory for a plain-text query, honoring `.gitignore` and
+ * the provider's configured limits.
+ * @param path - absolute directory to search.
+ * @param query - plain-text query; never interpreted as a regular expression.
+ * @param signal - caller lifetime; abort cancels pending search work.
+ * @returns the bounded one-shot result.
+ */
+abstract search( path: string, query: string, signal?: AbortSignal, ): Promise<WorkspaceSearchResult>
+```
+
+Source: [`packages/host/workspace-search/src/service.ts`](../../packages/host/workspace-search/src/service.ts)
 <!-- END GENERATED cordis-surface -->

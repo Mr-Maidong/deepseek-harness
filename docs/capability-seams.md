@@ -203,6 +203,8 @@ flowchart LR
   pkg_host_directory_picker_browse["host-directory-picker-browse"]
   pkg_host_git_summary["host-git-summary"]
   svc_gitSummary["ctx.gitSummary<br/>Workspace git-state read seam"]
+  pkg_host_workspace_search["host-workspace-search"]
+  svc_workspaceSearch["ctx.workspaceSearch<br/>Workspace plain-text search seam"]
   pkg_host_webserver["host-webserver"]
   svc_webServer["ctx.webServer<br/>HTTP route registration"]
   pkg_client_connection["client-connection"]
@@ -267,6 +269,7 @@ flowchart LR
   pkg_host_directory_picker_native --> svc_directoryPicker
   pkg_host_git_summary --> svc_gitSummary
   pkg_host_webserver --> svc_webServer
+  pkg_host_workspace_search --> svc_workspaceSearch
   pkg_inspector --> svc_inspector
   pkg_invariants --> svc_invariants
   pkg_jobs --> svc_jobs
@@ -468,6 +471,7 @@ flowchart LR
   svc_workflowEngine --> pkg_tool_workflow
   svc_workspaceRegistry --> pkg_api_session_controller
   svc_workspaceRegistry --> pkg_api_workspace_controller
+  svc_workspaceSearch --> pkg_api_workspace_controller
   svc_fs -. event gate .-> pkg_fs_observation_policy
 ```
 
@@ -537,6 +541,7 @@ flowchart LR
 | `ctx.spillStore` | `seam` | [`spill`](../packages/spill/spill) | [`spill-local`](../packages/spill/spill-local) | [`spill-policy`](../packages/spill/spill-policy) | - | The backend saves oversized tool text and returns a model-facing locator plus retrieval hint; spill-policy is the tools/post-execute consumer that decides when to spill. |
 | `ctx.directoryPicker` | `seam` | [`host-directory-picker`](../packages/host/directory-picker) | [`host-directory-picker-native`](../packages/host/directory-picker-native), [`host-directory-picker-browse`](../packages/host/directory-picker-browse) | [`api-workspace-controller`](../packages/api/workspace-controller) | - | Discriminated interaction capability: the native backend opens one OS chooser on the host display, the browse backend serves listing/creation primitives for the in-app browser; dual-face backends fill ui-workspace directory-flow slots from their browser halves (no wire advertisement). |
 | `ctx.gitSummary` | `seam` | [`host-git-summary`](../packages/host/git-summary) | [`host-git-summary`](../packages/host/git-summary) | [`api-workspace-controller`](../packages/api/workspace-controller) | - | One bounded read of branch and uncommitted change counts for a Host directory; the local provider spawns the git CLI through ctx.subprocess, and the Workspace Remote publishes the result to the Studio file tree. |
+| `ctx.workspaceSearch` | `seam` | [`host-workspace-search`](../packages/host/workspace-search) | [`host-workspace-search`](../packages/host/workspace-search) | [`api-workspace-controller`](../packages/api/workspace-controller) | - | One bounded one-shot plain-text search over a Host directory; the local provider spawns ripgrep through ctx.subprocess, and the Workspace Remote publishes the result to the Studio header search panel. |
 | `ctx.webServer` | `core` | [`host-webserver`](../packages/host/webserver) | - | [`client-connection`](../packages/client/connection), [`client-modules`](../packages/client/modules), [`client-hmr`](../packages/client/hmr) | - | Plain node:http carrier: named-route registry, index transform taps, and the static dist fallback; web-transport plugins register their own routes. |
 | `ctx.clientModules` | `core` | [`client-modules`](../packages/client/modules) | - | [`client-hmr`](../packages/client/hmr) | - | Composes the __DSH_BOOT__ entry graph from an incremental dsh.client scan, serves plugin bundles, and notifies rebuilt/graph-changed subscribers. |
 | `ctx.workflowEngine` | `seam` | [`workflow`](../packages/workflow/workflow) | [`workflow-worker-thread`](../packages/workflow/workflow-worker-thread) | [`tool-workflow`](../packages/workflow/tool-workflow), [`tool-ralph`](../packages/workflow/tool-ralph) | - | One engine per context, as in bash, with no named-provider registry; the general workflow and fixed Ralph consumers start runs whose agent() calls fan out through ctx.subagents. |

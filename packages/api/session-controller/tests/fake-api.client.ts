@@ -274,6 +274,9 @@ export class FakeApiClient {
           this.onWorkspaceArchiveSession(payload),
         ),
         gitSummary: () => Promise.resolve(ok({ summary: null })),
+        search: () => Promise.resolve(ok({
+          result: { files: [], fileCount: 0, matchCount: 0, truncated: false, durationMs: 0 },
+        })),
         follow: signal => this.openWorkspace(signal),
       },
     }

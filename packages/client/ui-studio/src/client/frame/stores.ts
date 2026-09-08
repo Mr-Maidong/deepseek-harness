@@ -25,7 +25,10 @@ type StudioActions = {
   setStatus: (draft: StudioState, px: number) => void
 }
 
-/** Create the isolated geometry store used by one root registration. */
+/**
+ * Create the isolated geometry store used by one root registration.
+ * @returns the store handle.
+ */
 export function createStudioStore(): EngineStoreHandle<StudioState, StudioActions> {
   return defineStore({
     persist: 'dsh.studio.layout.v1',

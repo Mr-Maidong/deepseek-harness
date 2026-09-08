@@ -32,6 +32,8 @@ import type {
   WorkspaceInsertSessionBeforeRequest,
   WorkspaceOrderValue,
   WorkspaceRenameRequest,
+  WorkspaceSearchRequest,
+  WorkspaceSearchValue,
   WorkspaceId,
   WorkspaceValue,
   WorkspaceView,
@@ -146,6 +148,10 @@ class ScriptedWorkspaceRemote implements WorkspaceRemote {
     throw new Error('unused')
   }
 
+  search(_request: WorkspaceSearchRequest): Promise<RemoteResult<WorkspaceSearchValue>> {
+    throw new Error('unused')
+  }
+
   async *follow(signal = new AbortController().signal): AsyncIterable<WorkspaceFollowFrame> {
     const generation = this.generations[this.calls++]
     if (generation === undefined) throw new Error('no scripted Workspace generation')
@@ -187,6 +193,10 @@ class CommandWorkspaceRemote implements WorkspaceRemote {
   })))
 
   readonly gitSummary = vi.fn<WorkspaceRemote['gitSummary']>(() => Promise.resolve(remoteOk({ summary: null })))
+
+  readonly search = vi.fn<WorkspaceRemote['search']>(() => Promise.resolve(remoteOk({
+    result: { files: [], fileCount: 0, matchCount: 0, truncated: false, durationMs: 0 },
+  })))
 
   async *follow(_signal?: AbortSignal): AsyncIterable<WorkspaceFollowFrame> {}
 }

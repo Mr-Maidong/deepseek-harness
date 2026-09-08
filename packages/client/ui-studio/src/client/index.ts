@@ -28,6 +28,9 @@ import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-theme/client'
 import type {} from '@deepseek-ai/dsh-tool-todo/client'
+import type { BoundActions } from '@deepseek-ai/dsh-client-ui-slots'
+import { en as headerEn, NS as HEADER_NS, zh as headerZh } from './header-search/locales.ts'
+import { HeaderSearch, type HeaderSearchInjected } from './header-search/HeaderSearch.tsx'
 import { en, NS, zh } from './left-panel/locales.ts'
 import { LeftPanelMain, type LeftPanelInjected } from './left-panel/LeftPanelMain.tsx'
 import { PreviewCard, type PreviewCardInjected, type CodeReference } from './preview/PreviewCard.tsx'
@@ -35,6 +38,7 @@ import { PreviewCard, type PreviewCardInjected, type CodeReference } from './pre
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
     'studio-left-panel': import('./left-panel/locales.ts').LeftPanelKey
+    'studio-header-search': import('./header-search/locales.ts').HeaderSearchKey
   }
 }
 import { ThemePresenter } from './theme-presenter.ts'
@@ -47,8 +51,11 @@ import { createProjectTodoStore } from './frame/project-todo-store.ts'
 import type {
   StudioCenterEditorOwnerProps, StudioCenterToolbarOwnerProps,
   StudioLeftMainOwnerProps, StudioNavigationOwnerProps, StudioStatusOwnerProps, StudioWorkspaceOwnerProps,
-  StudioWorkbenchOwnerProps,
+  StudioWorkbenchOwnerProps, StudioPreview,
 } from './frame/contract.ts'
+
+/** Baked actions of the frame's exclusive studio store, as delivered to the root entry's inject hook. */
+type StudioFrameActions = BoundActions<ReturnType<typeof createStudioStore>>
 
 // Contract exports only (export-convergence rule: cross-package consumers
 // keep a symbol exported; test-only/package-internal symbols live off /src).
@@ -92,6 +99,7 @@ export const inject = ['slots', 'theme', 'locale', 'sessions', 'workspaces', 'ui
 export function apply(ctx: ClientContext): void {
   const layout = new StudioLayout()
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-studio: dictionaries')
+  ctx.effect(() => ctx.locale.register(HEADER_NS, { zh: headerZh, en: headerEn }), 'ui-studio: header-search dictionaries')
   ctx.effect(() => {
     const presenter = new ThemePresenter()
     presenter.apply(ctx.theme.getTheme())
@@ -107,6 +115,26 @@ export function apply(ctx: ClientContext): void {
    * ui-studio) own; the children table, store, and inject wiring differ, but
    * the effect frame is per-fiber boilerplate. */
   ctx.effect(() => {
+    // Root-scoped bridge into the frame's preview store: the root entry's
+    // inject hook receives the baked studio-store actions (this registration
+    // owns the store), and the Session-scoped header entry publishes preview
+    // states through it — a Session-scoped registrant cannot declare a
+    // root-scoped store, and sharing the store handle across scopes throws.
+    // The root entry mounts before any Session header entry exists, so the
+    // hook is guaranteed live before a consumer reads it; `requireBridge`
+    // fails loud anyway if that ever stops holding.
+    let previewPublisher: ((preview: StudioPreview) => void) | undefined
+    const bridge = {
+      attach(actions: StudioFrameActions): void {
+        previewPublisher = (preview) => { actions.setPreview(preview) }
+      },
+      require(): (preview: StudioPreview) => void {
+        if (previewPublisher === undefined) {
+          throw new Error('ui-studio: header-search preview bridge not wired (root entry not mounted)')
+        }
+        return previewPublisher
+      },
+    }
     const disposeService = ctx.reflect.provide('layout', layout)
     const disposeRootRegistration = ctx.slots.register({
       name: 'root',
@@ -129,9 +157,19 @@ export function apply(ctx: ClientContext): void {
       // Exclusive store: the factory itself — the framework instantiates per
       // entry and delivers useStore/actions to StudioFrame as standard props.
       store: createStudioStore,
-      inject: () => ({}),
+      inject: (actions) => { bridge.attach(actions); return {} },
       locale: NS,
     }, StudioFrame)
+    // Search + file-read face shared by the left-panel entry (full member)
+    // and the Session-header search entry (subset via the same closures).
+    const studioSearchFace = {
+      readFile: (path: string) => ctx.uiWorkspace.readFile(path),
+      searchWorkspace: async (workspaceId: WorkspaceId, query: string, signal?: AbortSignal) => {
+        const result = await ctx.remote.workspace.search({ workspaceId, query }, signal)
+        if (!result.ok) throw new Error(result.error.message)
+        return result.value.result
+      },
+    }
     const workspaceInjected = (): LeftPanelInjected => ({
       startSession: (workspaceId?: WorkspaceId) => { ctx.uiWorkspace.startSession(workspaceId) },
       open: (sessionId: SessionId) => { ctx.sessions.open(sessionId) },
@@ -149,7 +187,7 @@ export function apply(ctx: ClientContext): void {
       },
       createWorkspace: input => ctx.workspaces.create(input),
       listDirectory: (path, signal) => ctx.uiWorkspace.listDirectory(path, signal),
-      readFile: path => ctx.uiWorkspace.readFile(path),
+      ...studioSearchFace,
       gitSummary: async (workspaceId, signal) => {
         const result = await ctx.remote.workspace.gitSummary({ workspaceId }, signal)
         if (!result.ok) throw new Error(result.error.message)
@@ -190,6 +228,28 @@ export function apply(ctx: ClientContext): void {
       inject: workspaceInjected,
       locale: NS,
     }, LeftPanelMain)
+    // The Session header's search utility: session-scope inject receives the
+    // fixed current sessionId; the workspace it belongs to is resolved from
+    // the workspaces snapshot at registration time, and preview states are
+    // published through the root-entry bridge (the store itself stays
+    // exclusive to its declaring scope). Registered last so the trigger sits
+    // rightmost in the utilities row.
+    const disposeHeaderSearchRegistration = ctx.slots.inject(
+      'conversation.session.header.utilities',
+      () => ctx.slots.register({
+        name: 'conversation.session.header.utilities',
+        id: 'studio-header-search',
+        order: Number.MAX_SAFE_INTEGER,
+        locale: HEADER_NS,
+        inject: (sessionId): HeaderSearchInjected => ({
+          workspaceId: ctx.workspaces.list.getSnapshot().items.find(
+            workspace => workspace.sessionIds.includes(sessionId),
+          )?.workspaceId,
+          ...studioSearchFace,
+          onPreview: (preview) => { bridge.require()(preview) },
+        }),
+      }, HeaderSearch),
+    )
     const disposeWorkbenchRegistration = ctx.slots.register({
       name: 'studio.workbench',
       store: createProjectTodoStore,
@@ -205,6 +265,7 @@ export function apply(ctx: ClientContext): void {
       locale: NS,
     }, StudioWorkbench)
     return () => {
+      disposeHeaderSearchRegistration()
       disposeWorkbenchRegistration()
       disposeWorkspaceRegistration()
       disposeEditorRegistration()

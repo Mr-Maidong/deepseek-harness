@@ -742,6 +742,23 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 
 来源：[`packages/core/session/src/types.ts:279`](../packages/core/session/src/types.ts)
 
+### `studio/*`
+
+<a id="studiotodo-complete--log-only"></a>
+
+#### `studio/todo-complete` — 仅日志
+
+```ts persistence-catalog
+/**
+ * Model-written completion for one Studio work item. The latest event for a
+ * todo id is its rendered completion.
+ * @param data - stable work-item id and structured execution result.
+ */
+'studio/todo-complete': WorkbenchTodoCompletion
+```
+
+来源：[`packages/todo/tool-todo/src/types.ts:70`](../packages/todo/tool-todo/src/types.ts)
+
 ### `subagent/*`
 
 <a id="subagentdescriptor--log-only"></a>
@@ -852,7 +869,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 
 类型：[TodoItem](subsystems/todo.zh.md)
 
-来源：[`packages/todo/tool-todo/src/types.ts:31`](../packages/todo/tool-todo/src/types.ts)
+来源：[`packages/todo/tool-todo/src/types.ts:42`](../packages/todo/tool-todo/src/types.ts)
 
 ### `tool/*`
 

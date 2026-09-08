@@ -205,6 +205,8 @@ flowchart LR
   pkg_host_directory_picker_browse["host-directory-picker-browse"]
   pkg_host_git_summary["host-git-summary"]
   svc_gitSummary["ctx.gitSummary<br/>Workspace git-state read seam"]
+  pkg_host_workspace_search["host-workspace-search"]
+  svc_workspaceSearch["ctx.workspaceSearch<br/>Workspace plain-text search seam"]
   pkg_host_webserver["host-webserver"]
   svc_webServer["ctx.webServer<br/>HTTP route registration"]
   pkg_client_connection["client-connection"]
@@ -269,6 +271,7 @@ flowchart LR
   pkg_host_directory_picker_native --> svc_directoryPicker
   pkg_host_git_summary --> svc_gitSummary
   pkg_host_webserver --> svc_webServer
+  pkg_host_workspace_search --> svc_workspaceSearch
   pkg_inspector --> svc_inspector
   pkg_invariants --> svc_invariants
   pkg_jobs --> svc_jobs
@@ -470,6 +473,7 @@ flowchart LR
   svc_workflowEngine --> pkg_tool_workflow
   svc_workspaceRegistry --> pkg_api_session_controller
   svc_workspaceRegistry --> pkg_api_workspace_controller
+  svc_workspaceSearch --> pkg_api_workspace_controller
   svc_fs -. event gate .-> pkg_fs_observation_policy
 ```
 
@@ -539,6 +543,7 @@ flowchart LR
 | `ctx.spillStore` | `seam` | [`spill`](../packages/spill/spill) | [`spill-local`](../packages/spill/spill-local) | [`spill-policy`](../packages/spill/spill-policy) | - | 后端保存过大的工具文本，并返回面向模型的定位信息和取回提示；spill-policy 是 tools/post-execute 消费方，负责决定何时 spill。 |
 | `ctx.directoryPicker` | `seam` | [`host-directory-picker`](../packages/host/directory-picker) | [`host-directory-picker-native`](../packages/host/directory-picker-native), [`host-directory-picker-browse`](../packages/host/directory-picker-browse) | [`api-workspace-controller`](../packages/api/workspace-controller) | - | 带判别标记的交互能力：原生后端在 Host 显示设备上打开一个操作系统选择器，浏览后端为应用内浏览器提供列表与创建原语；双端后端通过其浏览器侧填充 ui-workspace 目录流程的 slot（不通过协议发布）。 |
 | `ctx.gitSummary` | `seam` | [`host-git-summary`](../packages/host/git-summary) | [`host-git-summary`](../packages/host/git-summary) | [`api-workspace-controller`](../packages/api/workspace-controller) | - | 对单个 Host 目录的一次有界读取，报告分支与未提交改动行数；本地提供者经 ctx.subprocess 生成 git CLI 进程，Workspace Remote 把结果发布给 Studio 文件树。 |
+| `ctx.workspaceSearch` | `seam` | [`host-workspace-search`](../packages/host/workspace-search) | [`host-workspace-search`](../packages/host/workspace-search) | [`api-workspace-controller`](../packages/api/workspace-controller) | - | 对单个 Host 目录的一次有界一次性纯文本搜索；本地提供者经 ctx.subprocess 生成 ripgrep 进程，Workspace Remote 把结果发布给 Studio 头部搜索面板。 |
 | `ctx.webServer` | `core` | [`host-webserver`](../packages/host/webserver) | - | [`client-connection`](../packages/client/connection), [`client-modules`](../packages/client/modules), [`client-hmr`](../packages/client/hmr) | - | 普通的 node:http 载体：具名路由注册表、索引转换 tap，以及静态 dist 回退；Web 传输插件注册自己的路由。 |
 | `ctx.clientModules` | `core` | [`client-modules`](../packages/client/modules) | - | [`client-hmr`](../packages/client/hmr) | - | 通过增量 `dsh.client` 扫描组合 __DSH_BOOT__ 入口图，提供插件组合包，并通知重建／图变更订阅方。 |
 | `ctx.workflowEngine` | `seam` | [`workflow`](../packages/workflow/workflow) | [`workflow-worker-thread`](../packages/workflow/workflow-worker-thread) | [`tool-workflow`](../packages/workflow/tool-workflow), [`tool-ralph`](../packages/workflow/tool-ralph) | - | 每个上下文使用一个引擎，与 bash 相同，且没有具名提供方注册表；通用工作流与固定 Ralph 消费方启动运行，其中的 agent() 调用通过 ctx.subagents 扇出。 |

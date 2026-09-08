@@ -65,7 +65,10 @@ function findTodo(state: ProjectTodoState, todoId: string): ProjectTodo | undefi
   return undefined
 }
 
-/** Create the workspace-scoped store that persists one todo pool per Workspace. */
+/**
+ * Create the workspace-scoped store that persists one todo pool per Workspace.
+ * @returns the store handle.
+ */
 export function createProjectTodoStore(): EngineStoreHandle<ProjectTodoState, ProjectTodoActions> {
   return defineStore({
     init: (): ProjectTodoState => ({ projects: [] }),

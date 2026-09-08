@@ -49,13 +49,21 @@ function stubResizeObserver(): Recorded[] {
 
 /**
  * Host component that anchors a panel and reports the computed position.
- * @param props - whether the panel is open.
+ * @param props - whether the panel is open, plus the placement side/align.
  * @returns the anchor and, while open, the panel carrying the position.
  */
-function Host({ open }: { open: boolean }) {
+function Host({ open, side, align }: { open: boolean; side?: 'top' | 'bottom'; align?: 'start' | 'end' }) {
   const anchorRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
-  const position = useAnchoredPosition({ open, anchorRef, panelRef, gap: 4, margin: 12 })
+  const position = useAnchoredPosition({
+    open,
+    anchorRef,
+    panelRef,
+    ...(side === undefined ? {} : { side }),
+    ...(align === undefined ? {} : { align }),
+    gap: 4,
+    margin: 12,
+  })
   return (
     <>
       <button ref={anchorRef} type="button">anchor</button>
@@ -107,5 +115,11 @@ describe('useAnchoredPosition', () => {
     expect(made).toHaveLength(0)
     expect(add.mock.calls.filter(([type]) => type === 'scroll' || type === 'resize')).toEqual([])
     add.mockRestore()
+  })
+
+  it('accepts the end alignment option', () => {
+    // jsdom has no layout, so the geometry itself is owned by a browser
+    // scenario; here the option must only wire through without throwing.
+    expect(() => render(<Host open align="end" />)).not.toThrow()
   })
 })

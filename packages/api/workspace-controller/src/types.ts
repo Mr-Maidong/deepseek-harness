@@ -8,10 +8,12 @@
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
 import type { GitSummaryResult } from '@deepseek-ai/dsh-host-git-summary/types'
+import type { WorkspaceSearchResult } from '@deepseek-ai/dsh-host-workspace-search/types'
 
 export type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
 export type { DirectoryEntry, DirectoryListing } from '@deepseek-ai/dsh-host-directory-picker/types'
 export type { GitSummaryResult }
+export type { WorkspaceSearchFile, WorkspaceSearchMatch, WorkspaceSearchResult } from '@deepseek-ai/dsh-host-workspace-search/types'
 
 /** One durable Workspace projected for browser consumers. */
 export interface WorkspaceView {
@@ -50,6 +52,8 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     'directory-picker/create-failed': { readonly path: string }
     /** The git-summary capability is not composed in this Host profile. */
     'workspace/git-summary-unavailable': Record<string, never>
+    /** The workspace-search capability is not composed in this Host profile. */
+    'workspace/search-unavailable': Record<string, never>
   }
 }
 
@@ -139,4 +143,18 @@ export interface WorkspaceGitSummaryRequest {
 /** Git state of one Workspace's directory, or null when not a repository. */
 export interface WorkspaceGitSummaryValue {
   readonly summary: GitSummaryResult | null
+}
+
+/** Request to search one Workspace's directory for a plain-text query. */
+export interface WorkspaceSearchRequest {
+  readonly workspaceId: WorkspaceId
+  /** Plain-text query; never interpreted as a regular expression. */
+  readonly query: string
+  /** Optional cap on reported matches; the Host applies its own ceiling. */
+  readonly maxResults?: number
+}
+
+/** Bounded one-shot search result for one Workspace's directory. */
+export interface WorkspaceSearchValue {
+  readonly result: WorkspaceSearchResult
 }

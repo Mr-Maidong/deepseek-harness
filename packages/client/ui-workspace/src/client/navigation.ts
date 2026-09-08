@@ -48,6 +48,11 @@ export interface UiWorkspace {
    * @returns created absolute path.
    */
   createDirectory(path: string, name: string): Promise<string>
+  /**
+   * Read one text file for the preview card.
+   * @param path - file path returned by a directory listing.
+   * @returns the file path, text content, and an extension-derived language label.
+   */
   readFile(path: string): Promise<{ path: string; content: string; language?: string }>
 }
 

@@ -16,6 +16,8 @@ import type {
   WorkspaceInsertSessionBeforeRequest,
   WorkspaceOrderValue,
   WorkspaceRenameRequest,
+  WorkspaceSearchRequest,
+  WorkspaceSearchValue,
   WorkspaceValue,
   WorkspaceId,
   WorkspaceView,
@@ -119,6 +121,12 @@ class FakeWorkspaceRemote implements WorkspaceRemote {
 
   gitSummary(_request: WorkspaceGitSummaryRequest): Promise<RemoteResult<WorkspaceGitSummaryValue>> {
     return Promise.resolve(remoteOk({ summary: null }))
+  }
+
+  search(_request: WorkspaceSearchRequest): Promise<RemoteResult<WorkspaceSearchValue>> {
+    return Promise.resolve(remoteOk({
+      result: { files: [], fileCount: 0, matchCount: 0, truncated: false, durationMs: 0 },
+    }))
   }
 
   async *follow(_signal?: AbortSignal): AsyncGenerator<WorkspaceFollowFrame> {}

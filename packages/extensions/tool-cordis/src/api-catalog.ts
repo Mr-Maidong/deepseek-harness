@@ -852,13 +852,13 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
       },
       {
         signature: '@Remote(\'list\') async list(path: string | undefined, signal: AbortSignal): Promise<DirectoryListing>',
-        description: 'List one directory level for a Remote caller\'s in-app browser.',
+        description: 'List one directory level for a Remote caller\'s in-app browser. The browse interaction always lists; a native backend may also list when it implements the optional `list` member, so the verb serves whichever interaction offers a listing rather than demanding the browse kind.',
         parameters: [{ name: 'path', description: 'absolute directory to list; absent lists the home directory.' }, { name: 'signal', description: 'caller lifetime; abort stops the backend\'s scan instead of letting it outlive a disconnected caller.' }],
         returns: 'the level\'s listing with its ancestry.',
       },
       {
         signature: '@Remote(\'readText\') async readText(path: string, signal: AbortSignal): Promise<string>',
-        description: 'Read one bounded UTF-8 text file for a Remote caller\'s preview.',
+        description: 'Read one bounded UTF-8 text file for a Remote caller\'s preview. The browse interaction always reads; a native backend may also read when it implements the optional `readText` member, so the verb serves whichever interaction offers a read rather than demanding the browse kind.',
         parameters: [{ name: 'path', description: 'absolute file path returned by the Host directory listing.' }, { name: 'signal', description: 'caller lifetime; abort stops the pending filesystem read.' }],
         returns: 'the file\'s UTF-8 content.',
       },
@@ -2907,6 +2907,12 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: 'request', description: 'Workspace identity.' }, { name: 'signal', description: 'caller lifetime; abort cancels pending git work.' }],
         returns: 'the git summary, or null when the directory is not a repository.',
       },
+      {
+        signature: '@Remote(\'search\') async search( request: WorkspaceSearchRequest, signal?: AbortSignal, ): Promise<WorkspaceSearchValue>',
+        description: 'Search one Workspace\'s directory for a plain-text query.',
+        parameters: [{ name: 'request', description: 'Workspace identity and plain-text query.' }, { name: 'signal', description: 'caller lifetime; abort cancels pending search work.' }],
+        returns: 'the bounded one-shot search result.',
+      },
     ],
   },
   {
@@ -2955,6 +2961,19 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Resolve by canonical directory path without creating or mutating a workspace. A missing path rejects during `realpath`; an existing unowned directory returns `undefined`.',
         parameters: [{ name: 'path', description: 'Existing directory path in a fully qualified spelling.' }],
         returns: 'the workspace owning the canonical path, when one exists.',
+      },
+    ],
+  },
+  {
+    key: 'workspaceSearch',
+    summary: 'Abstract workspace-search service.',
+    description: 'Abstract workspace-search service. Subclass, implement search, and load the subclass as a plugin — it registers as `ctx.workspaceSearch` (one implementation per context; loading a second throws per cordis duplicate- service behavior).',
+    methods: [
+      {
+        signature: 'abstract search( path: string, query: string, signal?: AbortSignal, ): Promise<WorkspaceSearchResult>',
+        description: 'Search one directory for a plain-text query, honoring `.gitignore` and the provider\'s configured limits.',
+        parameters: [{ name: 'path', description: 'absolute directory to search.' }, { name: 'query', description: 'plain-text query; never interpreted as a regular expression.' }, { name: 'signal', description: 'caller lifetime; abort cancels pending search work.' }],
+        returns: 'the bounded one-shot result.',
       },
     ],
   },
@@ -4032,7 +4051,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'DirectoryPickerNativeCapability',
-    declaration: 'export interface DirectoryPickerNativeCapability {\n    kind: \'native\';\n    pick(signal: AbortSignal): Promise<string | null>;\n    list?(path?: string, signal?: AbortSignal): Promise<DirectoryListing>;\n}',
+    declaration: 'export interface DirectoryPickerNativeCapability {\n    kind: \'native\';\n    pick(signal: AbortSignal): Promise<string | null>;\n    list?(path?: string, signal?: AbortSignal): Promise<DirectoryListing>;\n    readText?(path: string, signal?: AbortSignal): Promise<string>;\n}',
   },
   {
     name: 'DirectoryRegistrationHandle',
@@ -6365,6 +6384,26 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'WorkspaceRenameRequest',
     declaration: 'export interface WorkspaceRenameRequest {\n    readonly workspaceId: WorkspaceId;\n    readonly title: string;\n}',
+  },
+  {
+    name: 'WorkspaceSearchFile',
+    declaration: 'export interface WorkspaceSearchFile {\n    readonly path: string;\n    readonly matches: readonly WorkspaceSearchMatch[];\n}',
+  },
+  {
+    name: 'WorkspaceSearchMatch',
+    declaration: 'export interface WorkspaceSearchMatch {\n    readonly line: number;\n    readonly column: number;\n    readonly preview: string;\n    readonly matchStart: number;\n    readonly matchLength: number;\n}',
+  },
+  {
+    name: 'WorkspaceSearchRequest',
+    declaration: 'export interface WorkspaceSearchRequest {\n    readonly workspaceId: WorkspaceId;\n    readonly query: string;\n    readonly maxResults?: number;\n}',
+  },
+  {
+    name: 'WorkspaceSearchResult',
+    declaration: 'export interface WorkspaceSearchResult {\n    readonly files: readonly WorkspaceSearchFile[];\n    readonly fileCount: number;\n    readonly matchCount: number;\n    readonly truncated: boolean;\n    readonly durationMs: number;\n}',
+  },
+  {
+    name: 'WorkspaceSearchValue',
+    declaration: 'export interface WorkspaceSearchValue {\n    readonly result: WorkspaceSearchResult;\n}',
   },
   {
     name: 'WorkspaceValue',

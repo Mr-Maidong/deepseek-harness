@@ -1,0 +1,233 @@
+/* Header search: a titleRow trigger plus a floating results panel.
+   The panel portals into the studio frame node (not document.body) so the
+   frame-scoped `--studio-*` tokens resolve — the same visual language as the
+   floating preview card it sits above. */
+
+.root {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--studio-muted);
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.trigger:hover,
+.trigger:focus-visible,
+.trigger[aria-expanded='true'] {
+  background: var(--studio-gold-wash);
+  color: var(--studio-ink);
+}
+
+.trigger:focus-visible {
+  outline: 1px solid var(--studio-gold);
+  outline-offset: -2px;
+}
+
+.trigger svg {
+  flex: none;
+}
+
+/* Fixed positioning comes from useAnchoredPosition via inline style; the
+   hidden measure mount gets left/top 0 until then. */
+.panel {
+  position: fixed;
+  z-index: 40;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 380px;
+  max-width: min(380px, calc(100vw - 32px));
+  max-height: min(420px, calc(100vh - 140px));
+  overflow: hidden;
+  border: 1px solid var(--studio-line);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  color: var(--studio-ink);
+  background: var(--studio-panel);
+  backdrop-filter: blur(18px);
+}
+
+/* Card-style search band: icon, borderless input, in-flight spinner. */
+.panelHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--studio-line);
+  color: var(--studio-muted);
+  font-size: 12px;
+}
+
+.panelHeader svg {
+  flex: none;
+}
+
+.input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  color: var(--studio-ink);
+  background: transparent;
+  font: 400 12px/20px 'YaHei Consolas Hybrid', monospace;
+  outline: none;
+}
+
+.input::placeholder { color: var(--studio-muted); opacity: 0.7; }
+
+.spinner {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--studio-line);
+  border-top-color: var(--studio-gold);
+  border-radius: 50%;
+  corner-shape: round;
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.results {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  padding: 8px;
+  overflow: auto;
+  list-style: none;
+  /* The preview card's scrollbar: invisible until the surface is hovered. */
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.results:hover,
+.results:focus-within {
+  scrollbar-color: var(--studio-line) transparent;
+}
+
+.results::-webkit-scrollbar { width: 6px; }
+.results::-webkit-scrollbar-thumb { background: transparent; }
+.results:hover::-webkit-scrollbar-thumb,
+.results:focus-within::-webkit-scrollbar-thumb { background: var(--studio-line); }
+
+.file {
+  margin-bottom: 8px;
+}
+
+.fileHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 6px;
+}
+
+.filePath {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--studio-ink);
+  font: 500 13px/20px 'YaHei Consolas Hybrid', monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileCount {
+  flex: none;
+  color: var(--studio-gold);
+  font: 400 12px/18px 'YaHei Consolas Hybrid', monospace;
+}
+
+.matches {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.match {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--studio-muted);
+  text-align: left;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.match:hover {
+  background: var(--studio-gold-wash);
+  color: var(--studio-ink);
+}
+
+.match:focus-visible {
+  outline: 1px solid var(--studio-gold);
+  outline-offset: -2px;
+}
+
+.match[data-open] {
+  color: var(--studio-gold);
+  background: var(--studio-gold-wash);
+}
+
+.matchPos {
+  flex: none;
+  color: var(--studio-gold);
+  font: 400 11px/16px 'YaHei Consolas Hybrid', monospace;
+}
+
+.matchPreview {
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  font: 400 12px/18px 'YaHei Consolas Hybrid', monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.error {
+  margin: 8px 10px;
+  padding: 6px 10px;
+  border: 1px solid var(--studio-red-wash-strong);
+  border-radius: 4px;
+  color: var(--studio-red);
+  background: var(--studio-red-wash);
+  font: 400 12px/18px 'YaHei Consolas Hybrid', monospace;
+}
+
+.empty {
+  margin: 8px 10px;
+  padding: 14px 10px;
+  color: var(--studio-muted);
+  font: 400 13px/20px 'YaHei Consolas Hybrid', monospace;
+  text-align: center;
+}
+
+.truncated {
+  padding: 6px 6px 2px;
+  color: var(--studio-muted);
+  font: 400 12px/18px 'YaHei Consolas Hybrid', monospace;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation: none; }
+}

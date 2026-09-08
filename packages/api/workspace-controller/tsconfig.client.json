@@ -19,6 +19,7 @@
     { "path": "../../core/session" },
     { "path": "../../host/directory-picker" },
     { "path": "../../host/git-summary" },
+    { "path": "../../host/workspace-search" },
     { "path": "../../typert/protocol" },
     { "path": "../../workspace/workspace" }
   ]

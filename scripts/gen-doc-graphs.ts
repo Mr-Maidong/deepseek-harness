@@ -624,6 +624,15 @@ const SERVICE_ROLES: ServiceRole[] = [
     note: 'One bounded read of branch and uncommitted change counts for a Host directory; the local provider spawns the git CLI through ctx.subprocess, and the Workspace Remote publishes the result to the Studio file tree.',
   },
   {
+    key: 'workspaceSearch',
+    pkg: 'host-workspace-search',
+    title: 'Workspace plain-text search seam',
+    mode: 'seam',
+    implementations: ['host-workspace-search'],
+    consumers: ['api-workspace-controller'],
+    note: 'One bounded one-shot plain-text search over a Host directory; the local provider spawns ripgrep through ctx.subprocess, and the Workspace Remote publishes the result to the Studio header search panel.',
+  },
+  {
     key: 'webServer',
     pkg: 'host-webserver',
     title: 'HTTP route registration',

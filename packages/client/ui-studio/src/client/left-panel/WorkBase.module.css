@@ -287,6 +287,7 @@
   border: 1px solid currentColor;
   border-right-color: transparent;
   border-radius: 50%;
+  corner-shape: round;
   animation: studio-spin 700ms linear infinite;
 }
 

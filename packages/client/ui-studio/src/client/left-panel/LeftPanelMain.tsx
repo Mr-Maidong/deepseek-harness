@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { PropsLocale, PropsRenderSlots, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { GitSummaryResult, WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-api-workspace-controller/client'
+import type { GitSummaryResult, WorkspaceId, WorkspaceView, WorkspaceSearchResult } from '@deepseek-ai/dsh-api-workspace-controller/client'
 import type { DirectoryFlowOwnerProps } from '@deepseek-ai/dsh-client-ui-workspace/client'
 import { ChevronIcon, FileTreeIcon, GitBranchIcon, WorkBaseIcon } from './icons/icons.tsx'
 import { WorkBase } from './WorkBase.tsx'
@@ -27,6 +27,12 @@ export interface LeftPanelInjected {
   readFile: (path: string) => Promise<{ path: string; content: string; language?: string }>
   /** Read git branch and uncommitted change counts for one Workspace. */
   gitSummary: (workspaceId: WorkspaceId, signal?: AbortSignal) => Promise<GitSummaryResult | null>
+  /** Search one Workspace's directory for a plain-text query. */
+  searchWorkspace: (
+    workspaceId: WorkspaceId,
+    query: string,
+    signal?: AbortSignal,
+  ) => Promise<WorkspaceSearchResult>
 }
 
 /** Full composed props for the Studio workspace region. */

@@ -3,6 +3,7 @@
 import { Context } from '@deepseek-ai/cordis'
 import { Remote, RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import type { GitSummaryRuntime } from '@deepseek-ai/dsh-host-git-summary'
+import type { WorkspaceSearchRuntime } from '@deepseek-ai/dsh-host-workspace-search'
 import { WorkspaceCommands } from './commands.ts'
 import { DirectoryPickerController } from './directory-picker.ts'
 import { WorkspaceFeed } from './feed.ts'
@@ -20,6 +21,8 @@ import type {
   WorkspaceInsertSessionBeforeRequest,
   WorkspaceOrderValue,
   WorkspaceRenameRequest,
+  WorkspaceSearchRequest,
+  WorkspaceSearchValue,
   WorkspaceValue,
 } from './types.ts'
 
@@ -151,6 +154,37 @@ export class WorkspaceController extends TypertRemoteService {
     }
     const summary = await gitSummary.summary(workspace.path, signal)
     return { summary }
+  }
+
+  /**
+   * Search one Workspace's directory for a plain-text query.
+   * @param request - Workspace identity and plain-text query.
+   * @param signal - caller lifetime; abort cancels pending search work.
+   * @returns the bounded one-shot search result.
+   */
+  @Remote('search')
+  async search(
+    request: WorkspaceSearchRequest,
+    signal?: AbortSignal,
+  ): Promise<WorkspaceSearchValue> {
+    const workspaceSearch: WorkspaceSearchRuntime | undefined = this.ctx.get('workspaceSearch')
+    if (workspaceSearch === undefined) {
+      throw new RemoteError(
+        'workspace/search-unavailable',
+        'The workspace-search capability is not composed in this Host profile',
+        {},
+      )
+    }
+    const workspace = this.ctx.workspaceRegistry.get(request.workspaceId)
+    if (workspace === undefined) {
+      throw new RemoteError(
+        'workspace/not-found',
+        `Workspace "${request.workspaceId}" not found`,
+        { workspaceId: request.workspaceId },
+      )
+    }
+    const result = await workspaceSearch.search(workspace.path, request.query, signal)
+    return { result }
   }
 }
 

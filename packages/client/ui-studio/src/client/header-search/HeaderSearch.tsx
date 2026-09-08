@@ -27,6 +27,8 @@ export type HeaderSearchProps =
 export interface HeaderSearchInjected {
   /** Workspace the Session belongs to, or undefined when unanchored (search disabled). */
   workspaceId: WorkspaceId | undefined
+  /** Absolute host directory of that Workspace; result paths are displayed relative to it. */
+  workspacePath: string | undefined
   /** Search one Workspace's directory for a plain-text query. */
   searchWorkspace: (
     workspaceId: WorkspaceId,
@@ -46,7 +48,7 @@ const SEARCH_DEBOUNCE_MS = 250
 const MEASURE_STYLE: CSSProperties = { visibility: 'hidden', left: 0, top: 0 }
 
 export function HeaderSearch(props: HeaderSearchProps): React.ReactElement {
-  const { workspaceId, searchWorkspace, readFile, onPreview, t } = props
+  const { workspaceId, workspacePath, searchWorkspace, readFile, onPreview, t } = props
   const [query, setQuery] = useState('')
   const [result, setResult] = useState<WorkspaceSearchResult | undefined>(undefined)
   const [error, setError] = useState<string | undefined>(undefined)
@@ -133,6 +135,14 @@ export function HeaderSearch(props: HeaderSearchProps): React.ReactElement {
     return () => { cancel() }
   }, [cancel, workspaceId])
 
+  // Row labels show the workspace-relative form for a compact, scannable list;
+  // result paths stay the fully qualified host identity the read and the
+  // preview card use. A path outside the root, or no root, renders verbatim.
+  const displayPath = (absolute: string): string =>
+    workspacePath !== undefined && absolute.startsWith(workspacePath)
+      ? absolute.slice(workspacePath.length).replace(/^[/\\]+/, '')
+      : absolute
+
   const openMatch = useCallback((path: string, line: number, column: number) => {
     const kind: StudioPreview['kind'] = path.toLowerCase().endsWith('.html') || path.toLowerCase().endsWith('.htm') ? 'iframe' : 'code'
     onPreview({ path, status: 'loading', kind })
@@ -176,7 +186,7 @@ export function HeaderSearch(props: HeaderSearchProps): React.ReactElement {
         {result.files.map(file => (
           <li key={file.path} className={css.file}>
             <div className={css.fileHeader}>
-              <span className={css.filePath}>{file.path}</span>
+              <span className={css.filePath}>{displayPath(file.path)}</span>
               <span className={css.fileCount}>{file.matches.length}</span>
             </div>
             <ul className={css.matches}>

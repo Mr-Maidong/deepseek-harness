@@ -45,7 +45,7 @@ Web 组合会加载此包，包本身没有用户可配置字段。生成的[配
 
 Host 的 directory-picker browse 能力负责校验并限制文本读取。workspace Client 服务将结果映射为预览，并根据扩展名生成语言标签。点击文件会通过 owner 回调发布带状态的预览（`loading` → `ready`/`error`），悬浮卡片自己展示读取状态，文件树保持渲染。StudioFrame 持有预览状态，并通过 `studio.center.editor` 将 PreviewCard 渲染为锚定在输入栏上方的浮卡片；该卡片是按 kind 驱动的万能容器（`code` 展示源码，`iframe` 在沙箱 frame 内嵌渲染产物，如产出的 HTML）。文件条目保持使用 Host 返回的完整路径。展开一个文件夹会重新读取它，并且展开时会重读它下面所有仍处于展开状态的文件夹，因此折叠过的子树恢复出来的是目录当前的内容；某次重读失败时，屏幕上已有的条目保持不变。
 
-工作区搜索位于会话标题行最右侧的工具位（`conversation.session.header.utilities`）：搜索触发钮在其下方右对齐展开一个悬浮结果面板，样式沿用万能预览卡片的 `--studio-*` token 语言并门户挂载进 studio frame 节点，底层是 Host 的 ripgrep 纯文本搜索（`remote.workspace.search`）。查询有防抖，回车立即搜索，单调请求号加 AbortController 保证只有最新请求的结果会落地。点击匹配项走同一条预览链路（滚动到匹配的行列）并收起面板。头部条目在注册时解析会话所属的工作区，并经根条目桥接把预览发布进 frame 独占的预览 store——会话作用域的注册方无法声明根作用域的 store。
+工作区搜索位于会话标题行最右侧的工具位（`conversation.session.header.utilities`）：搜索触发钮在其下方右对齐展开一个悬浮结果面板，样式沿用万能预览卡片的 `--studio-*` token 语言并门户挂载进 studio frame 节点，底层是 Host 的 ripgrep 纯文本搜索（`remote.workspace.search`）。查询有防抖，回车立即搜索，单调请求号加 AbortController 保证只有最新请求的结果会落地。结果的文件路径是完全限定的 Host 路径，与文件树和有界读取使用同一身份；面板按相对工作区根目录的形式标注。点击匹配项走同一条预览链路（滚动到匹配的行列）并收起面板。头部条目在注册时解析会话所属的工作区，并经根条目桥接把预览发布进 frame 独占的预览 store——会话作用域的注册方无法声明根作用域的 store。
 
 </details>
 

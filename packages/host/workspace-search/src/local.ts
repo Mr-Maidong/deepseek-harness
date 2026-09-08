@@ -7,6 +7,7 @@
  * @module @deepseek-ai/dsh-host-workspace-search/local
  */
 
+import { join } from 'node:path'
 import type { SubprocessSpawnSpec } from '@deepseek-ai/dsh-subprocess'
 import { WorkspaceSearchRuntime } from './service.ts'
 import type {
@@ -125,7 +126,12 @@ export class LocalWorkspaceSearch extends WorkspaceSearchRuntime {
       SEARCH_MAX_PREVIEW_UNITS,
     )
     return {
-      files,
+      // Consumers read these files through the directory-picker read fence,
+      // which takes fully qualified paths only; join each ripgrep-relative
+      // path onto the searched directory with the platform's own separator
+      // style, so a result names a file exactly as a Host directory listing
+      // would.
+      files: files.map(file => ({ ...file, path: join(path, file.path) })),
       fileCount,
       matchCount,
       truncated: truncated || stdout.lossy,
@@ -211,7 +217,7 @@ export function parseRipgrepJson(
   return { files, fileCount, matchCount, truncated }
 }
 
-/** Extract the POSIX-relative path from a ripgrep path object (`./a.ts` → `a.ts`). */
+/** Extract the search-directory-relative path from a ripgrep path object (`./a.ts` → `a.ts`). */
 function pathOf(data: unknown): string | undefined {
   if (!isRecord(data)) return undefined
   const path = data.path
@@ -307,6 +313,7 @@ export function utf16Offset(text: string, byteOffset: number): number {
   let byteIndex = 0
   while (byteIndex < clamped) {
     const byte = bytes[byteIndex]
+    /* v8 ignore next 2 -- the clamp bounds the walk to the buffer, so the reader never runs past the last byte */
     if (byte === undefined) break
     if (byte < 0x80) {
       byteIndex += 1

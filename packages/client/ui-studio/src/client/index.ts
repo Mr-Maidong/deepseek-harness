@@ -229,11 +229,11 @@ export function apply(ctx: ClientContext): void {
       locale: NS,
     }, LeftPanelMain)
     // The Session header's search utility: session-scope inject receives the
-    // fixed current sessionId; the workspace it belongs to is resolved from
-    // the workspaces snapshot at registration time, and preview states are
-    // published through the root-entry bridge (the store itself stays
-    // exclusive to its declaring scope). Registered last so the trigger sits
-    // rightmost in the utilities row.
+    // fixed current sessionId; the workspace it belongs to — id and root path
+    // together — is resolved from the workspaces snapshot at registration
+    // time, and preview states are published through the root-entry bridge
+    // (the store itself stays exclusive to its declaring scope). Registered
+    // last so the trigger sits rightmost in the utilities row.
     const disposeHeaderSearchRegistration = ctx.slots.inject(
       'conversation.session.header.utilities',
       () => ctx.slots.register({
@@ -241,13 +241,20 @@ export function apply(ctx: ClientContext): void {
         id: 'studio-header-search',
         order: Number.MAX_SAFE_INTEGER,
         locale: HEADER_NS,
-        inject: (sessionId): HeaderSearchInjected => ({
-          workspaceId: ctx.workspaces.list.getSnapshot().items.find(
-            workspace => workspace.sessionIds.includes(sessionId),
-          )?.workspaceId,
-          ...studioSearchFace,
-          onPreview: (preview) => { bridge.require()(preview) },
-        }),
+        inject: (sessionId): HeaderSearchInjected => {
+          // One lookup so the id and the root path cannot disagree: results
+          // carry fully qualified host paths, and the panel displays them
+          // relative to this same workspace root.
+          const workspace = ctx.workspaces.list.getSnapshot().items.find(
+            candidate => candidate.sessionIds.includes(sessionId),
+          )
+          return {
+            workspaceId: workspace?.workspaceId,
+            workspacePath: workspace?.path,
+            ...studioSearchFace,
+            onPreview: (preview) => { bridge.require()(preview) },
+          }
+        },
       }, HeaderSearch),
     )
     const disposeWorkbenchRegistration = ctx.slots.register({

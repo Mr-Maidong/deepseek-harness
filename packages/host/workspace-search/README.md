@@ -27,7 +27,7 @@ Compose this package as a Host plugin row to register `ctx.workspaceSearch`, the
 
 ### Reading the result
 
-`search(path, query, signal)` returns `{ files, fileCount, matchCount, truncated, durationMs }`. Each file carries its POSIX-relative path and its matches; each match carries a 1-based `line` and `column`, a bounded `preview`, and `matchStart`/`matchLength` as UTF-16 code-unit offsets into the preview, so a browser can slice the preview with native string indexing regardless of multibyte content. `truncated` is true when a file, match, or output-byte limit stopped the search early.
+`search(path, query, signal)` returns `{ files, fileCount, matchCount, truncated, durationMs }`. Each file carries a fully qualified host path, joined onto the searched directory in the same separator style a Host directory listing uses, and its matches; each match carries a 1-based `line` and `column`, a bounded `preview`, and `matchStart`/`matchLength` as UTF-16 code-unit offsets into the preview, so a browser can slice the preview with native string indexing regardless of multibyte content. `truncated` is true when a file, match, or output-byte limit stopped the search early.
 
 -----
 

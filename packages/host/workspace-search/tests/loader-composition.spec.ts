@@ -86,7 +86,7 @@ describe('real Loader composition', () => {
     const search = ctx.get('workspaceSearch') as WorkspaceSearchRuntime
     const result = await search.search(dir, 'hello')
     expect(result.fileCount).toBe(1)
-    expect(result.files[0]?.path).toBe('a.ts')
+    expect(result.files[0]?.path).toBe(join(dir, 'a.ts'))
     expect(result.files[0]?.matches[0]).toMatchObject({ line: 1, column: 19 })
     expect(result.truncated).toBe(false)
 

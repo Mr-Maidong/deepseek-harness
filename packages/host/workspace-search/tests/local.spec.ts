@@ -99,6 +99,33 @@ describe('parseRipgrepJson', () => {
     expect(result.truncated).toBe(true)
   })
 
+  it('ignores events with malformed payloads, field by field', () => {
+    const end = '{"type":"end","data":{"path":{"text":"./plain.ts"}}}'
+    const match = (fields: string) => `{"type":"match","data":{${fields}}}`
+    const raw = [
+      '42', // event line is not an object
+      '{"type":"begin","data":5}', // begin data is not a record
+      '{"type":"begin","data":{"path":5}}', // begin path is not a record
+      '{"type":"begin","data":{"path":{"text":5}}}', // begin path text is not a string
+      '{"type":"end","data":{}}', // end arrives before any begin
+      match('"lines":{"text":"hi\\n"},"line_number":1,"submatches":[{"start":0,"end":2}]'), // match arrives before any begin
+      '{"type":"begin","data":{"path":{"text":"plain.ts"}}}', // begin without the ./ prefix names the file verbatim
+      '{"type":"match","data":5}', // match data is not a record
+      match('"lines":5,"line_number":1,"submatches":[{}]'), // lines is not a record
+      match('"lines":{"text":5},"line_number":1,"submatches":[{}]'), // line text is not a string
+      match('"lines":{"text":"hi\\n"},"line_number":"1","submatches":[{}]'), // line number is not a number
+      match('"lines":{"text":"hi\\n"},"line_number":1'), // submatches is missing
+      match('"lines":{"text":"hi\\n"},"line_number":1,"submatches":[5]'), // submatch is not a record
+      match('"lines":{"text":"hi\\n"},"line_number":1,"submatches":[{"start":0}]'), // end offset is missing
+      '{"type":"summary","data":{"stats":{}}}', // summary events carry no result rows
+      '{bad json', // unparseable line
+      end, // a file whose every match was rejected is not reported
+    ].join('\n')
+    const result = parseRipgrepJson(raw, 10, 10, 100)
+    expect(result.files).toEqual([])
+    expect(result).toMatchObject({ fileCount: 0, matchCount: 0, truncated: false })
+  })
+
   it('ignores malformed JSON lines and non-object events', () => {
     const raw = [
       'not json',
@@ -146,6 +173,11 @@ describe('utf16Offset', () => {
   it('counts multibyte characters as single code units', () => {
     expect(utf16Offset('你好', 0)).toBe(0)
     expect(utf16Offset('你好', 6)).toBe(2)
+  })
+
+  it('counts a 2-byte character as a single code unit', () => {
+    expect(utf16Offset('aé', 1)).toBe(1)
+    expect(utf16Offset('aé', 3)).toBe(2)
   })
 
   it('counts a 4-byte emoji as two code units (surrogate pair)', () => {

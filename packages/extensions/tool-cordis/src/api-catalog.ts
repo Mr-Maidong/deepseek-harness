@@ -2973,7 +2973,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         signature: 'abstract search( path: string, query: string, signal?: AbortSignal, ): Promise<WorkspaceSearchResult>',
         description: 'Search one directory for a plain-text query, honoring `.gitignore` and the provider\'s configured limits.',
         parameters: [{ name: 'path', description: 'absolute directory to search.' }, { name: 'query', description: 'plain-text query; never interpreted as a regular expression.' }, { name: 'signal', description: 'caller lifetime; abort cancels pending search work.' }],
-        returns: 'the bounded one-shot result.',
+        returns: 'the bounded one-shot result; each result file\'s `path` is a fully qualified host path joined onto `path`, ready for the directory-picker read.',
       },
     ],
   },

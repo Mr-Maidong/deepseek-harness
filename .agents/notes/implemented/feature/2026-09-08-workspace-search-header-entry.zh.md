@@ -14,7 +14,7 @@ Status: implemented
 
 - `HeaderSearch` 通过 `ctx.slots.inject` 注册进 `conversation.session.header.utilities`，取最大的列表 order 保证它位于最右；触发钮切换一个门户挂载进 studio frame 节点的悬浮面板（`useAnchoredPosition` 右对齐于触发钮下方、`useDismissOnOutsidePointer` 外点关闭、Escape 关闭并归还触发钮焦点）。
 - 会话作用域条目的 `workspaceId` 在注册时从工作区快照解析（`sessionIds` 包含该条目 `sessionId` 的工作区）；搜索与文件读取闭包与左栏条目的 inject 面共享。
-- 面板中的结果行复用文件树的预览链路（`loading` → 携带 `focus {line, column}` 的 `ready`，读取失败则 `error`），随后收起面板。预览写入经一道跨作用域桥：根注册的 inject 钩子收到 frame 独占 studio store 的烘焙 actions 并绑定 `setPreview`；会话作用域的注册方无法声明根作用域的 store，store 句柄本身也绝不跨作用域共享。
+- 面板中的结果行复用文件树的预览链路（`loading` → 携带 `focus {line, column}` 的 `ready`，读取失败则 `error`），随后收起面板。搜索能力上报完全限定的 Host 路径（由提供者在搜索目录之下拼接），因此结果命名文件的方式与 Host 目录列表一致；面板按相对工作区根目录的形式标注。预览写入经一道跨作用域桥：根注册的 inject 钩子收到 frame 独占 studio store 的烘焙 actions 并绑定 `setPreview`；会话作用域的注册方无法声明根作用域的 store，store 句柄本身也绝不跨作用域共享。
 - 查询防抖（250 ms），回车立即搜索，单调请求号加 AbortController 保证只有最新请求落地；清空查询与卸载时取消。
 - 左栏的内联 `SearchPanel` 区带及其 section 已从 `LeftPanelMain` 移除。
 

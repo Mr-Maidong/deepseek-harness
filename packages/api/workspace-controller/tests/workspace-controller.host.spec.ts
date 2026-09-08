@@ -398,7 +398,7 @@ describe('WorkspaceController search', () => {
     const path = stageDir(root, 'repo')
     const created = await controller.create({ path })
     const result = {
-      files: [{ path: 'a.ts', matches: [{ line: 1, column: 1, preview: 'hello\n', matchStart: 0, matchLength: 5 }] }],
+      files: [{ path: join(path, 'a.ts'), matches: [{ line: 1, column: 1, preview: 'hello\n', matchStart: 0, matchLength: 5 }] }],
       fileCount: 1,
       matchCount: 1,
       truncated: false,

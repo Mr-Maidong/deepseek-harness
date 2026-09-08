@@ -26,7 +26,7 @@ export interface WorkspaceSearchMatch {
 
 /** One workspace file that contains at least one match. */
 export interface WorkspaceSearchFile {
-  /** POSIX-relative path from the workspace root (e.g. `src/a.ts`). */
+  /** Fully qualified host path of the file, in the same separator style a Host directory listing reports (e.g. `/work/demo/src/a.ts`). */
   readonly path: string
   /** Matches in this file, in line order. */
   readonly matches: readonly WorkspaceSearchMatch[]

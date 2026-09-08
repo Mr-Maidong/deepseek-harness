@@ -52,17 +52,17 @@ describe('LocalWorkspaceSearch', () => {
     expect(result.fileCount).toBe(2)
     expect(result.matchCount).toBe(2)
     const paths = result.files.map(f => f.path).sort()
-    expect(paths).toEqual(['a.ts', 'b.ts'])
+    expect(paths).toEqual([join(root, 'a.ts'), join(root, 'b.ts')])
     // The ignored file and node_modules are excluded.
-    expect(paths).not.toContain('ignored.txt')
-    expect(paths).not.toContain('node_modules/dep.js')
+    expect(paths).not.toContain(join(root, 'ignored.txt'))
+    expect(paths).not.toContain(join(root, 'node_modules', 'dep.js'))
     expect(result.truncated).toBe(false)
   })
 
   it('reports line and column positions', async () => {
     const root = sampleDir()
     const result = await searchOf(root, 'hello')
-    const a = result.files.find(f => f.path === 'a.ts')
+    const a = result.files.find(f => f.path === join(root, 'a.ts'))
     expect(a).toBeDefined()
     const match = a?.matches[0]
     // "hello" begins at 1-based column 19 in `const greeting = "hello"`.
@@ -84,7 +84,7 @@ describe('LocalWorkspaceSearch', () => {
     writeFileSync(join(root, 'regex.txt'), 'a.b\n')
     // A regex `.` would match "aXb"; fixed-strings must not.
     const result = await searchOf(root, 'a.b')
-    const regex = result.files.find(f => f.path === 'regex.txt')
+    const regex = result.files.find(f => f.path === join(root, 'regex.txt'))
     expect(regex).toBeDefined()
     expect(regex?.matches[0]?.preview).toContain('a.b')
   })

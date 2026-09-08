@@ -27,7 +27,7 @@ kind: "package-reference"
 
 ### 读取结果
 
-`search(path, query, signal)` 返回 `{ files, fileCount, matchCount, truncated, durationMs }`。每个文件携带其 POSIX 相对路径与匹配项；每个匹配项携带 1 起始的 `line` 与 `column`、有界的 `preview`，以及作为 preview 内 UTF-16 码元偏移的 `matchStart`/`matchLength`，因此浏览器无论内容是否多字节都能用原生字符串索引切片 preview。当文件、匹配项或输出字节限制提前终止搜索时，`truncated` 为真。
+`search(path, query, signal)` 返回 `{ files, fileCount, matchCount, truncated, durationMs }`。每个文件携带其完全限定的 Host 路径（按 Host 目录列表相同的分隔符风格拼接在搜索目录之下）与匹配项；每个匹配项携带 1 起始的 `line` 与 `column`、有界的 `preview`，以及作为 preview 内 UTF-16 码元偏移的 `matchStart`/`matchLength`，因此浏览器无论内容是否多字节都能用原生字符串索引切片 preview。当文件、匹配项或输出字节限制提前终止搜索时，`truncated` 为真。
 
 -----
 

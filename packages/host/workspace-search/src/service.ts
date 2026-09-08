@@ -33,7 +33,8 @@ export abstract class WorkspaceSearchRuntime extends Service {
    * @param path - absolute directory to search.
    * @param query - plain-text query; never interpreted as a regular expression.
    * @param signal - caller lifetime; abort cancels pending search work.
-   * @returns the bounded one-shot result.
+   * @returns the bounded one-shot result; each result file's `path` is a fully qualified
+   *   host path joined onto `path`, ready for the directory-picker read.
    */
   abstract search(
     path: string,

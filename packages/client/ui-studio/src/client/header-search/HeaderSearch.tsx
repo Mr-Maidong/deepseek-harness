@@ -144,20 +144,24 @@ export function HeaderSearch(props: HeaderSearchProps): React.ReactElement {
       : absolute
 
   const openMatch = useCallback((path: string, line: number, column: number) => {
-    const kind: StudioPreview['kind'] = path.toLowerCase().endsWith('.html') || path.toLowerCase().endsWith('.htm') ? 'iframe' : 'code'
-    onPreview({ path, status: 'loading', kind })
+    const rendered = path.toLowerCase().endsWith('.html') || path.toLowerCase().endsWith('.htm')
+    onPreview({ path, status: 'loading', kind: rendered ? 'iframe' : 'code' })
     setOpen(false)
     void readFile(path).then(({ content, language }) => {
-      onPreview({
-        path,
-        status: 'ready',
-        content,
-        kind,
-        focus: { line, column },
-        ...(language === undefined ? {} : { language }),
-      })
+      // A rendered artifact has no source line to scroll to, so only the code
+      // state carries the match's focus line.
+      onPreview(rendered
+        ? { path, status: 'ready', kind: 'iframe', content }
+        : {
+          path,
+          status: 'ready',
+          kind: 'code',
+          content,
+          focus: { line, column },
+          ...(language === undefined ? {} : { language }),
+        })
     }).catch(() => {
-      onPreview({ path, status: 'error', kind })
+      onPreview({ path, status: 'error', kind: rendered ? 'iframe' : 'code' })
     })
   }, [onPreview, readFile])
 

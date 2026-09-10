@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { MouseEvent as ReactMouseEvent, KeyboardEvent as ReactKeyboardEvent } from 'react'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import type { StudioPreview } from '../frame/contract.ts'
 import { CloseIcon } from '../left-panel/icons/icons.tsx'
 import { NS } from '../left-panel/locales.ts'
 import css from './PreviewCard.module.css'
@@ -19,117 +21,135 @@ export interface PreviewCardInjected {
 
 type Props = PropsRuntime<'studio.center.editor'> & PropsLocale<typeof NS> & PreviewCardInjected
 
+/** Ready source file: the only preview kind whose content is line-numbered. */
+type CodePreview = Extract<StudioPreview, { status: 'ready'; kind: 'code' }>
+
+/** Inclusive 1-based line span that the insertion bubble quotes. */
+interface LineSpan {
+  start: number
+  end: number
+}
+
+/** Raised insertion bubble, keyed to the preview state it was raised on. */
+interface Bubble {
+  preview: StudioPreview
+  anchor: { left: number; top: number }
+  span: LineSpan
+}
+
 /**
  * Floating read-only preview card for a selected workspace file, anchored above
- * the composer bar. Selecting code reveals an "insert reference" bubble whose
- * inserted text quotes the file path and the selected line range.
+ * the composer bar. Source files carry a line-number gutter whose numbers mark
+ * the search hit and the quoted range; selecting code or clicking a line number
+ * reveals an "insert reference" bubble whose inserted text quotes the file path
+ * and the selected line range.
  */
 export function PreviewCard({ preview, onClose, t, insertReference }: Props): React.ReactElement | null {
-  // Selection bubble anchor: {left, top} in card coordinates for the bottom of
-  // the last selected line (the cursor's resting line), or undefined hiding it.
-  const [anchor, setAnchor] = useState<{ left: number; top: number } | undefined>()
-  const [range, setRange] = useState<{ start: number; end: number } | undefined>()
-  const codeRef = useRef<HTMLPreElement>(null)
+  const textRef = useRef<HTMLElement>(null)
   const bubbleRef = useRef<HTMLButtonElement>(null)
+  const [bubble, setBubble] = useState<Bubble | undefined>()
+
+  const code = preview !== undefined && preview.status === 'ready' && preview.kind === 'code'
+    ? preview
+    : undefined
+  const lines = useMemo(() => (code === undefined ? [] : code.content.split('\n')), [code])
+  // A search jump names the line it matched; clamp it to the opened file so a
+  // stale or out-of-range result still marks the nearest readable line.
+  const focusLine = code?.focus === undefined
+    ? undefined
+    : Math.min(Math.max(1, code.focus.line), lines.length)
+  // The bubble belongs to the preview state it was raised on, so a new read, a
+  // different file, or a mode change drops it instead of quoting stale lines.
+  const live = bubble !== undefined && bubble.preview === code ? bubble : undefined
+  const span = live?.span
 
   const dismiss = (): void => {
-    setAnchor(undefined)
-    setRange(undefined)
+    setBubble(undefined)
   }
 
-  // Scroll the code surface to the focused line when a search jump opens a
-  // ready preview. The <pre> is the scroll container; the focused line's
-  // offset is measured by counting the newlines before it, then the surface
-  // scrolls so that line sits near the vertical center. The line is briefly
-  // highlighted via a temporary class on the <pre>.
+  /** The scroll surface that holds the gutter and the code text. */
+  const surfaceOf = (): HTMLElement | undefined => textRef.current?.parentElement ?? undefined
+
+  // Scroll a search jump's hit line into view when its preview becomes ready.
+  // The gutter row is measured against the scroll surface, so the line lands
+  // near the vertical center without assuming a pixel line height.
   useEffect(() => {
-    if (preview === undefined || preview.status !== 'ready' || preview.kind !== 'code' || preview.focus === undefined) return
-    const code = codeRef.current
-    if (code === null) return
-    const line = Math.max(1, preview.focus.line)
-    const lines = preview.content.split('\n')
-    const target = Math.min(line, lines.length)
-    // Approximate the line's pixel offset from the number of lines above it.
-    const lineHeight = 22
-    const targetTop = (target - 1) * lineHeight
-    const viewport = code.clientHeight
-    code.scrollTop = Math.max(0, targetTop - viewport / 2)
-    const focusClass = css.focusLine
-    if (focusClass !== undefined) {
-      code.classList.add(focusClass)
-      const timer = setTimeout(() => { code.classList.remove(focusClass) }, 1600)
-      return () => { clearTimeout(timer) }
-    }
-  }, [preview])
+    if (focusLine === undefined) return
+    const surface = surfaceOf()
+    if (surface === undefined) return
+    const row = surface.querySelector<HTMLElement>(`[data-line="${focusLine}"]`)
+    if (row === null) return
+    const top = row.getBoundingClientRect().top - surface.getBoundingClientRect().top + surface.scrollTop
+    surface.scrollTop = Math.max(0, top - surface.clientHeight / 2 + row.offsetHeight / 2)
+  }, [code, focusLine])
 
   // Dismiss the bubble when the user clicks outside the code surface.
   // mouseUp/keyUp on the <pre> only fires for interactions *inside* it;
   // clicking elsewhere deselects without reaching those handlers.
   useEffect(() => {
-    if (anchor === undefined) return
+    if (live === undefined) return
     const onPointerDown = (e: Event): void => {
       const target = e.target
       if (!(target instanceof Node)) return
-      // Keep the bubble open when clicking inside the code surface or on the
-      // bubble itself (so its onClick handler can fire after pointerdown).
-      const code = codeRef.current
-      const bubble = bubbleRef.current
-      if ((code !== null && code.contains(target)) || (bubble !== null && bubble.contains(target))) return
+      // Keep the bubble open when clicking inside the code surface (its line
+      // numbers included, so the bubble can move to another line) or on the
+      // bubble itself, so a handler on either can run after pointerdown.
+      if (surfaceOf()?.contains(target) === true || bubbleRef.current?.contains(target) === true) return
       dismiss()
     }
     document.addEventListener('pointerdown', onPointerDown)
     return () => { document.removeEventListener('pointerdown', onPointerDown) }
-  }, [anchor])
+  }, [live])
 
-  const handleSelect = (): void => {
-    if (preview === undefined || preview.kind !== 'code' || preview.status !== 'ready') {
+  /**
+   * Raise the bubble so its lower-left corner sits under `anchor` in viewport
+   * space, translated into the code wrapper that positions it. The scroll
+   * surface fills that wrapper, so the surface rect is the same origin.
+   */
+  const raise = (surface: Element, quoted: { left: number; bottom: number }, target: CodePreview, next: LineSpan): void => {
+    const box = surface.getBoundingClientRect()
+    setBubble({
+      preview: target,
+      anchor: { left: quoted.left - box.left, top: quoted.bottom - box.top },
+      span: next,
+    })
+  }
+
+  const handleSelect = (event: ReactMouseEvent<HTMLElement> | ReactKeyboardEvent<HTMLElement>, target: CodePreview): void => {
+    const text = textRef.current
+    const range = selectedRange()
+    if (text === null || range === undefined || !text.contains(range.startContainer) || !text.contains(range.endContainer)) {
       dismiss()
       return
     }
-    const selection = window.getSelection()
-    const code = codeRef.current
-    if (selection === null || code === null || selection.isCollapsed || selection.rangeCount === 0
-      || !code.contains(selection.anchorNode) || !code.contains(selection.focusNode)) {
+    const quoted = quoteRange(text, range)
+    if (quoted === undefined) {
       dismiss()
       return
     }
-    const rects = selection.getRangeAt(0).getClientRects()
-    // A collapsed/void range yields no rects; only offer insertion over a visible selection.
-    if (rects.length === 0) {
-      dismiss()
-      return
-    }
-    // Anchor the bubble just below the last selected line (rects are ordered
-    // top-to-bottom, so the final rect is the cursor's resting line).
-    const last = rects[rects.length - 1]
-    if (last === undefined) {
-      dismiss()
-      return
-    }
-    // The bubble's positioned parent is .codeWrap (position: relative), so
-    // compute the anchor against that rect, not the outer .preview card rect
-    // (which includes the header and would offset the bubble downward).
-    const wrap = code.closest(`.${css.codeWrap}`)
-    if (!(wrap instanceof HTMLElement)) {
-      dismiss()
-      return
-    }
-    const box = wrap.getBoundingClientRect()
-    const rangeOfSelection = lineRange(code)
-    if (rangeOfSelection === undefined) {
-      dismiss()
-      return
-    }
-    setRange(rangeOfSelection)
-    setAnchor({ left: last.left - box.left, top: last.bottom - box.top })
+    raise(event.currentTarget, { left: quoted.left, bottom: quoted.bottom }, target, quoted.span)
+  }
+
+  /**
+   * Quote one line from its gutter number. The browser selection goes first, so
+   * the marked number plus the bubble are the only claim on which line is
+   * referenced; a press that ends off the numbers leaves any raised bubble alone.
+   */
+  const handleLineNumber = (event: ReactMouseEvent<HTMLElement>, target: CodePreview): void => {
+    const cell = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-line]') : null
+    if (cell === null) return
+    window.getSelection()?.removeAllRanges()
+    const box = cell.getBoundingClientRect()
+    const line = Number(cell.dataset.line)
+    raise(event.currentTarget, { left: box.left, bottom: box.bottom }, target, { start: line, end: line })
   }
 
   const handleReference = (): void => {
-    if (insertReference === undefined || range === undefined || preview === undefined || preview.status !== 'ready') {
+    if (insertReference === undefined || live === undefined || span === undefined) {
       dismiss()
       return
     }
-    insertReference({ path: preview.path, startLine: range.start, endLine: range.end })
+    insertReference({ path: live.preview.path, startLine: span.start, endLine: span.end })
     dismiss()
     window.getSelection()?.removeAllRanges()
   }
@@ -141,22 +161,41 @@ export function PreviewCard({ preview, onClose, t, insertReference }: Props): Re
       {preview.kind === 'code' && <span className={css.language}>{preview.status === 'ready' ? preview.language ?? t('preview.plain') : ''}</span>}
       <button type="button" className={css.close} aria-label={t('preview.close')} title={t('preview.close')} onClick={onClose}><CloseIcon /></button>
     </header>
-    {preview.status === 'loading' && <div className={css.code}>{t('preview.loading')}</div>}
+    {preview.status === 'loading' && <div className={css.status}>{t('preview.loading')}</div>}
     {preview.status === 'ready' && preview.kind === 'iframe'
       // Scripts run in an opaque origin (no allow-same-origin): produced and
       // possibly untrusted HTML is embedded without access to the app origin.
       ? <iframe className={css.iframe} title={preview.path} sandbox="allow-scripts allow-forms allow-popups" srcDoc={preview.content} />
-      : preview.status === 'ready' && (
+      : code !== undefined && (
         <div className={css.codeWrap}>
-          <pre ref={codeRef} className={css.code} onMouseUp={handleSelect} onKeyUp={handleSelect} tabIndex={0}>
-            <code>{preview.content}</code>
+          <pre
+            className={css.code}
+            onMouseUp={(event) => { handleSelect(event, code) }}
+            onKeyUp={(event) => { handleSelect(event, code) }}
+            onClick={(event) => { handleLineNumber(event, code) }}
+            tabIndex={0}
+          >
+            <span className={css.gutter} aria-hidden="true">
+              {lines.map((_, index) => {
+                const line = index + 1
+                const quoted = span !== undefined && line >= span.start && line <= span.end
+                return <span
+                  key={line}
+                  data-line={line}
+                  data-quoted={quoted || undefined}
+                  data-focus={line === focusLine || undefined}
+                  className={css.line}
+                >{line}</span>
+              })}
+            </span>
+            <code ref={textRef} className={css.text}>{code.content}</code>
           </pre>
-          {anchor !== undefined && range !== undefined && (
+          {live !== undefined && span !== undefined && (
             <button
               ref={bubbleRef}
               type="button"
               className={css.reference}
-              style={{ left: anchor.left, top: anchor.top }}
+              style={{ left: live.anchor.left, top: live.anchor.top }}
               aria-label={t('preview.reference')}
               title={t('preview.reference')}
               onClick={handleReference}
@@ -166,28 +205,38 @@ export function PreviewCard({ preview, onClose, t, insertReference }: Props): Re
           )}
         </div>
       )}
-    {preview.status === 'error' && <div className={css.code}>{t('preview.error')}</div>}
+    {preview.status === 'error' && <div className={css.status}>{t('preview.error')}</div>}
   </section>
 }
 
-/** Line span of the current selection inside the code content, or undefined when empty. */
-function lineRange(code: HTMLPreElement): { start: number; end: number } | undefined {
+/** The live selection's first range, or undefined when nothing is selected. */
+function selectedRange(): Range | undefined {
   const selection = window.getSelection()
-  if (selection === null || selection.isCollapsed || selection.rangeCount === 0
-    || !code.contains(selection.anchorNode) || !code.contains(selection.focusNode)) return undefined
+  if (selection === null || selection.rangeCount === 0) return undefined
+  return selection.getRangeAt(0)
+}
+
+/**
+ * What a range inside the code quotes: the 1-based line span and the viewport
+ * bottom of its lowest visible rect. The code element holds exactly the file
+ * text, so offsets measured against its start convert directly to lines.
+ * Undefined covers a collapsed or off-screen range, which quotes nothing.
+ */
+function quoteRange(code: HTMLElement, range: Range): { span: LineSpan; left: number; bottom: number } | undefined {
+  const text = range.toString()
+  if (text.length === 0) return undefined
+  const rects = range.getClientRects()
+  const bottom = rects[rects.length - 1]
+  if (bottom === undefined) return undefined
   const content = code.textContent
-  const range = selection.getRangeAt(0)
-  // Measure character offsets of the range against the content start (the code
-  // element holds exactly the file text), then convert to 1-based lines.
   const head = document.createRange()
   head.selectNodeContents(code)
   head.setEnd(range.startContainer, range.startOffset)
-  const startOffset = head.toString().length
-  const endOffset = startOffset + range.toString().length
-  if (endOffset <= startOffset) return undefined
+  const start = head.toString().length
   return {
-    start: lineOf(content, startOffset),
-    end: lineOf(content, endOffset),
+    span: { start: lineOf(content, start), end: lineOf(content, start + text.length) },
+    left: bottom.left,
+    bottom: bottom.bottom,
   }
 }
 

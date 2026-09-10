@@ -59,7 +59,7 @@ describe('FileTree', () => {
     render(<FileTree {...globalStandardProps} t={t} activeSection="project" rootPath="/workspace" listDirectory={vi.fn(async () => htmlListing)} readFile={vi.fn(async () => ({ path: '/workspace/index.html', content: '<h1>hi</h1>', language: 'html' }))} onPreview={onPreview} expandedPaths={[]} onToggleExpanded={vi.fn()} />)
     fireEvent.click(await screen.findByRole('button', { name: 'index.html' }))
     expect(onPreview).toHaveBeenCalledWith({ path: '/workspace/index.html', status: 'loading', kind: 'iframe' })
-    await vi.waitFor(() => { expect(onPreview).toHaveBeenLastCalledWith({ path: '/workspace/index.html', status: 'ready', content: '<h1>hi</h1>', language: 'html', kind: 'iframe' }) })
+    await vi.waitFor(() => { expect(onPreview).toHaveBeenLastCalledWith({ path: '/workspace/index.html', status: 'ready', content: '<h1>hi</h1>', kind: 'iframe' }) })
     // The card presents an iframe embedding the source instead of raw code.
     const onClose = vi.fn()
     render(<PreviewCard {...{ t, preview: { path: '/workspace/index.html', status: 'ready', content: '<h1>hi</h1>', language: 'html', kind: 'iframe' }, onClose } as unknown as ComponentProps<typeof PreviewCard>} />)
@@ -71,6 +71,17 @@ describe('FileTree', () => {
     // to the app origin, so allow-same-origin must stay off.
     expect(frame.getAttribute('sandbox')).toContain('allow-scripts')
     expect(frame.getAttribute('sandbox')).not.toContain('allow-same-origin')
+  })
+
+  it('opens a rendered artifact whose read fails as an iframe error', async () => {
+    const onPreview = vi.fn()
+    const htmlListing: DirectoryListing = {
+      path: '/workspace', home: '/workspace', crumbs: [], truncated: false,
+      entries: [{ kind: 'file', name: 'index.html', path: '/workspace/index.html', hidden: false }],
+    }
+    render(<FileTree {...globalStandardProps} t={t} activeSection="project" rootPath="/workspace" listDirectory={vi.fn(async () => htmlListing)} readFile={vi.fn(async () => { throw new Error('denied') })} onPreview={onPreview} expandedPaths={[]} onToggleExpanded={vi.fn()} />)
+    fireEvent.click(await screen.findByRole('button', { name: 'index.html' }))
+    await vi.waitFor(() => { expect(onPreview).toHaveBeenLastCalledWith({ path: '/workspace/index.html', status: 'error', kind: 'iframe' }) })
   })
 
   it('still lists non-rendered code files as code previews', async () => {
@@ -190,5 +201,155 @@ describe('FileTree', () => {
     const view = render(<FileTree {...globalStandardProps} t={t} activeSection="project" rootPath="/workspace" listDirectory={vi.fn(async () => openListing)} readFile={vi.fn()} onPreview={vi.fn()} expandedPaths={[]} onToggleExpanded={vi.fn()} openPath="/workspace/main.ts" />)
     expect((await view.findByRole('button', { name: 'main.ts' })).getAttribute('data-open')).toBe('true')
     expect(view.getByRole('button', { name: 'other.ts' }).getAttribute('data-open')).toBeNull()
+  })
+})
+
+describe('PreviewCard line numbers', () => {
+  const cardProps = (content: string, extra: Record<string, unknown> = {}): ComponentProps<typeof PreviewCard> =>
+    ({ t, preview: { path: '/workspace/src/main.ts', status: 'ready', kind: 'code', content, ...extra }, onClose: vi.fn() } as unknown as ComponentProps<typeof PreviewCard>)
+
+  /** Select `from`..`to` inside the code text, with stub client rects per line. */
+  const selectLines = (container: HTMLElement, from: number, to: number, rects: unknown[]): void => {
+    const text = container.querySelector('code')!.firstChild!
+    const range = document.createRange()
+    range.setStart(text, from)
+    range.setEnd(text, to)
+    range.getClientRects = () => rects as unknown as DOMRectList
+    const selection = window.getSelection()!
+    selection.removeAllRanges()
+    selection.addRange(range)
+  }
+
+  it('numbers every source line in a gutter that stays out of the code text', () => {
+    const { container } = render(<PreviewCard {...cardProps('alpha\nbeta\ngamma')} />)
+    const rows = [...container.querySelectorAll('[data-line]')]
+    expect(rows.map(row => row.textContent)).toEqual(['1', '2', '3'])
+    // Numbers are presentational: the code element still holds exactly the file.
+    expect(container.querySelector('code')!.textContent).toBe('alpha\nbeta\ngamma')
+    expect(rows[0]!.closest('[aria-hidden="true"]')).not.toBeNull()
+  })
+
+  it('numbers no preview that carries no source lines', () => {
+    const view = render(<PreviewCard {...{ t, preview: { path: '/workspace/main.ts', status: 'loading', kind: 'code' }, onClose: vi.fn() } as unknown as ComponentProps<typeof PreviewCard>} />)
+    expect(view.container.querySelector('[data-line]')).toBeNull()
+    // A rendered artifact embeds an iframe, so it has no line grid at all.
+    view.rerender(<PreviewCard {...{ t, preview: { path: '/workspace/index.html', status: 'ready', kind: 'iframe', content: '<h1>hi</h1>' }, onClose: vi.fn() } as unknown as ComponentProps<typeof PreviewCard>} />)
+    expect(view.container.querySelector('[data-line]')).toBeNull()
+    // Nor does a read that failed.
+    view.rerender(<PreviewCard {...{ t, preview: { path: '/workspace/main.ts', status: 'error', kind: 'code' }, onClose: vi.fn() } as unknown as ComponentProps<typeof PreviewCard>} />)
+    expect(view.container.querySelector('[data-line]')).toBeNull()
+  })
+
+  it('marks the line a search jump landed on, clamped to the file', () => {
+    const { container } = render(<PreviewCard {...cardProps('alpha\nbeta\ngamma', { focus: { line: 2, column: 3 } })} />)
+    expect(container.querySelector('[data-line="2"]')!.getAttribute('data-focus')).toBe('true')
+    expect(container.querySelector('[data-line="1"]')!.getAttribute('data-focus')).toBeNull()
+    // A stale result beyond the file still marks its last readable line.
+    const { container: stale } = render(<PreviewCard {...cardProps('alpha\nbeta\ngamma', { focus: { line: 9, column: 1 } })} />)
+    expect(stale.querySelector('[data-line="3"]')!.getAttribute('data-focus')).toBe('true')
+  })
+
+  it('marks every line number of the selected range', () => {
+    const content = 'alpha\nbeta\ngamma'
+    const { container } = render(<PreviewCard {...cardProps(content)} />)
+    const pre = container.querySelector('pre')!
+    selectLines(container, 'alpha\n'.length, 'alpha\nbeta\ngamma'.length, [{ left: 0, top: 0, bottom: 10 }])
+    fireEvent.mouseUp(pre)
+    expect(screen.getByRole('button', { name: '引入' })).toBeTruthy()
+    expect(container.querySelector('[data-line="2"]')!.getAttribute('data-quoted')).toBe('true')
+    expect(container.querySelector('[data-line="3"]')!.getAttribute('data-quoted')).toBe('true')
+    expect(container.querySelector('[data-line="1"]')!.getAttribute('data-quoted')).toBeNull()
+  })
+
+  it('quotes one line when its gutter number is clicked', () => {
+    const insertReference = vi.fn()
+    const { container } = render(<PreviewCard {...cardProps('alpha\nbeta\ngamma')} insertReference={insertReference} />)
+    const row = container.querySelector('[data-line="2"]')!
+    fireEvent.click(row)
+    expect(row.getAttribute('data-quoted')).toBe('true')
+    // The bubble hangs off the clicked line, not any earlier selection.
+    fireEvent.click(screen.getByRole('button', { name: '引入' }))
+    expect(insertReference).toHaveBeenCalledWith({ path: '/workspace/src/main.ts', startLine: 2, endLine: 2 })
+  })
+
+  it('drops the browser selection when a gutter number claims the line', () => {
+    const content = 'alpha\nbeta\ngamma'
+    const { container } = render(<PreviewCard {...cardProps(content)} />)
+    selectLines(container, 0, 'alpha'.length, [{ left: 0, top: 0, bottom: 10 }])
+    fireEvent.click(container.querySelector('[data-line="3"]')!)
+    expect(window.getSelection()!.rangeCount).toBe(0)
+    expect(container.querySelector('[data-line="3"]')!.getAttribute('data-quoted')).toBe('true')
+    expect(container.querySelector('[data-line="1"]')!.getAttribute('data-quoted')).toBeNull()
+  })
+
+  it('keeps a raised bubble when the press ends on the code text', () => {
+    const { container } = render(<PreviewCard {...cardProps('alpha\nbeta\ngamma')} />)
+    fireEvent.click(container.querySelector('[data-line="2"]')!)
+    expect(screen.getByRole('button', { name: '引入' })).toBeTruthy()
+    fireEvent.click(container.querySelector('code')!)
+    expect(screen.getByRole('button', { name: '引入' })).toBeTruthy()
+  })
+
+  it('raises no bubble for a click that selects nothing', () => {
+    const content = 'alpha\nbeta\ngamma'
+    const { container } = render(<PreviewCard {...cardProps(content)} />)
+    const pre = container.querySelector('pre')!
+    // No selection at all: the surface reports nothing to quote.
+    fireEvent.mouseUp(pre)
+    expect(screen.queryByRole('button', { name: '引入' })).toBeNull()
+    // A collapsed caret and an unlaid-out range both quote nothing as well.
+    const text = container.querySelector('code')!.firstChild!
+    const caret = document.createRange()
+    caret.setStart(text, 3)
+    caret.setEnd(text, 3)
+    window.getSelection()!.addRange(caret)
+    fireEvent.mouseUp(pre)
+    expect(screen.queryByRole('button', { name: '引入' })).toBeNull()
+    const unlaid = document.createRange()
+    unlaid.setStart(text, 0)
+    unlaid.setEnd(text, 'alpha'.length)
+    unlaid.getClientRects = () => [] as unknown as DOMRectList
+    window.getSelection()!.removeAllRanges()
+    window.getSelection()!.addRange(unlaid)
+    fireEvent.mouseUp(pre)
+    expect(screen.queryByRole('button', { name: '引入' })).toBeNull()
+  })
+
+  it('drops the bubble when the seat wires no reference callback', () => {
+    const { container } = render(<PreviewCard {...cardProps('alpha\nbeta')} />)
+    fireEvent.click(container.querySelector('[data-line="1"]')!)
+    fireEvent.click(screen.getByRole('button', { name: '引入' }))
+    expect(screen.queryByRole('button', { name: '引入' })).toBeNull()
+  })
+
+  it('quotes the selected range when the selection is made from the keyboard', () => {
+    const content = 'alpha\nbeta\ngamma'
+    const { container } = render(<PreviewCard {...cardProps(content)} />)
+    selectLines(container, 0, 'alpha\nbeta'.length, [{ left: 0, top: 0, bottom: 10 }])
+    fireEvent.keyUp(container.querySelector('pre')!)
+    expect(container.querySelector('[data-line="1"]')!.getAttribute('data-quoted')).toBe('true')
+    expect(container.querySelector('[data-line="2"]')!.getAttribute('data-quoted')).toBe('true')
+  })
+
+  it('renders nothing without a preview state', () => {
+    const view = render(<PreviewCard {...{ t, preview: undefined, onClose: vi.fn() } as unknown as ComponentProps<typeof PreviewCard>} />)
+    expect(view.container.firstChild).toBeNull()
+  })
+
+  it('dismisses a raised bubble only for a press outside the surface and the bubble', () => {
+    const { container } = render(<PreviewCard {...cardProps('alpha\nbeta')} />)
+    const pre = container.querySelector('pre')!
+    fireEvent.click(container.querySelector('[data-line="1"]')!)
+    const bubble = () => screen.queryByRole('button', { name: '引入' })
+    // A press on the surface, on the bubble itself, or on a target that is not
+    // a node keeps the bubble; only an outside node dismisses it.
+    fireEvent.pointerDown(pre)
+    expect(bubble()).not.toBeNull()
+    fireEvent.pointerDown(bubble()!)
+    expect(bubble()).not.toBeNull()
+    fireEvent.pointerDown(window)
+    expect(bubble()).not.toBeNull()
+    fireEvent.pointerDown(document.body)
+    expect(bubble()).toBeNull()
   })
 })

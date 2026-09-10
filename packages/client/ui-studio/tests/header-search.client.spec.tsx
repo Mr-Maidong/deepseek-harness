@@ -157,6 +157,41 @@ describe('HeaderSearch', () => {
     expect(ready.language).toBeUndefined()
   })
 
+  it('opens a code match whose read carries no language label', async () => {
+    const readFile = vi.fn(async () => ({ path: `${WS_ROOT}/src/a.ts`, content: 'const greeting = "hello"\n' }))
+    const { onPreview } = renderSearch({ readFile })
+    const input = openPanel()
+    fireEvent.change(input, { target: { value: 'hello' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    fireEvent.click(await screen.findByRole('button', { name: /1:17/ }))
+    await waitFor(() => {
+      expect(onPreview).toHaveBeenLastCalledWith({
+        path: `${WS_ROOT}/src/a.ts`,
+        status: 'ready',
+        content: 'const greeting = "hello"\n',
+        kind: 'code',
+        focus: { line: 1, column: 17 },
+      })
+    })
+  })
+
+  it('publishes an iframe error preview when a rendered artifact cannot be read', async () => {
+    const htmlResult: WorkspaceSearchResult = {
+      ...result,
+      files: [{ path: `${WS_ROOT}/index.html`, matches: result.files[0]!.matches }],
+    }
+    const searchWorkspace = vi.fn(async () => htmlResult)
+    const readFile = vi.fn(async () => { throw new Error('gone') })
+    const { onPreview } = renderSearch({ searchWorkspace, readFile })
+    const input = openPanel()
+    fireEvent.change(input, { target: { value: 'hello' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    fireEvent.click(await screen.findByRole('button', { name: /1:17/ }))
+    await waitFor(() => {
+      expect(onPreview).toHaveBeenLastCalledWith({ path: `${WS_ROOT}/index.html`, status: 'error', kind: 'iframe' })
+    })
+  })
+
   it('only the latest request commits when an earlier one settles late', async () => {
     let releaseFirst: ((value: WorkspaceSearchResult) => void) | undefined
     const searchWorkspace = vi.fn((_id: string, query: string) => {

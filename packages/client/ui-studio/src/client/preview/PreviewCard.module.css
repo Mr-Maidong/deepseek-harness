@@ -20,7 +20,37 @@
 .language { flex: none; color: var(--studio-gold); }
 .close { flex: none; margin-left: auto; display: grid; width: 22px; height: 22px; place-items: center; padding: 0; border: 1px solid var(--studio-line); border-radius: 50%; corner-shape: round; color: var(--studio-muted); background: transparent; cursor: pointer; }
 .close:hover { color: var(--studio-gold); border-color: var(--studio-gold); }
-.code { flex: 1; margin: 0; padding: 14px; overflow: auto; white-space: pre; font: 13px/1.7 monospace; outline: none; }
+/* Reading and failure messages carry the code surface's own metrics. */
+.status { flex: 1; margin: 0; padding: 14px; overflow: auto; white-space: pre; font: 13px/22px monospace; outline: none; }
+/* Scrolling source surface: the gutter and the text are two columns of one
+   scroll box, so they share the vertical padding and every numbered row sits on
+   its own source line. An exact 22px line height keeps that grid integral. */
+.code { flex: 1; display: flex; align-items: flex-start; margin: 0; overflow: auto; white-space: pre; font: 13px/22px monospace; outline: none; }
+/* Line-number gutter. It is pinned to the left edge so long lines still scroll
+   under a readable column, which is why it covers the surface behind it. The
+   numbers are excluded from selection, so copied code stays the file's text. */
+.gutter {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  flex: none;
+  padding: 0 10px 0 14px;
+  color: var(--studio-muted);
+  background: var(--studio-input);
+  backdrop-filter: blur(8px);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+.line { display: block; padding: 0 3px; cursor: pointer; }
+.line:hover { color: var(--studio-gold); }
+/* The search jump's hit line: gold number over a wash band. */
+.line[data-focus] { color: var(--studio-gold); background: var(--studio-gold-wash); }
+/* The lines the insertion bubble quotes: a bar on the gutter's inner edge ties
+   each number to the row it names, and composes with the hit-line band. */
+.line[data-quoted] { color: var(--studio-gold); box-shadow: inset -2px 0 0 var(--studio-gold); }
+/* The file text as one selectable run, so copying and drag-selecting stay exact. */
+.text { flex: none; padding-right: 14px; color: var(--studio-ink); }
 /* Wrapper that turns the scrollable code surface into the positioning context
    for the floating "insert reference" bubble revealed by a text selection. */
 .codeWrap { position: relative; flex: 1; display: flex; min-height: 0; }
@@ -51,12 +81,17 @@
 .iframe { flex: none; width: 100%; aspect-ratio: 16 / 9; border: 0; }
 /* Reuse the file-tree scrollbar: a thin bar that stays invisible until the
    surface is hovered or focused, then shows the studio line color. */
-.code { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+.code,
+.status { scrollbar-width: thin; scrollbar-color: transparent transparent; }
 .code:hover,
-.code:focus-within { scrollbar-color: var(--studio-line) transparent; }
-.code::-webkit-scrollbar { width: 6px; }
-.code::-webkit-scrollbar-thumb { background: transparent; }
+.code:focus-within,
+.status:hover,
+.status:focus-within { scrollbar-color: var(--studio-line) transparent; }
+.code::-webkit-scrollbar,
+.status::-webkit-scrollbar { width: 6px; }
+.code::-webkit-scrollbar-thumb,
+.status::-webkit-scrollbar-thumb { background: transparent; }
 .code:hover::-webkit-scrollbar-thumb,
-.code:focus-within::-webkit-scrollbar-thumb { background: var(--studio-line); }
-/* Brief highlight on the code surface after a search jump scrolls to a line. */
-.focusLine { background: rgba(212, 175, 55, 0.06); }
+.code:focus-within::-webkit-scrollbar-thumb,
+.status:hover::-webkit-scrollbar-thumb,
+.status:focus-within::-webkit-scrollbar-thumb { background: var(--studio-line); }

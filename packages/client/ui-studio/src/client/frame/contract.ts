@@ -12,18 +12,24 @@ export interface StudioNavigationOwnerProps {
 /** How the floating card renders a ready preview: native previews (code, …) or an embedded iframe for rendered artifacts such as HTML. */
 export type StudioPreviewKind = 'code' | 'iframe'
 
-/** Read state of a workspace file as it travels from the tree click to the floating card. */
+/**
+ * Read state of a workspace file as it travels from the tree click to the
+ * floating card. A ready read discriminates on its kind: only source carries a
+ * language label and a search-jump focus line, while a rendered artifact is
+ * just the content the frame embeds.
+ */
 export type StudioPreview =
   | { path: string; status: 'loading'; kind: StudioPreviewKind }
   | {
     path: string
     status: 'ready'
+    kind: 'code'
     content: string
-    kind: StudioPreviewKind
     language?: string
     /** 1-based line/column to scroll the card to when it opens (search jump). */
     focus?: { line: number; column: number }
   }
+  | { path: string; status: 'ready'; kind: 'iframe'; content: string }
   | { path: string; status: 'error'; kind: StudioPreviewKind }
 
 /** Workspace and session switcher share. */

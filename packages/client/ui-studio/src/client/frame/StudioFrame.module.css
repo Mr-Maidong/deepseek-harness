@@ -11,31 +11,14 @@
    effect on html. Suppressing root overscroll stops the whole layout from
    rubber-banding when a wheel gesture chains past a finished inner scroller,
    and leaves document scrollability otherwise untouched. */
-.frame {
-  position: relative;
-  display: grid;
-  grid-template-rows: 100%;
-  height: 100%;
-  min-width: 0;
-  overflow: hidden;
-  color: #d6dddc;
-  background:
-    linear-gradient(180deg, rgba(14, 23, 31, 0.42), rgba(17, 26, 34, 0.72)),
-    url('../assets/illustrations/0.webp') center / cover no-repeat,
-    #111a22;
-  font-family: 'YaHei Consolas Hybrid', monospace;
-  overscroll-behavior: none;
+/* Studio palette primitives live at the document root: ui-primitives' Modal
+   portals its dialog to document.body, outside the `.frame` subtree, and
+   StudioDialog.module.css re-maps the shared aliases there from these values.
+   The alias remapping itself stays frame-scoped below. */
+:global(:root) {
   --studio-ink: #d6dddc;
   --studio-muted: #b2bdc2;
   --studio-gold: #f0dfbc;
-  --studio-motion: 320ms cubic-bezier(0.22, 1, 0.36, 1);
-  --dsw-font-family: 'YaHei Consolas Hybrid', monospace;
-  transition: grid-template-columns var(--studio-motion);
-  /* No frozen markdown ladder or conversation font tokens here: the frame's
-     descendants (the conversation seat and workbench markdown) must resolve
-     the body-level adaptive ladder from ui-theme (gradient-shadow-text.css),
-     which derives from --dsh-content-font-size so the Settings font-size
-     preference keeps controlling conversation text. */
   --studio-line: rgba(164, 181, 184, 0.2);
   --studio-red: #a23f47;
   --studio-panel: rgb(20 32 41 / 40%);
@@ -44,6 +27,30 @@
   --studio-red-wash: rgba(162, 63, 71, 0.1);
   --studio-red-wash-strong: rgba(162, 63, 71, 0.16);
   --studio-red-line: rgba(162, 63, 71, 0.72);
+}
+
+.frame {
+  position: relative;
+  display: grid;
+  grid-template-rows: 100%;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--studio-ink);
+  background:
+    linear-gradient(180deg, rgba(14, 23, 31, 0.42), rgba(17, 26, 34, 0.72)),
+    url('../assets/illustrations/0.webp') center / cover no-repeat,
+    #111a22;
+  font-family: 'YaHei Consolas Hybrid', monospace;
+  overscroll-behavior: none;
+  --studio-motion: 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  --dsw-font-family: 'YaHei Consolas Hybrid', monospace;
+  transition: grid-template-columns var(--studio-motion);
+  /* No frozen markdown ladder or conversation font tokens here: the frame's
+     descendants (the conversation seat and workbench markdown) must resolve
+     the body-level adaptive ladder from ui-theme (gradient-shadow-text.css),
+     which derives from --dsh-content-font-size so the Settings font-size
+     preference keeps controlling conversation text. */
   --dsw-alias-bg-base: var(--studio-panel);
   --dsw-alias-bg-layer-1: var(--studio-panel);
   --dsw-alias-bg-layer-2: var(--studio-input);

@@ -13,6 +13,7 @@ import type { WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-api-workspace-
 import type { DirectoryFlowOwnerProps } from '@deepseek-ai/dsh-client-ui-workspace/client'
 import type { WorkspaceSnapshot } from '@deepseek-ai/dsh-api-workspace-controller/client'
 import { Modal } from '@deepseek-ai/dsh-client-ui-primitives'
+import dialogTheme from '../../styles/StudioDialog.module.css'
 import { ChevronIcon, SessionIcon } from './icons/icons.tsx'
 import { NS } from './locales.ts'
 import type { LeftPanelInjected } from './LeftPanelMain.tsx'
@@ -236,11 +237,12 @@ export function WorkBase(props: WorkBaseProps): React.ReactElement {
       {archiveTarget !== undefined && (
         <Modal
           open
+          className={dialogTheme.theme ?? ''}
           title={t('session.archiveConfirmTitle')}
           description={t('session.archiveConfirmBody')}
           closeLabel={t('session.archiveConfirmCancel')}
           footer={(
-            <button type="button" className={css.dangerButton} onClick={() => {
+            <button type="button" className={dialogTheme.danger} onClick={() => {
               const target = archiveTarget
               setArchiveTarget(undefined)
               void archiveSession(target)
@@ -254,13 +256,14 @@ export function WorkBase(props: WorkBaseProps): React.ReactElement {
       {confirmDelete !== undefined && (
         <Modal
           open
+          className={dialogTheme.theme ?? ''}
           title={t('workspace.deleteConfirmTitle')}
           description={t('workspace.deleteConfirmBody')}
           closeLabel={t('workspace.deleteConfirmCancel')}
           footer={(
             <button
               type="button"
-              className={css.dangerButton}
+              className={dialogTheme.danger}
               onClick={() => { void props.deleteWorkspace(confirmDelete.workspaceId); setConfirmDelete(undefined) }}
             >
               {t('workspace.deleteConfirmOk')}

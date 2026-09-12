@@ -1,0 +1,30 @@
+/**
+ * Theme scope for dialogs portaled to document.body by ui-primitives' Modal.
+ *
+ * StudioFrame maps the shared `--dsw-alias-*` families onto the studio palette
+ * on `.frame`, but a portaled dialog sits outside that subtree and resolves the
+ * platform defaults; applying `.theme` (as the Modal `className`) re-declares
+ * the same mapping on the dialog root for its own subtree. `.danger` styles the
+ * destructive confirm button. The `--studio-*` primitives come from
+ * StudioFrame.module.css's `:global(:root)` block, which loads with the frame
+ * that hosts every studio dialog.
+ */
+.theme {
+  --dsw-font-family: 'YaHei Consolas Hybrid', monospace;
+  color: var(--studio-ink);
+  font-family: var(--dsw-font-family);
+  --dsw-alias-bg-layer-2: var(--studio-input);
+  --dsw-alias-label-primary: var(--studio-ink);
+  --dsw-alias-label-secondary: var(--studio-muted);
+  --dsw-alias-interactive-bg-hover: var(--studio-gold-wash);
+}
+
+.danger {
+  padding: 7px 13px;
+  border: 1px solid var(--studio-red-line);
+  border-radius: 3px;
+  background: var(--studio-red-wash-strong);
+  color: var(--studio-ink);
+  font: 500 14px/20px var(--dsw-font-family);
+  cursor: pointer;
+}

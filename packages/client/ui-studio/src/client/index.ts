@@ -2,18 +2,21 @@
  * Studio layout plugin, browser half: one register() call contributes
  * StudioFrame into the runtime's built-in 'root' slot, and the composition
  * disables ui-layout's own root entry, so this entry OWNS the whole-window
- * layout: it declares the frame's own child seats AND re-declares the four
- * shipped top-level seats the rest of the browser keeps registering into
- * (`sidebar`, `conversation`, `details`, `shell.overlay`) — a slot needs one
- * live declarer, and with ui-layout gone, these would be undeclared and
- * every downstream registration would throw.
+ * layout: it declares the frame's own child seats AND re-declares the shipped
+ * top-level seats the rest of the browser keeps registering into (`sidebar`,
+ * `main`, `shell.overlay`) — a slot needs one live declarer, and with ui-layout
+ * gone a bare `register` into an undeclared seat would throw. The shipped right
+ * column (`rightbar`) is deliberately left undeclared: this frame has three
+ * columns plus the status column, so the panel's seat registrants wait, and the
+ * panel package's expand control rides that declaration rather than leaving a
+ * dead button in the conversation header.
  *
  * The register call also re-homes the services ui-layout used to provide:
  * `ctx.layout` (the panel-action face ui-sidebar and ui-conversation inject)
- * now maps to the studio store (toggleSidebar ↔ left rail toggle; details
- * transitions are no-ops — this layout has no details column), and the theme
- * presenter projects `ctx.theme` onto the document exactly as the shadowed
- * frame's did.
+ * now maps to the studio store (toggleSidebar ↔ left rail toggle; panel
+ * selection and right-column transitions are no-ops — this layout has neither),
+ * and the theme presenter projects `ctx.theme` onto the document exactly as the
+ * shadowed frame's did.
  */
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
@@ -146,9 +149,10 @@ export function apply(ctx: ClientContext): void {
       children: {
         // Re-declared shipped top-level seats (ui-layout's entry is disabled in
         // the composition): every downstream registrant keeps a live declarer.
+        // `rightbar` is absent on purpose — the frame has no right column, so
+        // its panel seat and the header control that opens it stay unregistered.
         'sidebar': { kind: 'single', scope: 'root' },
         'main': { kind: 'keyed', scope: 'root' },
-        'rightbar': { kind: 'single', scope: 'root' },
         'shell.overlay': { kind: 'list', scope: 'root' },
         'sidebar.settings': { kind: 'single', scope: 'root' },
         'studio.navigation': { kind: 'single', scope: 'root' },

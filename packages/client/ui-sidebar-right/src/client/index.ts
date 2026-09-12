@@ -166,16 +166,19 @@ export function apply(ctx: ClientContext): void {
           occurrence: tab => controller.tabDomain.occurrence(sessionId, tab),
         }),
       }, RightbarSeat)
+      // The expand button rides the panel's declaration: a shell that declares
+      // no `rightbar` seat has no column for the button to open, so the
+      // contribution waits with the seat instead of leaving a dead control in
+      // the conversation header. It shares the panel's store: it only needs to
+      // know whether the panel is expanded, and to ask for it to be. The
+      // header's corner seat is its own place, past the utilities, so showing
+      // and hiding it moves nothing else in the row.
+      yield ctx.slots.register({
+        name: 'conversation.session.header.corner',
+        locale: NS,
+        store,
+      }, ExpandButton)
     })
-    // The expand button shares the panel's store: it only needs to know whether
-    // the panel is expanded, and to ask for it to be. The header's corner seat
-    // is its own place, past the utilities, so showing and hiding it moves
-    // nothing else in the row.
-    const disposeExpand = ctx.slots.inject('conversation.session.header.corner', () => ctx.slots.register({
-      name: 'conversation.session.header.corner',
-      locale: NS,
-      store,
-    }, ExpandButton))
     // Stage two for the guide: it declares the chain child it hosts and reads
     // the registry's entry boxes, which an ordinary type has no reason to do.
     const guideInjected: GuideInjected = {
@@ -198,7 +201,6 @@ export function apply(ctx: ClientContext): void {
     return () => {
       disposeGuideTitle()
       disposeGuide()
-      disposeExpand()
       disposeSeat()
       for (const dispose of disposeTypes.reverse()) dispose()
       for (const release of adoptions) release()

@@ -38,11 +38,19 @@ interface Recorded {
   component: unknown
 }
 
-async function boot() {
+async function boot(options: { gated?: boolean } = {}) {
   const ctx = new Context()
   const registered: Recorded[] = []
+  /** Slot declarations this run is waiting on, keyed by slot name (gated boots only). */
+  const declarations = new Map<string, Parameters<SlotRegistry['inject']>[1]>()
   const slots = {
-    inject: vi.fn((_name: string, register: Parameters<SlotRegistry['inject']>[1]) => ctx.effect(register)),
+    inject: vi.fn((name: string, register: Parameters<SlotRegistry['inject']>[1]) => {
+      if (options.gated === true) {
+        declarations.set(name, register)
+        return () => { declarations.delete(name) }
+      }
+      return ctx.effect(register)
+    }),
     register: vi.fn((options: Omit<Recorded, 'component'>, component: unknown) => {
       const entry: Recorded = { ...options, component }
       registered.push(entry)
@@ -75,7 +83,7 @@ async function boot() {
     if (entry.inject === undefined) throw new Error(`expected ${entry.name} to inject`)
     return entry.inject(SESSION)
   }
-  return { ctx, registered, dictionaries, layout, resources, fiber, seat, injectedOf }
+  return { ctx, registered, dictionaries, layout, resources, fiber, seat, injectedOf, declarations }
 }
 
 describe('ui-sidebar-right apply', () => {
@@ -111,6 +119,24 @@ describe('ui-sidebar-right apply', () => {
     // Both seats read one store: the button only needs to know whether the panel is expanded.
     expect(seat('rightbar.session').store).toBeDefined()
     expect(seat('conversation.session.header.corner').store).toBe(seat('rightbar.session').store)
+  })
+
+  it('registers the header expand control only where a shell declares the rightbar seat', async () => {
+    // A frame with no right column declares no `rightbar` seat: every panel
+    // contribution waits, the header control included — otherwise it would stand
+    // in the conversation header opening a panel that has no home.
+    const { ctx, registered, declarations } = await boot({ gated: true })
+    expect(registered).toEqual([])
+    const declare = declarations.get('rightbar')
+    if (declare === undefined) throw new Error('expected the plugin to await the rightbar declaration')
+    // The supplied frame declares the seat: panel, session seat, and header
+    // control install as one contribution and fold back together.
+    const install = ctx.effect(declare)
+    expect(registered.map(entry => entry.name)).toEqual([
+      'rightbar', 'rightbar.session', 'conversation.session.header.corner',
+    ])
+    await install()
+    expect(registered).toEqual([])
   })
 
   it('hands the panel seat the frame report, the service binding, the opens, the observable registry, and the Tab domain', async () => {

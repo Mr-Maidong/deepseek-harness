@@ -87,7 +87,7 @@ function renderWorkbench(): Harness {
 }
 
 describe('StudioWorkbench completion reconcile', () => {
-  it('renders a store-completed todo with its summary and disables every mutation', () => {
+  it('renders a store-completed todo with its summary and locks every mutation', () => {
     const { store } = renderWorkbench()
     const todoId = store.getSnapshot().projects[0]!.todos[0]!.id
     act(() => {
@@ -105,7 +105,9 @@ describe('StudioWorkbench completion reconcile', () => {
     const checkbox = screen.getByRole('checkbox') as HTMLInputElement
     expect(checkbox.checked).toBe(true)
     expect(checkbox.disabled).toBe(true)
-    expect(screen.getByRole('button', { name: '删除事项' })).toHaveProperty('disabled', true)
+    // A completed todo is a terminal record the store never deletes, so the
+    // workbench hides its delete button outright.
+    expect(screen.queryByRole('button', { name: '删除事项' })).toBeNull()
     expect(screen.getByRole('button', { name: '调用模型生成总结并写回' })).toHaveProperty('disabled', true)
   })
 
@@ -344,5 +346,26 @@ describe('StudioWorkbench completion reconcile', () => {
     fireEvent.click(screen.getByRole('button', { name: '展开详情' }))
     expect(body.hasAttribute('data-collapsed')).toBe(false)
     expect(screen.getByText('Shipped the fold.')).toBeTruthy()
+  })
+})
+
+describe('StudioWorkbench project removal confirmation', () => {
+  it('asks before removing the active project and keeps it when dismissed', () => {
+    const { store } = renderWorkbench()
+    fireEvent.click(screen.getByRole('button', { name: '移除项目' }))
+    expect(screen.getByRole('dialog', { name: '移除项目？' })).toBeTruthy()
+    expect(store.getSnapshot().projects).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button', { name: '取消' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(store.getSnapshot().projects).toHaveLength(1)
+  })
+
+  it('removes the project and its todos only when the dialog confirms', () => {
+    const { store } = renderWorkbench()
+    fireEvent.click(screen.getByRole('button', { name: '移除项目' }))
+    fireEvent.click(screen.getByRole('button', { name: '移除' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(store.getSnapshot().projects).toEqual([])
+    expect(document.querySelectorAll(`.${cardClass}`)).toHaveLength(0)
   })
 })

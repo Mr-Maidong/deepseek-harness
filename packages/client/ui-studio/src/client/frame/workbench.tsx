@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { MarkdownText, relativeTime } from '@deepseek-ai/dsh-client-ui-primitives'
+import { MarkdownText, Modal, relativeTime } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { PropsLocale, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
 import type { WorkbenchTodoCompletion } from '@deepseek-ai/dsh-tool-todo/client'
 import { NS } from '../left-panel/locales.ts'
+import dialogTheme from '../../styles/StudioDialog.module.css'
 import type { createProjectTodoStore, ProjectTodo, TodoCompletionInput } from './project-todo-store.ts'
 import css from './Workbench.module.css'
 
@@ -75,6 +76,10 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
   const [draftTitle, setDraftTitle] = useState('')
   const [projectTitle, setProjectTitle] = useState('')
   const [projectDraftOpen, setProjectDraftOpen] = useState(false)
+  // Removal confirmation target: dropping a project also drops its todos,
+  // completed ones included (the per-todo delete guard is bypassed), so the
+  // trigger only opens the dialog and the dialog's confirm performs it.
+  const [removingProjectId, setRemovingProjectId] = useState<string>()
   const [editingTodoId, setEditingTodoId] = useState<string>()
   const [editingDetail, setEditingDetail] = useState('')
   // Uncompleted todos default to expanded; completed todos default to collapsed.
@@ -138,11 +143,11 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
     })
   }
 
-  const removeProject = (): void => {
-    if (activeProject === undefined) return
-    const next = projects.find(project => project.id !== activeProject.id)
-    actions.removeProject(activeProject.id)
+  const removeProject = (projectId: string): void => {
+    const next = projects.find(project => project.id !== projectId)
+    actions.removeProject(projectId)
     setActiveProjectId(next?.id ?? '')
+    setRemovingProjectId(undefined)
   }
 
   const removeTodo = (todoId: string): void => {
@@ -270,7 +275,7 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
       <div className={css.projectActions}>
         <button className={css.iconButton} type="button" aria-label={t('workbench.addProject')} title={t('workbench.addProject')} onClick={() => { setProjectDraftOpen(open => !open); setProjectTitle('') }}><span className={css.newIcon} aria-hidden="true" /></button>
         <button className={css.quietButton} type="button" disabled={activeProject === undefined || !activeProject.todos.some(todo => todo.status !== 'completed')} aria-label={t('workbench.sendAll')} title={t('workbench.sendAll')} onClick={() => { void sendProject() }}><span className={css.sendIcon} aria-hidden="true" /></button>
-        <button className={css.quietButton} type="button" disabled={activeProject === undefined} aria-label={t('workbench.removeProject')} title={t('workbench.removeProject')} onClick={removeProject}><span className={css.deleteIcon} aria-hidden="true" /></button>
+        <button className={css.quietButton} type="button" disabled={activeProject === undefined} aria-label={t('workbench.removeProject')} title={t('workbench.removeProject')} onClick={() => { if (activeProject !== undefined) setRemovingProjectId(activeProject.id) }}><span className={css.deleteIcon} aria-hidden="true" /></button>
       </div>
     </div>
     {projectDraftOpen && <form className={css.inlineForm} onSubmit={(event) => { event.preventDefault(); addProject() }}><input value={projectTitle} onChange={(event) => { setProjectTitle(event.target.value) }} placeholder={t('workbench.projectPrompt')} aria-label={t('workbench.projectPrompt')} autoFocus /><button className={css.textButton} type="submit" disabled={projectTitle.trim() === ''}>{t('workbench.addProject')}</button></form>}
@@ -281,7 +286,7 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
         {todos.map(todo => <article className={css.todoCard} key={todo.id} data-todoid={todo.id} data-done={todo.status === 'completed' || undefined}>
           <div className={css.todoCardHead}>
             <label className={css.todoTitleRow}><input className={css.todoCheckbox} type="checkbox" checked={todo.status === 'completed'} disabled={todo.status === 'completed'} onChange={() => { markDone(todo) }} aria-label={todo.status === 'completed' ? t('workbench.done') : t('workbench.markDone')} /><span className={css.todoTitle}>{todo.title}</span></label>
-            <div className={css.todoActions}><button className={css.todoSend} type="button" disabled={todo.status === 'completed'} aria-label={t('workbench.sendOne')} title={t('workbench.sendOne')} onClick={() => { void sendTodo(todo) }}><span className={css.sendIcon} aria-hidden="true" /></button><button className={css.todoWriteBack} type="button" disabled={todo.status === 'completed' || todo.sourceSessionId !== sessionId} aria-label={t('workbench.writeBack')} title={t('workbench.writeBack')} onClick={() => { void writeBackTodo(todo) }}><span className={css.summaryIcon} aria-hidden="true" /></button><button className={css.todoDelete} type="button" disabled={todo.status === 'completed'} aria-label={t('workbench.removeTodo')} title={t('workbench.removeTodo')} onClick={() => { removeTodo(todo.id) }}><span className={css.deleteIcon} aria-hidden="true" /></button></div>
+            <div className={css.todoActions}><button className={css.todoSend} type="button" disabled={todo.status === 'completed'} aria-label={t('workbench.sendOne')} title={t('workbench.sendOne')} onClick={() => { void sendTodo(todo) }}><span className={css.sendIcon} aria-hidden="true" /></button><button className={css.todoWriteBack} type="button" disabled={todo.status === 'completed' || todo.sourceSessionId !== sessionId} aria-label={t('workbench.writeBack')} title={t('workbench.writeBack')} onClick={() => { void writeBackTodo(todo) }}><span className={css.summaryIcon} aria-hidden="true" /></button>{todo.status === 'completed' ? undefined : <button className={css.todoDelete} type="button" aria-label={t('workbench.removeTodo')} title={t('workbench.removeTodo')} onClick={() => { removeTodo(todo.id) }}><span className={css.deleteIcon} aria-hidden="true" /></button>}</div>
           </div>
           <div className={css.todoCardBody} data-collapsed={collapsedFor(todo) || undefined}>
             {editingTodoId === todo.id ? <div className={css.todoDetailEditor}><textarea className={css.todoDetailInput} value={editingDetail} onChange={(event) => { setEditingDetail(event.target.value) }} aria-label={t('workbench.editDetail')} rows={3} placeholder={t('workbench.todoDetailPrompt')} autoFocus /><div className={css.todoDetailActions}><button className={css.textButton} type="button" onClick={saveEditingDetail}>{t('workbench.saveDetail')}</button><button className={css.quietTextButton} type="button" onClick={cancelEditingDetail}>{t('workbench.cancelEdit')}</button></div></div> : <button className={css.todoDetail} type="button" onClick={() => { startEditingDetail(todo) }} disabled={todo.status === 'completed'} aria-label={t('workbench.editDetail')} title={t('workbench.editDetail')}>{todo.detail === '' ? t('workbench.todoDetailPrompt') : <MarkdownText text={todo.detail} labels={MARKDOWN_LABELS} />}</button>}
@@ -299,5 +304,6 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
       {error !== undefined && <p className={css.error} role="alert">{error}</p>}
       <form className={css.todoForm} onSubmit={(event) => { event.preventDefault(); addTodo() }}><input value={draftTitle} onChange={(event) => { setDraftTitle(event.target.value) }} placeholder={t('workbench.addTodo')} aria-label={t('workbench.addTodo')} /><button className={css.sendDraft} type="submit" disabled={draftTitle.trim() === ''} aria-label={t('workbench.addTodo')} title={t('workbench.addTodo')}><span className={css.sendIcon} aria-hidden="true" /></button></form>
     </>}
+    {removingProjectId !== undefined && <Modal open className={dialogTheme.theme ?? ''} title={t('workbench.removeProjectConfirmTitle')} description={t('workbench.removeProjectConfirmBody')} closeLabel={t('workbench.removeProjectConfirmCancel')} footer={<button type="button" className={dialogTheme.danger} onClick={() => { removeProject(removingProjectId) }}>{t('workbench.removeProjectConfirmOk')}</button>} onClose={() => { setRemovingProjectId(undefined) }} />}
   </section>
 }

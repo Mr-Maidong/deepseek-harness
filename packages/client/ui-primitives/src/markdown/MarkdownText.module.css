@@ -99,7 +99,7 @@
 
 .markdown :where(ul, ol) {
   margin: 16px 0;
-  padding-left: 18px;
+  padding-left: 20px;
 }
 
 .markdown li:not(:first-child) {

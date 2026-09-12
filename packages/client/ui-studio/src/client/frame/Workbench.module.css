@@ -177,14 +177,14 @@ textarea:focus-visible {
 }
 
 .textButton {
-  padding: 6px 8px;
+  padding: 2px 8px;
   background: rgba(156, 169, 164, 0.05);
   color: #d9e0dd;
   white-space: nowrap;
 }
 
 .quietTextButton {
-  padding: 6px 8px;
+  padding: 2px 8px;
   background: transparent;
   color: #aebcbd;
   white-space: nowrap;
@@ -401,7 +401,6 @@ textarea:focus-visible {
 .todoDetail ul,
 .todoDetail ol {
   margin: 4px 0;
-  padding-left: 16px;
 }
 
 .todoDetail li {
@@ -590,7 +589,7 @@ textarea:focus-visible {
   display: flex;
   justify-content: flex-end;
   gap: 4px;
-  margin-top: 6px;
+  margin: 4px 0;
 }
 
 .todoCard[data-done] .todoTitle {

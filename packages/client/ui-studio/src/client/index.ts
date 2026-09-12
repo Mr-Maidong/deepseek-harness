@@ -86,8 +86,13 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
   }
 }
 
-/** Required services (cordis fiber inject — the loader passes all module exports as an object plugin). */
-export const inject = ['slots', 'theme', 'locale', 'sessions', 'workspaces', 'uiWorkspace', 'remote', 'remote.workspace']
+/**
+ * Required services (cordis fiber inject — the loader passes all module exports as an object plugin).
+ * `uiWorkspace` is deliberately absent: ui-workspace injects `layout`, which this plugin provides,
+ * so gating activation on uiWorkspace would deadlock the composition. The UI-time callbacks below
+ * resolve it through `ctx.get` instead.
+ */
+export const inject = ['slots', 'theme', 'locale', 'sessions', 'workspaces', 'remote', 'remote.workspace']
 
 /**
  * Client plugin body: provide ctx.layout, seat the theme presenter, and one
@@ -162,8 +167,17 @@ export function apply(ctx: ClientContext): void {
     }, StudioFrame)
     // Search + file-read face shared by the left-panel entry (full member)
     // and the Session-header search entry (subset via the same closures).
+    // uiWorkspace is resolved per call rather than injected — see the inject
+    // list contract; every caller is a post-activation UI gesture.
+    const uiWorkspace = () => {
+      const service = ctx.get('uiWorkspace')
+      if (service === undefined) {
+        throw new Error('ui-studio: uiWorkspace service is not composed')
+      }
+      return service
+    }
     const studioSearchFace = {
-      readFile: (path: string) => ctx.uiWorkspace.readFile(path),
+      readFile: (path: string) => uiWorkspace().readFile(path),
       searchWorkspace: async (workspaceId: WorkspaceId, query: string, signal?: AbortSignal) => {
         const result = await ctx.remote.workspace.search({ workspaceId, query }, signal)
         if (!result.ok) throw new Error(result.error.message)
@@ -171,9 +185,9 @@ export function apply(ctx: ClientContext): void {
       },
     }
     const workspaceInjected = (): LeftPanelInjected => ({
-      startSession: (workspaceId?: WorkspaceId) => { ctx.uiWorkspace.startSession(workspaceId) },
+      startSession: (workspaceId?: WorkspaceId) => { uiWorkspace().startSession(workspaceId) },
       open: (sessionId: SessionId) => { ctx.sessions.open(sessionId) },
-      archiveSession: async (sessionId: SessionId) => { await ctx.uiWorkspace.archiveSession(sessionId) },
+      archiveSession: async (sessionId: SessionId) => { await uiWorkspace().archiveSession(sessionId) },
       renameSession: async (sessionId: SessionId, title: string) => {
         const session = ctx.sessions.binding(sessionId)?.session
         if (session === undefined) throw new Error(`unknown session "${sessionId}"`)
@@ -186,7 +200,7 @@ export function apply(ctx: ClientContext): void {
         void ctx.sessions.fork({ sessionId, increaseTitle: true }).then((childId) => { ctx.sessions.open(childId) })
       },
       createWorkspace: input => ctx.workspaces.create(input),
-      listDirectory: (path, signal) => ctx.uiWorkspace.listDirectory(path, signal),
+      listDirectory: (path, signal) => uiWorkspace().listDirectory(path, signal),
       ...studioSearchFace,
       gitSummary: async (workspaceId, signal) => {
         const result = await ctx.remote.workspace.gitSummary({ workspaceId }, signal)

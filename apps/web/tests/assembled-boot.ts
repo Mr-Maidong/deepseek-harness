@@ -25,6 +25,8 @@ interface AssembledPlugin extends WebBootEntry {
 interface AssembledBootOptions {
   /** Package ids omitted from this mounted composition. */
   readonly exclude?: readonly string[]
+  /** Extra cordis.patch.yml overlay files composed after the bundle layers (repo-relative or absolute). */
+  readonly overlays?: readonly string[]
 }
 
 interface ClientPackageManifest {
@@ -88,10 +90,18 @@ function resolveClientExport(packagePath: string, pkg: ClientPackageManifest): s
 const comboUrl = (ids: readonly string[], rev: string): string =>
   `/plugins/??${ids.map(id => `${id}/client.js`).join(',')}&rev=${rev}`
 
-/** Derive the assembled browser graph from the same bundle patches and package declarations as `dsh web`. */
-function loadAssembledPlugins(): readonly AssembledPlugin[] {
-  const entries = appBoot.composeEntries(BUNDLE_LAYERS.map(layer =>
-    appBoot.loadOverlayPatches('assembled boot', layer.patch)))
+/**
+ * Derive the assembled browser graph from the same bundle patches and package declarations as `dsh web`.
+ * @param overlays - extra patch files composed after the bundle layers, mirroring `dsh web --patch`.
+ * @returns the module-graph-ordered client plugins of the composed entries.
+ */
+function loadAssembledPlugins(overlays: readonly string[] = []): readonly AssembledPlugin[] {
+  const layers = [
+    ...BUNDLE_LAYERS.map(layer => appBoot.loadOverlayPatches('assembled boot', layer.patch)),
+    ...overlays.map(overlay => appBoot.loadOverlayPatches('assembled boot',
+      overlay.startsWith('/') ? overlay : join(REPO_ROOT, overlay))),
+  ]
+  const entries = appBoot.composeEntries(layers)
   const plugins = new Map<string, AssembledPlugin>()
   for (const entry of entries) {
     if (entry.disabled === true || typeof entry.name !== 'string') continue
@@ -254,7 +264,8 @@ export function installAssembledBootEnv(): void {
  */
 export function mountAssembledApp(search = '?fixture', options: AssembledBootOptions = {}): void {
   const excluded = new Set(options.exclude)
-  const plugins = PLUGINS.filter(plugin => !excluded.has(plugin.id))
+  const composition = options.overlays === undefined ? PLUGINS : loadAssembledPlugins(options.overlays)
+  const plugins = composition.filter(plugin => !excluded.has(plugin.id))
   history.replaceState(null, '', `/${search}`)
   const root = document.createElement('div')
   root.id = 'root'

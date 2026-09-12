@@ -57,7 +57,7 @@ Host 的 directory-picker browse 能力负责校验并限制文本读取。works
 ## 进一步探索
 
 - [Web 客户端架构](../../../docs/subsystems/web-client.zh.md)——客户端分层与运行时组合。
-- [文件系统能力 seam](../../../.agents/notes/implemented/architecture/2026-06-17-filesystem-capability-seam.zh.md)——文件系统所有权与策略。
+- [文件系统能力 seam](../../../.agents/notes/archived/architecture/2026-06-17-filesystem-capability-seam.md)——文件系统所有权与策略。
 - [Workspace controller 包](../../api/workspace-controller/README.zh.md)——工作区 Remote 操作。
 
 -----

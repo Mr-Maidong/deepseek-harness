@@ -82,7 +82,7 @@ function DragHandle(props: { side: string; left: number; onStart: () => void; on
 /** Full composed props for the workbench frame. */
 export type StudioFrameProps =
   & PropsRuntime<'root'>
-  & PropsRenderSlots<'sidebar.settings' | 'studio.navigation' | 'studio.workspace' | 'studio.workbench' | 'conversation' | 'studio.status' | 'studio.center.editor' | 'studio.center.toolbar' | 'shell.overlay'>
+  & PropsRenderSlots<'sidebar.settings' | 'studio.navigation' | 'studio.workspace' | 'studio.workbench' | 'main' | 'studio.status' | 'studio.center.editor' | 'studio.center.toolbar' | 'shell.overlay'>
   & PropsStore<ReturnType<typeof createStudioStore>>
   & PropsLocale<typeof NS>
 
@@ -185,7 +185,7 @@ export function StudioFrame({ useStore, actions, renderSlot, SessionProvider }: 
     </aside>
     <main className={css.conversationCol} style={{ '--studio-composer-height': `${composerHeight}px` } as CSSProperties}>
       <div ref={conversationViewRef} className={css.conversationView}>
-        {renderSlot('conversation', {})}
+        {renderSlot('main', {}, { entryKey: 'conversation' })}
       </div>
       {panels.preview !== undefined && renderSlot('studio.center.editor', {
         preview: panels.preview,

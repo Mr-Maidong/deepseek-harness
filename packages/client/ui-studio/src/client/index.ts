@@ -142,8 +142,8 @@ export function apply(ctx: ClientContext): void {
         // Re-declared shipped top-level seats (ui-layout's entry is disabled in
         // the composition): every downstream registrant keeps a live declarer.
         'sidebar': { kind: 'single', scope: 'root' },
-        'conversation': { kind: 'single', scope: 'session-maybe' },
-        'details': { kind: 'single', scope: 'session' },
+        'main': { kind: 'keyed', scope: 'root' },
+        'rightbar': { kind: 'single', scope: 'root' },
         'shell.overlay': { kind: 'list', scope: 'root' },
         'sidebar.settings': { kind: 'single', scope: 'root' },
         'studio.navigation': { kind: 'single', scope: 'root' },

@@ -7,6 +7,7 @@
  * event ledger with its timing overview, and fiber disposal removes the tab.
  * Timeline projection and inclusive focus edge cases ride along.
  */
+import type { GlobalStandardProps } from '@deepseek-ai/dsh-client-ui-slots'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createElement, type ComponentProps, type FC, type ReactNode } from 'react'
@@ -52,11 +53,16 @@ import type { TrajectorySnapshot } from '../src/client/trajectory-contract.ts'
 import { deriveTrajectoryTimeline } from '../src/client/timeline.ts'
 import { t as tTrajectory, tZh } from './locale.client.ts'
 
+// Every session-scope fixture carries the resource hook the resources plugin merges into GlobalStandardProps.
+const useResource = (() => ({ status: 'none' as const, value: undefined, failure: undefined, reload: () => {} })) as GlobalStandardProps['useResource']
+const usePanelInfo: GlobalStandardProps['usePanelInfo'] = selector => selector({ activePanelId: null })
+
 function TrajectoryTimeline(
   props: Omit<ComponentProps<typeof LocalizedTrajectoryTimeline>, 't'>,
 ) {
   return <LocalizedTrajectoryTimeline {...props} t={tTrajectory} />
 }
+
 
 const SID = 's1' as SessionId
 const tConversation: ConversationSessionHeaderProps['t'] =
@@ -219,6 +225,7 @@ function standaloneProps(
     sessionId: SID,
     useChat: bindSnapshotSelector(createSnapshotStore(EMPTY_CHAT_SNAPSHOT)),
     useSessions: emptySessions(),
+    usePanelInfo, useResource,
     useSessionPendingInteraction: bindSnapshotSelector(
       createSnapshotStore<SessionPendingInteractionSnapshot>(new Map()),
     ),
@@ -345,6 +352,7 @@ function mount(fixture: Awaited<ReturnType<typeof bench>>) {
     useConversation,
     useConversationViews,
     useSessions,
+    usePanelInfo, useResource,
     useSessionPendingInteraction,
     useWorkspaces,
     useProjection,
@@ -789,9 +797,9 @@ describe('timeline projection', () => {
 
       fireEvent.mouseEnter(span as HTMLElement)
       act(() => { vi.advanceTimersByTime(499) })
-      expect(view.container.querySelector('[role="tooltip"]')).toBeNull()
+      expect(document.body.querySelector('[role="tooltip"]')).toBeNull()
       act(() => { vi.advanceTimersByTime(1) })
-      const tooltip = view.container.querySelector<HTMLElement>('[role="tooltip"]')
+      const tooltip = document.body.querySelector<HTMLElement>('[role="tooltip"]')
       expect(tooltip?.textContent).toContain('Total 2,000 ms')
       expect(tooltip?.textContent).toContain('TTFT 500 ms')
       expect(tooltip?.textContent).toContain('Decoding 1,500 ms')

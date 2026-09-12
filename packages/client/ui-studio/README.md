@@ -57,7 +57,7 @@ Workspace search lives in the conversation titleRow's rightmost utilities seat (
 ## Further Exploration
 
 - [Web client architecture](../../../docs/subsystems/web-client.md) — client layering and runtime assembly.
-- [Filesystem capability seam](../../../.agents/notes/implemented/architecture/2026-06-17-filesystem-capability-seam.md) — filesystem ownership and policy.
+- [Filesystem capability seam](../../../.agents/notes/archived/architecture/2026-06-17-filesystem-capability-seam.md) — filesystem ownership and policy.
 - [Workspace controller package](../../api/workspace-controller/README.md) — workspace Remote operations.
 
 -----

@@ -31,6 +31,21 @@ function updatedLabel(updatedAt: string, now: number, t: StudioWorkbenchProps['t
 }
 
 /**
+ * Chat-message heading for one todo: the title leads, and the stable todoId
+ * stays on the same line because `workbench_complete` requires the model to
+ * echo that id verbatim when it writes the completion back.
+ */
+function todoHeading(todo: ProjectTodo): string {
+  return todo.title + '（todoId: ' + todo.id + '）'
+}
+
+/** Heading plus the task detail on an indented next line; an empty detail adds no line. */
+function todoMessage(todo: ProjectTodo, detailIndent: string): string {
+  const detail = todo.detail.trim()
+  return todoHeading(todo) + (detail === '' ? '' : '\n' + detailIndent + detail)
+}
+
+/**
  * Fold model-written completions from the bound session's projection into the
  * workspace todo store. Completions live durably in the workspace store; the
  * session projection is only the channel that carries the model's
@@ -210,7 +225,7 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
     setError(undefined)
     actions.updateTodoStatus(todo.id, 'in_progress')
     try {
-      await sendToChat('灵光任务（todoId: ' + todo.id + '）\n' + todo.title + '\n' + todo.detail)
+      await sendToChat(todoMessage(todo, ''))
     } catch {
       actions.updateTodoStatus(todo.id, 'blocked')
       setError(t('workbench.sendFailed'))
@@ -221,7 +236,7 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
     if (todo.status === 'completed') return
     setError(undefined)
     try {
-      await sendToChat('灵光任务（todoId: ' + todo.id + '）已执行。请调用 workbench_complete，将本次执行的整体方案、实现路径、修改文件与验证结果写回。不要重新执行任务。')
+      await sendToChat(todoHeading(todo) + '已执行。请调用 workbench_complete，将本次执行的整体方案、实现路径、修改文件与验证结果写回。不要重新执行任务。')
     } catch {
       setError(t('workbench.sendFailed'))
     }
@@ -234,7 +249,7 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
     setError(undefined)
     for (const todo of pendingTodos) actions.updateTodoStatus(todo.id, 'in_progress')
     try {
-      await sendToChat(pendingTodos.map(todo => '- (todoId: ' + todo.id + ') ' + todo.title + '\n  ' + todo.detail).join('\n'))
+      await sendToChat(pendingTodos.map(todo => '- ' + todoMessage(todo, '  ')).join('\n'))
     } catch {
       for (const todo of pendingTodos) actions.updateTodoStatus(todo.id, 'blocked')
       setError(t('workbench.sendFailed'))

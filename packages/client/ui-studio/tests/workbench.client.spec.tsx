@@ -105,7 +105,7 @@ describe('StudioWorkbench completion reconcile', () => {
     const checkbox = screen.getByRole('checkbox') as HTMLInputElement
     expect(checkbox.checked).toBe(true)
     expect(checkbox.disabled).toBe(true)
-    expect(screen.getByRole('button', { name: '删除灵光' })).toHaveProperty('disabled', true)
+    expect(screen.getByRole('button', { name: '删除事项' })).toHaveProperty('disabled', true)
     expect(screen.getByRole('button', { name: '调用模型生成总结并写回' })).toHaveProperty('disabled', true)
   })
 
@@ -153,7 +153,7 @@ describe('StudioWorkbench completion reconcile', () => {
     // jsdom cannot measure text-overflow, but the styling contract is that a
     // long title stays one nowrap span (clipped with an ellipsis in the real
     // browser) and the checkbox/actions row keeps its layout.
-    const longTitle = '灵光任务标题'.repeat(40)
+    const longTitle = '事项标题'.repeat(40)
     const store = createProjectTodoStore().create('workspace-1')
     store.actions.addProject({ title: 'Studio' })
     const projectId = store.getSnapshot().projects[0]!.id

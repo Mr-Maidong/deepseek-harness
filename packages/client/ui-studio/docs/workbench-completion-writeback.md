@@ -1,8 +1,8 @@
-# 灵光工作项执行结果写回方案
+# 工作台事项执行结果写回方案
 
-> 目标：任务在对话中执行完成后，**一键**调用模型把执行总结（整体方案 / 实现路径 / 修改文件 / 验证结果）写回灵光池同一条待办的 `completion` 数据结构，并保证可回放、唯一权威来源、模型输入与日志一致。
+> 目标：任务在对话中执行完成后，**一键**调用模型把执行总结（整体方案 / 实现路径 / 修改文件 / 验证结果）写回工作台同一条待办的 `completion` 数据结构，并保证可回放、唯一权威来源、模型输入与日志一致。
 
-> 实现状态（2026-09-03）：已落地为「工作区 store 权威 + 会话投影作为 reconcile 触发」。`workbench.tsx` 不再把 `studioTodoCompletions` 投影叠加渲染；一个 `useEffect` 把绑定会话投影里的 completion 经 `actions.completeTodo` 折入工作区 store，渲染直接读 store 的 `todo.status` / `todo.completion`，因此同一工作区各会话看到的完成一致且刷新后仍在。完成是终态：store 拒绝把已完成任务重开/改详情/删除/重写，workbench 对已完成任务禁用复选框、编辑、发送、写回与删除；后续工作新建灵光。详见 Agent Note `2026-09-03-studio-todo-completion-workspace-persistence`。本文档其余部分保留为当时的方案推演与分阶段讨论。
+> 实现状态（2026-09-03）：已落地为「工作区 store 权威 + 会话投影作为 reconcile 触发」。`workbench.tsx` 不再把 `studioTodoCompletions` 投影叠加渲染；一个 `useEffect` 把绑定会话投影里的 completion 经 `actions.completeTodo` 折入工作区 store，渲染直接读 store 的 `todo.status` / `todo.completion`，因此同一工作区各会话看到的完成一致且刷新后仍在。完成是终态：store 拒绝把已完成任务重开/改详情/删除/重写，workbench 对已完成任务禁用复选框、编辑、发送、写回与删除；后续工作新建事项。详见 Agent Note `2026-09-03-studio-todo-completion-workspace-persistence`。本文档其余部分保留为当时的方案推演与分阶段讨论。
 
 当前现状（已核实）：
 
@@ -24,7 +24,7 @@
    │                    │        'studio/todo-complete', { … completedAt, completedBy:'model'})│
    │                    │  sessionProjection: studioTodoCompletions（按 todoId 折叠）         │
    ▼                    └─────────────────────────────────────────────────────────────────────┘
- 灵光池卡片 ◄──────── 按 sourceSessionId 对账 + 按 todoId 合并「已提交事件」渲染 completion
+ 工作台卡片 ◄──────── 按 sourceSessionId 对账 + 按 todoId 合并「已提交事件」渲染 completion
 ```
 
 ---
@@ -66,7 +66,7 @@ type WorkbenchCompleteArgs = {
 ## 3. 唯一权威来源与 UI 对账
 
 - **权威来源 = 已提交的 `studio/todo-complete` 事件**。浏览器 store 不再是完成的权威，而是从事件派生的缓存（派生 = 权威来源上重建，符合「从一个权威来源派生缓存/提示/UI/回放」）。
-- 浏览器侧按待办的 `sourceSessionId` 绑定会话，用运行时投影 hook 读取 `studioTodoCompletions`，按 `todoId` 合并到卡片渲染；未知 id（serv 端无法查 store）自然不命中任何卡片而被丢弃——写回是「对话→灵光池」单向对账，不反向改对话。
+- 浏览器侧按待办的 `sourceSessionId` 绑定会话，用运行时投影 hook 读取 `studioTodoCompletions`，按 `todoId` 合并到卡片渲染；未知 id（serv 端无法查 store）自然不命中任何卡片而被丢弃——写回是「对话→工作台」单向对账，不反向改对话。
 - 为降低侵入，**阶段性落地**：P0 先让事件监听（在浏览器端订阅 `sourceSessionId` 会话）调用既有的 `actions.completeTodo`，store 仍作为渲染来源，事件是持久/回放默认值；P1 切到投影优先。两者都满足「先提交事件、再从已提交事件更新」，提交点是事件 append，之后的派生态一律在提交点成功后。
 
 ## 4. 「一键」UX（用户诉求核心）
@@ -76,9 +76,9 @@ type WorkbenchCompleteArgs = {
 1. 点击 → 向该待办的 `sourceSessionId` 会话排队一条用户消息（`queue`）：
 
    ```text
-   灵光任务「<title>」（todoId <id>）已执行。请将本次执行的整体方案、实现路径、修改文件与验证结果调用 workbench_complete 写回同一条待办。
+   事项「<title>」（todoId <id>）已执行。请将本次执行的整体方案、实现路径、修改文件与验证结果调用 workbench_complete 写回同一条待办。
    ```
-2. 模型（服务端，工具所在处）据此调用 `workbench_complete` → 事件落日志 → 灵光池卡片更新显示总结。
+2. 模型（服务端，工具所在处）据此调用 `workbench_complete` → 事件落日志 → 工作台卡片更新显示总结。
 3. 幂等可重按；模型未调用工具时按钮保持可用、不误判。
 
 配套改造 `sendTodo` / `sendProject`：发送指令时在提示词前部附上待办的稳定 `todoId`（`--todo: <id>` 或紧凑 JSON 行）。因为这是用户文本，天然进入日志，满足「模型可见 ⟺ 已记录」。工具描述要求模型逐字回显该 id。注意 `completedAt/completedBy` 由工具执行者补齐，不要求模型编造时间戳。
@@ -100,5 +100,5 @@ type WorkbenchCompleteArgs = {
 ## 7. 边界与权衡
 
 - **todoId 信任**：服务端工具看不到浏览器 store，只能信任模型回显的 id；未知 id 在 UI 侧被丢弃，不产生脏数据。可选：工具额外接受 `expectedTitle` 做软校验（本期可不做）。
-- **不反向作用**：写回只作用于灵光池卡片，不改写对话内容。
+- **不反向作用**：写回只作用于工作台卡片，不改写对话内容。
 - **两处状态来源的短期并存**（P0 store 渲染、日志为权威）是刻意的过渡：提交点唯一（事件 append），派生更新在其后。当前实现已采用投影优先；浏览器 store 仍只负责任务定义和用户直接勾选完成，消除模型写回的双写。

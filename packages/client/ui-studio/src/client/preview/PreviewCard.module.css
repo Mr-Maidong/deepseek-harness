@@ -50,7 +50,9 @@
 /* The buffer itself: fixed-height rows matching the gutter, one scroll row per
    source line, no wrapping and no resize grip. */
 .editor { flex: 1; min-width: 0; margin: 0; padding: 14px 14px 14px 0; border: 0; outline: none; resize: none; overflow-x: auto; overflow-y: hidden; white-space: pre; color: var(--studio-ink); background: transparent; font: 13px/22px monospace; tab-size: 2; }
-.editor:focus-visible { box-shadow: inset 0 0 0 1px var(--studio-gold); }
+/* The editor takes focus whenever the card opens, so it draws no focus ring:
+   the caret is the focus indicator, and a gold frame around the whole buffer
+   on every open reads as a selection rather than an editor. */
 /* Floating insertion bubble anchored just below the last selected line: it
    rides the editor wrapper's coordinates (set inline from the line geometry)
    and hangs under that line with a small gap. */

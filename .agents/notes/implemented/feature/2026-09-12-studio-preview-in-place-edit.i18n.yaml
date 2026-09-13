@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-12-studio-preview-in-place-edit.md
-2026-09-12-studio-preview-in-place-edit.md: 1738fc23a4f7416205166accd135aad20f7df58f
-2026-09-12-studio-preview-in-place-edit.zh.md: 59de7de0d0b39bf162799c7dc3ed02f10a4af045
+2026-09-12-studio-preview-in-place-edit.md: 8d8847aa32b4432627dc49cea59d78a59ef8288d
+2026-09-12-studio-preview-in-place-edit.zh.md: c663ebdd5ed08cbfc204f13c1cc4b0822d29f8eb

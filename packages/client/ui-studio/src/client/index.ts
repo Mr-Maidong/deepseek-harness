@@ -213,20 +213,15 @@ export function apply(ctx: ClientContext): void {
         return result.value.summary
       },
     })
-    // Editor seat is root-scoped, so the current session is resolved at call
-    // time (from the sessions list selection) rather than injected as a fixed id.
-    const currentSession = (): SessionId => {
-      const current = ctx.sessions.list.getSnapshot().current
-      if (current === undefined) throw new Error('ui-studio: no current session owns this file')
-      return current
-    }
     // The edit buffer reads the complete file through `workspaceFiles`, the only
     // face that also reports the version a save is guarded by; a saved file is
     // re-read through the ordinary preview read so the store keeps one source of
-    // truth for the card's content and language label.
+    // truth for the card's content and language label. The Session comes from
+    // the list on each call, because the editor seat is root-scoped and the
+    // frame store restores its preview before that list arrives.
     const previewEdit = createPreviewEditFace({
       workspaceFiles: ctx.remote.workspaceFiles,
-      session: currentSession,
+      sessions: ctx.sessions.list,
       publish: (preview) => { bridge.require()(preview) },
       readFile: path => studioSearchFace.readFile(path),
     })

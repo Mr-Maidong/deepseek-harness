@@ -61,6 +61,16 @@ describe('PreviewCard editor', () => {
     expect(saveButton().disabled).toBe(true)
   })
 
+  it('lands the caret in the buffer as soon as it opens, and takes none without a write face', async () => {
+    card()
+    expect(await screen.findByRole('textbox', { name: '编辑文件内容' })).toBeTruthy()
+    expect(document.activeElement).toBe(editor())
+    cleanup()
+    card({ loadForEdit: undefined, saveEdit: undefined, reloadPreview: undefined })
+    expect(editor().readOnly).toBe(true)
+    expect(document.activeElement).not.toBe(editor())
+  })
+
   it('saves the edited buffer with Ctrl+S and keeps the next save guarded by the new version', async () => {
     const injected = card()
     await screen.findByRole('textbox', { name: '编辑文件内容' })
@@ -205,6 +215,8 @@ describe('PreviewCard editor', () => {
     } as unknown as ComponentProps<typeof PreviewCard>} />)
     await waitFor(() => { expect(editor().value).toBe('other\n') })
     expect(injected.loadForEdit).toHaveBeenLastCalledWith('/workspace/other.ts')
+    // The new buffer takes the caret again, exactly as opening the card did.
+    expect(document.activeElement).toBe(editor())
   })
 
   it('drops a read that settles or fails after the card moved on', async () => {

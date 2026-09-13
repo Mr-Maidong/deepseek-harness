@@ -301,6 +301,9 @@ export function PreviewCard({
               wrap="off"
               spellCheck={false}
               readOnly={saveEdit === undefined}
+              // The card opens as an editor, so the caret lands in the buffer
+              // without a click; a card with no write face takes no focus.
+              autoFocus={saveEdit !== undefined}
               aria-label={t('preview.editor')}
               onChange={(event) => { setBuffer({ ...buffer, text: event.target.value }); setFailure(undefined) }}
               onKeyDown={(event) => { handleEditorKeyDown(event, buffer, saveEdit) }}

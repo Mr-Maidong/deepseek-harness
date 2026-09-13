@@ -44,7 +44,9 @@ describe('FileTree', () => {
     render(<PreviewCard {...{ t, preview: { path: '/workspace/main.ts', status: 'ready', content: 'export {}', language: 'typescript', kind: 'code' }, onClose } as unknown as ComponentProps<typeof PreviewCard>} />)
     expect(screen.getByRole('region', { name: '代码预览' })).toBeTruthy()
     expect(screen.getByText('/workspace/main.ts')).toBeTruthy()
-    expect(screen.getByText('export {}')).toBeTruthy()
+    // Without an edit face the card opens the read it already has as a read-only buffer.
+    expect((screen.getByRole('textbox', { name: '编辑文件内容' }) as HTMLTextAreaElement).value).toBe('export {}')
+    expect((screen.getByRole('textbox', { name: '编辑文件内容' }) as HTMLTextAreaElement).readOnly).toBe(true)
     expect(screen.getByText('typescript')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: '关闭预览' }))
     expect(onClose).toHaveBeenCalled()
@@ -99,63 +101,23 @@ describe('FileTree', () => {
     expect(onPreview).toHaveBeenLastCalledWith({ path: '/workspace/main.ts', status: 'error', kind: 'code' })
   })
 
-  it('reveals an insert-reference bubble over a code selection and quotes file + line range', () => {
+  it('reveals an insert-reference bubble over a buffer selection and quotes file + line range', () => {
     const onClose = vi.fn()
     const insertReference = vi.fn()
     const content = 'line1\nline2\nline3\nline4'
     const { container } = render(<PreviewCard {...{ t, preview: { path: '/workspace/src/main.ts', status: 'ready', content, kind: 'code' }, onClose, insertReference } as unknown as ComponentProps<typeof PreviewCard>} />)
-    const pre = container.querySelector('pre')
-    expect(pre).not.toBeNull()
-    // Simulate a selection spanning line 2 through line 3. jsdom reports static
-    // client rects per line, so the bubble anchors just below the last selected
-    // line (the lower of the two lines spanned).
-    const code = pre!.querySelector('code')!
-    const text = code.firstChild!
-    const range = document.createRange()
-    range.setStart(text, 'line1\n'.length)
-    range.setEnd(text, 'line1\nline2\nline3'.length)
-    // jsdom reports no client rects for a static range; stub them so the card
-    // resolves a selection anchor for the bubble.
-    range.getClientRects = () => [
-      { left: 100, top: 40, bottom: 50 },
-      { left: 100, top: 50, bottom: 60 },
-    ] as unknown as DOMRectList
-    const selection = window.getSelection()!
-    selection.removeAllRanges()
-    selection.addRange(range)
-    fireEvent.mouseUp(pre!)
+    const editor = container.querySelector('textarea')!
+    // A selection spanning line 2 through line 3 quotes both; the editor never wraps,
+    // so character offsets map straight to source lines.
+    editor.setSelectionRange('line1\n'.length, 'line1\nline2\nline3'.length)
+    fireEvent.mouseUp(editor)
     const bubble = screen.getByRole('button', { name: '引入' })
     expect(bubble).toBeTruthy()
-    // Anchored at the bottom of the last selected line (the lower rect's bottom).
-    expect(bubble.style.top).toBe('60px')
-    expect(bubble.style.left).toBe('100px')
     fireEvent.click(bubble)
     expect(insertReference).toHaveBeenCalledWith({ path: '/workspace/src/main.ts', startLine: 2, endLine: 3 })
-    selection.removeAllRanges()
     expect(screen.queryByRole('button', { name: '引入' })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: '关闭预览' }))
     expect(onClose).toHaveBeenCalled()
-  })
-
-  it('dismisses the insert-reference bubble when clicking outside the code surface', () => {
-    const onClose = vi.fn()
-    const content = 'line1\nline2\nline3'
-    const { container } = render(<PreviewCard {...{ t, preview: { path: '/workspace/src/main.ts', status: 'ready', content, kind: 'code' }, onClose } as unknown as ComponentProps<typeof PreviewCard>} />)
-    const pre = container.querySelector('pre')!
-    const code = pre.querySelector('code')!
-    const text = code.firstChild!
-    const range = document.createRange()
-    range.setStart(text, 'line1\n'.length)
-    range.setEnd(text, 'line1\nline2'.length)
-    range.getClientRects = () => [{ left: 0, top: 0, bottom: 10 }] as unknown as DOMRectList
-    const selection = window.getSelection()!
-    selection.removeAllRanges()
-    selection.addRange(range)
-    fireEvent.mouseUp(pre)
-    expect(screen.getByRole('button', { name: '引入' })).toBeTruthy()
-    // Clicking outside the code surface (on the document body) dismisses.
-    fireEvent.pointerDown(document.body)
-    expect(screen.queryByRole('button', { name: '引入' })).toBeNull()
   })
 
   it('carries the reading and failure states inside the floating card', () => {
@@ -208,24 +170,17 @@ describe('PreviewCard line numbers', () => {
   const cardProps = (content: string, extra: Record<string, unknown> = {}): ComponentProps<typeof PreviewCard> =>
     ({ t, preview: { path: '/workspace/src/main.ts', status: 'ready', kind: 'code', content, ...extra }, onClose: vi.fn() } as unknown as ComponentProps<typeof PreviewCard>)
 
-  /** Select `from`..`to` inside the code text, with stub client rects per line. */
-  const selectLines = (container: HTMLElement, from: number, to: number, rects: unknown[]): void => {
-    const text = container.querySelector('code')!.firstChild!
-    const range = document.createRange()
-    range.setStart(text, from)
-    range.setEnd(text, to)
-    range.getClientRects = () => rects as unknown as DOMRectList
-    const selection = window.getSelection()!
-    selection.removeAllRanges()
-    selection.addRange(range)
+  /** Select `from`..`to` inside the editor buffer. The editor never wraps, so offsets map to lines. */
+  const selectRange = (container: HTMLElement, from: number, to: number): void => {
+    container.querySelector('textarea')!.setSelectionRange(from, to)
   }
 
-  it('numbers every source line in a gutter that stays out of the code text', () => {
+  it('numbers every source line in a gutter that stays out of the buffer', () => {
     const { container } = render(<PreviewCard {...cardProps('alpha\nbeta\ngamma')} />)
     const rows = [...container.querySelectorAll('[data-line]')]
     expect(rows.map(row => row.textContent)).toEqual(['1', '2', '3'])
-    // Numbers are presentational: the code element still holds exactly the file.
-    expect(container.querySelector('code')!.textContent).toBe('alpha\nbeta\ngamma')
+    // Numbers are presentational: the buffer still holds exactly the file.
+    expect(container.querySelector('textarea')!.value).toBe('alpha\nbeta\ngamma')
     expect(rows[0]!.closest('[aria-hidden="true"]')).not.toBeNull()
   })
 
@@ -252,9 +207,8 @@ describe('PreviewCard line numbers', () => {
   it('marks every line number of the selected range', () => {
     const content = 'alpha\nbeta\ngamma'
     const { container } = render(<PreviewCard {...cardProps(content)} />)
-    const pre = container.querySelector('pre')!
-    selectLines(container, 'alpha\n'.length, 'alpha\nbeta\ngamma'.length, [{ left: 0, top: 0, bottom: 10 }])
-    fireEvent.mouseUp(pre)
+    selectRange(container, 'alpha\n'.length, content.length)
+    fireEvent.mouseUp(container.querySelector('textarea')!)
     expect(screen.getByRole('button', { name: '引入' })).toBeTruthy()
     expect(container.querySelector('[data-line="2"]')!.getAttribute('data-quoted')).toBe('true')
     expect(container.querySelector('[data-line="3"]')!.getAttribute('data-quoted')).toBe('true')
@@ -272,46 +226,53 @@ describe('PreviewCard line numbers', () => {
     expect(insertReference).toHaveBeenCalledWith({ path: '/workspace/src/main.ts', startLine: 2, endLine: 2 })
   })
 
-  it('drops the browser selection when a gutter number claims the line', () => {
+  it('moves the quote to the gutter line that was clicked', () => {
     const content = 'alpha\nbeta\ngamma'
     const { container } = render(<PreviewCard {...cardProps(content)} />)
-    selectLines(container, 0, 'alpha'.length, [{ left: 0, top: 0, bottom: 10 }])
+    selectRange(container, 0, 'alpha'.length)
+    fireEvent.mouseUp(container.querySelector('textarea')!)
+    expect(container.querySelector('[data-line="1"]')!.getAttribute('data-quoted')).toBe('true')
     fireEvent.click(container.querySelector('[data-line="3"]')!)
-    expect(window.getSelection()!.rangeCount).toBe(0)
     expect(container.querySelector('[data-line="3"]')!.getAttribute('data-quoted')).toBe('true')
     expect(container.querySelector('[data-line="1"]')!.getAttribute('data-quoted')).toBeNull()
   })
 
-  it('keeps a raised bubble when the press ends on the code text', () => {
+  it('keeps a raised bubble when the press moves into the buffer', () => {
     const { container } = render(<PreviewCard {...cardProps('alpha\nbeta\ngamma')} />)
     fireEvent.click(container.querySelector('[data-line="2"]')!)
     expect(screen.getByRole('button', { name: '引入' })).toBeTruthy()
-    fireEvent.click(container.querySelector('code')!)
+    fireEvent.pointerDown(container.querySelector('textarea')!)
     expect(screen.getByRole('button', { name: '引入' })).toBeTruthy()
   })
 
   it('raises no bubble for a click that selects nothing', () => {
     const content = 'alpha\nbeta\ngamma'
     const { container } = render(<PreviewCard {...cardProps(content)} />)
-    const pre = container.querySelector('pre')!
-    // No selection at all: the surface reports nothing to quote.
-    fireEvent.mouseUp(pre)
+    // No selection at all: the buffer reports nothing to quote.
+    fireEvent.mouseUp(container.querySelector('textarea')!)
     expect(screen.queryByRole('button', { name: '引入' })).toBeNull()
-    // A collapsed caret and an unlaid-out range both quote nothing as well.
-    const text = container.querySelector('code')!.firstChild!
-    const caret = document.createRange()
-    caret.setStart(text, 3)
-    caret.setEnd(text, 3)
-    window.getSelection()!.addRange(caret)
-    fireEvent.mouseUp(pre)
+    // A collapsed caret quotes nothing either.
+    selectRange(container, 3, 3)
+    fireEvent.mouseUp(container.querySelector('textarea')!)
     expect(screen.queryByRole('button', { name: '引入' })).toBeNull()
-    const unlaid = document.createRange()
-    unlaid.setStart(text, 0)
-    unlaid.setEnd(text, 'alpha'.length)
-    unlaid.getClientRects = () => [] as unknown as DOMRectList
-    window.getSelection()!.removeAllRanges()
-    window.getSelection()!.addRange(unlaid)
-    fireEvent.mouseUp(pre)
+  })
+
+  it('stops a selection that ends just past a newline at the line it terminates', () => {
+    const content = 'alpha\nbeta\ngamma'
+    const { container } = render(<PreviewCard {...cardProps(content)} />)
+    // Selecting whole lines leaves the caret at the start of line 3, which the
+    // quoting rule must not read as a third selected line.
+    selectRange(container, 0, 'alpha\nbeta\n'.length)
+    fireEvent.mouseUp(container.querySelector('textarea')!)
+    expect(container.querySelector('[data-line="1"]')!.getAttribute('data-quoted')).toBe('true')
+    expect(container.querySelector('[data-line="2"]')!.getAttribute('data-quoted')).toBe('true')
+    expect(container.querySelector('[data-line="3"]')!.getAttribute('data-quoted')).toBeNull()
+  })
+
+  it('ignores a press that lands on the gutter but not on a number', () => {
+    const { container } = render(<PreviewCard {...cardProps('alpha\nbeta')} />)
+    // The gutter itself, not one of its numbered cells.
+    fireEvent.click(container.querySelector('[data-line="1"]')!.parentElement!)
     expect(screen.queryByRole('button', { name: '引入' })).toBeNull()
   })
 
@@ -325,8 +286,8 @@ describe('PreviewCard line numbers', () => {
   it('quotes the selected range when the selection is made from the keyboard', () => {
     const content = 'alpha\nbeta\ngamma'
     const { container } = render(<PreviewCard {...cardProps(content)} />)
-    selectLines(container, 0, 'alpha\nbeta'.length, [{ left: 0, top: 0, bottom: 10 }])
-    fireEvent.keyUp(container.querySelector('pre')!)
+    selectRange(container, 0, 'alpha\nbeta'.length)
+    fireEvent.keyUp(container.querySelector('textarea')!)
     expect(container.querySelector('[data-line="1"]')!.getAttribute('data-quoted')).toBe('true')
     expect(container.querySelector('[data-line="2"]')!.getAttribute('data-quoted')).toBe('true')
   })
@@ -338,12 +299,12 @@ describe('PreviewCard line numbers', () => {
 
   it('dismisses a raised bubble only for a press outside the surface and the bubble', () => {
     const { container } = render(<PreviewCard {...cardProps('alpha\nbeta')} />)
-    const pre = container.querySelector('pre')!
+    const editor = container.querySelector('textarea')!
     fireEvent.click(container.querySelector('[data-line="1"]')!)
     const bubble = () => screen.queryByRole('button', { name: '引入' })
     // A press on the surface, on the bubble itself, or on a target that is not
     // a node keeps the bubble; only an outside node dismisses it.
-    fireEvent.pointerDown(pre)
+    fireEvent.pointerDown(editor)
     expect(bubble()).not.toBeNull()
     fireEvent.pointerDown(bubble()!)
     expect(bubble()).not.toBeNull()

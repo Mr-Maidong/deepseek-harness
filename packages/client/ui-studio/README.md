@@ -1,5 +1,5 @@
 ---
-description: "Studio workspace navigation and read-only source preview for users and maintainers composing the web client."
+description: "Studio workspace navigation and source preview with guarded in-place editing for users and maintainers composing the web client."
 kind: "package-reference"
 ---
 
@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Studio provides a three-column workspace for navigating sessions, browsing the current workspace, previewing bounded text files, and managing project todos. Choose it when the web client needs an editor-style surface with a read-only file preview. File reads stay on the Host/Remote path and never grant the browser direct filesystem access.
+Studio provides a three-column workspace for navigating sessions, browsing the current workspace, previewing bounded text files, editing and saving a workspace file in place, and managing project todos. Choose it when the web client needs an editor-style surface with an editable file preview. File reads stay on the Host/Remote path and never grant the browser direct filesystem access.
 
 ## Table of Contents
 
@@ -25,7 +25,7 @@ Studio provides a three-column workspace for navigating sessions, browsing the c
 <a id="use-this-package"></a>
 ## Use this package
 
-Mount Studio when the web client needs workspace navigation, a file tree, a read-only source preview, and a project workbench.
+Mount Studio when the web client needs workspace navigation, a file tree, an editable source preview, and a project workbench.
 
 ### When to choose it
 
@@ -43,7 +43,7 @@ The package is loaded by the Web composition and has no user-configurable fields
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-The Host directory-picker browse capability validates and bounds text reads. The workspace Client service maps the result to a preview with an extension-derived language label. A file click publishes a status-carrying preview (`loading` → `ready`/`error`) through the owner callback, so the floating card shows the read state itself while the tree keeps rendering. StudioFrame owns preview state and renders PreviewCard anchored above the composer bar through `studio.center.editor`; the card is a kind-driven universal container (`code` shows source, `iframe` embeds rendered artifacts such as produced HTML in a sandboxed frame). File rows use Host-listed paths unchanged. Expanding a folder re-reads it, and opening one re-reads every folder still held open beneath it, so a collapsed subtree comes back with the directory's current contents; a failed re-read keeps the rows already on screen.
+The Host directory-picker browse capability validates and bounds text reads. The workspace Client service maps the result to a preview with an extension-derived language label. A file click publishes a status-carrying preview (`loading` → `ready`/`error`) through the owner callback, so the floating card shows the read state itself while the tree keeps rendering. StudioFrame owns preview state and renders PreviewCard anchored above the composer bar through `studio.center.editor`; the card is a kind-driven universal container (`code` shows source, `iframe` embeds rendered artifacts such as produced HTML in a sandboxed frame). Opening a source file opens it as an editor, not as a read with a mode to switch: the card reads the file's complete bytes through the workspace-file Remote (`workspaceFiles.readAll`) with the version they carry and shows them in a line-numbered buffer. `Ctrl+S` (or the Save control) writes the buffer through `workspaceFiles.write` under that version, so a file that changed since the read is refused (`workspace-file/version-conflict`) instead of overwritten — the card keeps the buffer and offers to reload. A successful save keeps the version the write produced and re-reads the file through the ordinary preview read, so the frame store, the content, and the language label stay one source of truth. The card also suppresses the browser's context menu, leaving that gesture for the card's own actions. File rows use Host-listed paths unchanged. Expanding a folder re-reads it, and opening one re-reads every folder still held open beneath it, so a collapsed subtree comes back with the directory's current contents; a failed re-read keeps the rows already on screen.
 
 A source file renders as the file text beside a line-number gutter whose numbers mark the search hit and the lines the "insert reference" bubble quotes; clicking a number quotes exactly that line. The reading, failure, and embedded-artifact states carry no gutter, and the numbers stay out of copied selections.
 
@@ -69,7 +69,7 @@ Workspace search lives in the conversation titleRow's rightmost utilities seat (
 
 #### What the model sees
 
-Nothing. Studio preview is browser-only state and does not enter model requests; the `studio.center.editor` slot receives it only for browser rendering.
+Nothing directly. Studio preview state is browser-only and does not enter model requests; an in-place save writes the workspace file through the Host Remote, which a later model request sees only as ordinary file content the agent reads or the user references.
 
 #### Token effect
 
@@ -83,9 +83,11 @@ Independent of model request prefixes.
 
 <a id="known-limitations-and-deferred-work"></a>
 
-The preview is intentionally read-only and bounded; it does not edit, search, or stream large files.
+The preview is bounded and edits only existing text files; it does not create, delete, search, or stream large files.
 
-- **No editing** — users can inspect content but must use another tool to modify files.
+- **Existing regular files only** — a save replaces a file the session workspace root already contains; creating, deleting, and renaming files needs another tool, and a symlink is refused rather than followed.
+- **Saves are version-guarded, not merged** — a file that changed after the buffer was read is refused outright, so the user reloads and reapplies the edit instead of merging.
+- **The buffer carries no undo history across files** — the card holds one buffer per open file; closing or replacing the preview drops unsaved text without a prompt.
 - **Extension labels are limited** — unknown extensions display as plain text.
 - **Directory listings refresh on expand** — opening a folder re-reads it and everything still open beneath it, but a folder that stays open while its contents change keeps showing what it had when it opened, because the browse path has no filesystem watch.
 
@@ -95,6 +97,6 @@ The preview is intentionally read-only and bounded; it does not edit, search, or
 <details>
 <summary>Working context for maintainers — click to expand</summary>
 
-The preview uses the existing editor slot so a future editor can replace the presentation without adding a second composition path.
+The preview uses the existing editor slot so a future editor can replace the presentation without adding a second composition path, and its edit face is one module (`src/client/preview/edit-face.ts`) over the workspace-file Remote, so a richer editor replaces the line-numbered textarea without touching the frame store.
 
 </details>

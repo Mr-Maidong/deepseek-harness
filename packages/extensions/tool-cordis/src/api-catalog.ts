@@ -2977,6 +2977,12 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'the complete related file using the ordinary file-size and access checks.',
       },
       {
+        signature: '@Remote async write( workspaceFileScope: WorkspaceFileScope, path: string, request: WorkspaceFileWrite, signal: AbortSignal, ): Promise<WorkspaceFileStat>',
+        description: 'Replace the complete content of one existing regular file inside the Session\'s workspace.\n\nWrites are deliberately narrower than reads: the workspace root must contain the target and the path itself must already be a regular file, so a symlink is refused rather than followed and no file is created. The complete new text is bounded by `maxFileBytes` and published atomically by the filesystem backend. `request.version` carries the version the caller read; a file that changed since then is refused instead of overwritten.',
+        parameters: [{ name: 'workspaceFileScope', description: 'header-derived workspace root for the Session identity on the wire.' }, { name: 'path', description: 'absolute or workspace-relative path inside the workspace root.' }, { name: 'request', description: 'the complete new text and the version it was based on.' }, { name: 'signal', description: 'caller cancellation.' }],
+        returns: 'the file\'s identity and the version this write produced.',
+      },
+      {
         signature: '@Remote async stat(workspaceFileScope: WorkspaceFileScope, path: string, signal: AbortSignal): Promise<WorkspaceFileStat>',
         description: 'Report one regular file\'s identity, version, and size without its content.',
         parameters: [{ name: 'workspaceFileScope', description: 'header-derived workspace root for the Session identity on the wire.' }, { name: 'path', description: 'absolute path or path relative to the workspace root; files outside it are allowed.' }, { name: 'signal', description: 'caller cancellation.' }],
@@ -6529,6 +6535,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'WorkspaceFileWatchFrame',
     declaration: 'export type WorkspaceFileWatchFrame = {\n    readonly kind: \'ready\';\n} | {\n    readonly kind: \'change\';\n    readonly change: WorkspaceFileChange;\n};',
+  },
+  {
+    name: 'WorkspaceFileWrite',
+    declaration: 'export interface WorkspaceFileWrite {\n    readonly text: string;\n    readonly version?: string;\n}',
   },
   {
     name: 'WorkspaceFollowFrame',

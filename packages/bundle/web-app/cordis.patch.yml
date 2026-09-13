@@ -107,8 +107,9 @@
     - id: session-controller
       name: '@deepseek-ai/dsh-api-session-controller'
 
-    # Workspace file service: bounded read, directory listing, and the
-    # agent-write change feed inside the session workspace root.
+    # Workspace file service: bounded read, one version-guarded write of an
+    # existing workspace file, directory listing, and the agent-write change
+    # feed inside the session workspace root.
     - id: workspace-files
       name: '@deepseek-ai/dsh-api-workspace-files'
 

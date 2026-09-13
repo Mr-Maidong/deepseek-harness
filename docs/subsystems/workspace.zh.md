@@ -339,6 +339,23 @@ Host Remote file reads and workspace directory observations over the composed fi
 @Remote async readRelated( workspaceFileScope: WorkspaceFileScope, path: string, relativePath: string, signal: AbortSignal, ): Promise<WorkspaceFileBytes>
 
 /**
+ * Replace the complete content of one existing regular file inside the Session's workspace.
+ *
+ * Writes are deliberately narrower than reads: the workspace root must contain
+ * the target and the path itself must already be a regular file, so a symlink
+ * is refused rather than followed and no file is created. The complete new text
+ * is bounded by `maxFileBytes` and published atomically by the filesystem
+ * backend. `request.version` carries the version the caller read; a file that
+ * changed since then is refused instead of overwritten.
+ * @param workspaceFileScope - header-derived workspace root for the Session identity on the wire.
+ * @param path - absolute or workspace-relative path inside the workspace root.
+ * @param request - the complete new text and the version it was based on.
+ * @param signal - caller cancellation.
+ * @returns the file's identity and the version this write produced.
+ */
+@Remote async write( workspaceFileScope: WorkspaceFileScope, path: string, request: WorkspaceFileWrite, signal: AbortSignal, ): Promise<WorkspaceFileStat>
+
+/**
  * Report one regular file's identity, version, and size without its content.
  * @param workspaceFileScope - header-derived workspace root for the Session identity on the wire.
  * @param path - absolute path or path relative to the workspace root; files outside it are allowed.

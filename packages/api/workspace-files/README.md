@@ -1,5 +1,5 @@
 ---
-description: "Workspace file service for the web GUI: bounded file reads through the composed filesystem, plus directory listing and instrumented filesystem observation inside the Session workspace root."
+description: "Workspace file service for the web GUI: bounded file reads through the composed filesystem, plus one guarded in-place write, directory listing, and instrumented filesystem observation inside the Session workspace root."
 kind: "package-reference"
 ---
 
@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use this package to preview files readable through a Session's filesystem from the web client. It reads UTF-8 text by page, reads bounded byte windows or complete files, resolves related files from a base file's directory, and reports file metadata. File reads may target paths outside the workspace; directory listing and instrumented filesystem observations remain workspace-scoped. The service exposes no mutation operation.
+Use this package to preview files readable through a Session's filesystem from the web client. It reads UTF-8 text by page, reads bounded byte windows or complete files, resolves related files from a base file's directory, and reports file metadata. File reads may target paths outside the workspace; directory listing and instrumented filesystem observations remain workspace-scoped. The one mutation, `write`, replaces an existing regular file inside the workspace root under a version guard, so a preview can be edited in place without clobbering a change the reader never saw.
 
 ## Table of Contents
 
@@ -25,7 +25,7 @@ Use this package to preview files readable through a Session's filesystem from t
 <a id="use-this-package"></a>
 ## Use this package
 
-Mount the package beside `dsh-fs`, `dsh-sandbox-policy`, the Session store, and the Typert Gateway; the bundle does so right after the Session Controller. Every method takes the Session identity on the wire, so a Client calls `remote.workspaceFiles.read(sessionId, path, range, signal)`, `stat(sessionId, path, signal)`, `readBytes(sessionId, path, range, signal)`, `list(sessionId, path, signal)`, or `changes(sessionId, signal)` and never names a root itself. The Host reads a live Session header or uses persistence `stat` for a cold Session; it does not activate an Agent, read the event body, or borrow a parent Session's root. Session persistence is optional for live reads, but without it a cold Session cannot resolve and the Gateway returns `gateway/lookup-not-found`.
+Mount the package beside `dsh-fs`, `dsh-sandbox-policy`, the Session store, and the Typert Gateway; the bundle does so right after the Session Controller. Every method takes the Session identity on the wire, so a Client calls `remote.workspaceFiles.read(sessionId, path, range, signal)`, `stat(sessionId, path, signal)`, `readBytes(sessionId, path, range, signal)`, `write(sessionId, path, { text, version? }, signal)`, `list(sessionId, path, signal)`, or `changes(sessionId, signal)` and never names a root itself. The Host reads a live Session header or uses persistence `stat` for a cold Session; it does not activate an Agent, read the event body, or borrow a parent Session's root. Session persistence is optional for live reads, but without it a cold Session cannot resolve and the Gateway returns `gateway/lookup-not-found`.
 
 | Method | Returns | Purpose |
 |---|---|---|
@@ -34,12 +34,13 @@ Mount the package beside `dsh-fs`, `dsh-sandbox-policy`, the Session store, and 
 | `readBytes(path, { offset?, length? })` | `WorkspaceFileBytes` = stat + `{ offset, data, eof }` | One window of raw bytes from any regular file, base64-encoded |
 | `readAll(path)` | `WorkspaceFileBytes` with `offset: 0`, `eof: true` | Complete raw bytes under `maxFileBytes`; oversized files fail instead of being truncated |
 | `readRelated(path, relativePath)` | `WorkspaceFileBytes` | Complete bytes of a file resolved from the base file's directory on the Host |
+| `write(path, { text, version? })` | `WorkspaceFileStat` | Replaces one existing regular file's complete text inside the workspace root; a stale `version` refuses instead of overwriting |
 | `list(path)` | `WorkspaceDirectoryListing { path, entries, truncated }` | Direct children of one directory |
 | `changes()` | stream of `WorkspaceFileWatchFrame` | Subscription readiness, then filesystem observations inside the workspace root |
 
 ### Addressing and paths
 
-`read`, `readBytes`, `readAll`, `readRelated`, and `stat` accept an absolute path or one relative to the selected Session's workspace root. The composed filesystem decides whether the path is readable; the service does not impose workspace containment on file reads. `readRelated` resolves a relative filesystem path from the base file's directory, including when either file is outside the workspace. These methods report the file's absolute path in the filesystem's execution world. `list` remains workspace-scoped and reports the listed directory relative to that root. `changes` likewise reports only instrumented filesystem observations inside the workspace root.
+`read`, `readBytes`, `readAll`, `readRelated`, and `stat` accept an absolute path or one relative to the selected Session's workspace root. The composed filesystem decides whether the path is readable; the service does not impose workspace containment on file reads. `readRelated` resolves a relative filesystem path from the base file's directory, including when either file is outside the workspace. These methods report the file's absolute path in the filesystem's execution world. `write` is the exception to that read freedom: the workspace root must contain its target. `list` remains workspace-scoped and reports the listed directory relative to that root. `changes` likewise reports only instrumented filesystem observations inside the workspace root.
 
 ### Pages
 
@@ -51,7 +52,11 @@ Mount the package beside `dsh-fs`, `dsh-sandbox-policy`, the Session store, and 
 
 ### File-read and directory checks
 
-Every operation first uses `lstat` to reject a missing path, a final symlink, or the wrong file kind. File operations then resolve and read through the composed filesystem without an additional workspace-containment check. `list` alone requires the resolved directory to remain inside the workspace root. The configured page, window, complete-file, and listing caps still apply. Text pages additionally reject invalid UTF-8 and NUL bytes; byte reads do not decode content. An empty path is a `gateway/bad-request`.
+Every operation first uses `lstat` to reject a missing path, a final symlink, or the wrong file kind. File operations then resolve and read through the composed filesystem without an additional workspace-containment check. `list` alone requires the resolved directory to remain inside the workspace root. `write` requires containment too, and additionally refuses a target that is not already a regular file, so a symlink is refused rather than followed and no file is created. The configured page, window, complete-file, and listing caps still apply. Text pages additionally reject invalid UTF-8 and NUL bytes; byte reads do not decode content. An empty path is a `gateway/bad-request`.
+
+### The guarded write
+
+`write` replaces the complete text of one existing regular file inside the workspace root. The text is capped by `maxFileBytes` and published atomically by the filesystem backend. `request.version` is the version the caller read: when the file's current version differs, the write is refused with `workspace-file/version-conflict` and nothing changes; omitting `version` overwrites whatever the file holds now. The response is the file's `WorkspaceFileStat`, carrying the version the write produced. Creation, deletion, and rename have no endpoint.
 
 ### The change feed
 
@@ -62,7 +67,7 @@ Every operation first uses `lstat` to reject a missing path, a final symlink, or
 | Field | Default | Meaning |
 |---|---|---|
 | `maxBytes` | `2097152` (2 MiB) | Inclusive byte cap on one page's text and on one byte window; a larger page or window fails |
-| `maxFileBytes` | `33554432` (32 MiB) | Inclusive complete-file cap for `readAll` and `readRelated`; larger files fail with `too-large` |
+| `maxFileBytes` | `33554432` (32 MiB) | Inclusive complete-file cap for `readAll`, `readRelated`, and the complete text of `write`; larger values fail with `too-large` |
 | `maxLines` | `5000` | Default and largest page size in lines; a larger `limit` is refused |
 | `maxEntries` | `2000` | Cap on returned directory entries; the rest is dropped and reported cut |
 
@@ -70,7 +75,7 @@ The generated [configuration catalog](../../../docs/config-catalog.md#deepseek-a
 
 ### Failures
 
-Each failure is one `RemoteError` code with typed details, declared in [`src/types.ts`](src/types.ts): `workspace-file/not-found`, `workspace-file/outside-workspace` (directory listing only), `workspace-file/too-large` (with `limit`, the applicable page, window, or complete-file cap), `workspace-file/not-text`, `workspace-file/not-regular-file` (`kind`: `directory`, `symlink`, or `other`), and `workspace-file/not-directory` (`kind`: `file`, `symlink`, or `other`). Callers branch on the code, never on message text.
+Each failure is one `RemoteError` code with typed details, declared in [`src/types.ts`](src/types.ts): `workspace-file/not-found`, `workspace-file/outside-workspace` (directory listing and write), `workspace-file/too-large` (with `limit`, the applicable page, window, or complete-file cap), `workspace-file/not-text`, `workspace-file/not-regular-file` (`kind`: `directory`, `symlink`, or `other`), and `workspace-file/not-directory` (`kind`: `file`, `symlink`, or `other`), and `workspace-file/version-conflict` (write only). Callers branch on the code, never on message text.
 
 ### Client file resources
 
@@ -98,7 +103,7 @@ Reads through `ctx.fs` use the backend's read authority; the sandboxing backend 
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | `WorkspaceFiles`: the `workspaceFiles` service and Remote namespace, `Config`, the gates, the page cutter, `read`, `readBytes`, `readAll`, `readRelated`, `stat`, `list` |
+| [`src/index.ts`](src/index.ts) | `WorkspaceFiles`: the `workspaceFiles` service and Remote namespace, `Config`, the gates, the page cutter, `read`, `readBytes`, `readAll`, `readRelated`, `write`, `stat`, `list` |
 | [`src/changes.ts`](src/changes.ts) | `WorkspaceChangeFeed`: `fs/observed` subscription and one queue per open `changes` generation |
 | [`src/types.ts`](src/types.ts) | Wire types and the `RemoteErrorDetailsMap` codes, published as `./types` for Client packages |
 | [`src/client/index.ts`](src/client/index.ts), [`provider.ts`](src/client/provider.ts), [`change-feed.ts`](src/client/change-feed.ts) | Browser plugin, file metadata, and per-Session change feed |
@@ -141,6 +146,7 @@ None; this package neither assembles nor sends a provider request.
 - **No total line count** — a page reports `eof`, not how many lines follow; a consumer that needs the total pages to the end or estimates from `bytes`.
 - **One giant line has no page** — a single line above `maxBytes` fails `too-large` at every window that includes it, because pages are cut by lines, not bytes.
 - **Reads are not transactional** — result metadata comes from stat before content is read; a concurrent write can make the reported version and returned contents differ.
+- **In-place edits only** — `write` replaces an existing regular file inside the workspace root; creating, deleting, and renaming files have no endpoint, and a symlink is refused rather than followed.
 - **Unbounded generation queue** — a `changes` generation buffers every contained observation until its consumer pulls; a stalled consumer grows Host memory for the life of the stream.
 - **`maxEntries` bounds the answer, not the listing** — `list` asks `ctx.fs.listDir` for every child and cuts the array afterwards, so a directory far above the cap still costs the Host the whole listing (on `fs-local`, one stat per child); bounding that work needs a limit on the filesystem seam's `listDir`.
 - **Dead feeds retain metadata** — after the Host ends `changes` or the stream fails terminally, open values retain their last state until reopened.

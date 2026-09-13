@@ -251,6 +251,7 @@ flowchart TD
     pkg_host_open_in_app["host-open-in-app"]
     pkg_host_plugin_inventory["host-plugin-inventory"]
     pkg_host_webserver["host-webserver"]
+    pkg_host_workspace_search["host-workspace-search"]
   end
   subgraph group_identity["packages/identity"]
     pkg_anonymous_user_id["anonymous-user-id"]
@@ -435,6 +436,7 @@ flowchart TD
   pkg_subprocess_e2b --> pkg_subprocess
   pkg_subprocess_e2b --> pkg_timeout
   pkg_host_git_summary --> pkg_subprocess
+  pkg_host_workspace_search --> pkg_subprocess
   pkg_subprocess_local --> pkg_subprocess
   pkg_subprocess_local --> pkg_timeout
   pkg_skill_badge --> pkg_skill
@@ -559,10 +561,12 @@ flowchart TD
   pkg_api_workspace_controller --> pkg_client_connection
   pkg_api_workspace_controller --> pkg_host_directory_picker
   pkg_api_workspace_controller --> pkg_host_git_summary
+  pkg_api_workspace_controller --> pkg_host_workspace_search
   pkg_api_workspace_controller --> pkg_session
   pkg_api_workspace_controller --> pkg_storage_domain
   pkg_api_workspace_controller --> pkg_typert_protocol
   pkg_api_workspace_controller --> pkg_workspace
+  pkg_api_workspace_files --> pkg_fs
   pkg_file_reference --> pkg_agent
   pkg_time_context --> pkg_agent
   pkg_time_context --> pkg_invariants
@@ -1134,19 +1138,6 @@ flowchart TD
   pkg_subagent_fork_in_process --> pkg_subagent_in_process_driver
   pkg_subagent_spawn_in_process --> pkg_subagent
   pkg_subagent_spawn_in_process --> pkg_subagent_in_process_driver
-  pkg_client_ui_studio --> pkg_api_remotes
-  pkg_client_ui_studio --> pkg_api_session_controller
-  pkg_client_ui_studio --> pkg_api_workspace_controller
-  pkg_client_ui_studio --> pkg_client_locale
-  pkg_client_ui_studio --> pkg_client_store
-  pkg_client_ui_studio --> pkg_client_ui_conversation
-  pkg_client_ui_studio --> pkg_client_ui_layout
-  pkg_client_ui_studio --> pkg_client_ui_primitives
-  pkg_client_ui_studio --> pkg_client_ui_slots
-  pkg_client_ui_studio --> pkg_client_ui_theme
-  pkg_client_ui_studio --> pkg_client_ui_workspace
-  pkg_client_ui_studio --> pkg_invariants
-  pkg_client_ui_studio --> pkg_util_crypto
   pkg_experimental_client_ui_agent_team --> pkg_api_remotes
   pkg_experimental_client_ui_agent_team --> pkg_api_session_controller
   pkg_experimental_client_ui_agent_team --> pkg_client_locale
@@ -1221,7 +1212,6 @@ flowchart TD
 | [`deepseek-llm-api-extensions`](../packages/llm/deepseek-llm-api-extensions) | `llm` | — |
 | [`llm`](../packages/llm/llm) | `llm` | — |
 | [`api-gateway`](../packages/api/gateway) | `api` | — |
-| [`api-workspace-files`](../packages/api/workspace-files) | `api` | — |
 | [`cmdline`](../packages/boot/cmdline) | `boot` | — |
 | [`acp-app`](../packages/bundle/acp-app) | `bundle` | — |
 | [`base`](../packages/bundle/base) | `bundle` | — |
@@ -1269,6 +1259,7 @@ flowchart TD
 | [`client-ui-sidebar-right`](../packages/client/ui-sidebar-right) | `client` | — |
 | [`client-ui-skill`](../packages/client/ui-skill) | `client` | — |
 | [`client-ui-slots`](../packages/client/ui-slots) | `client` | — |
+| [`client-ui-studio`](../packages/client/ui-studio) | `client` | — |
 | [`client-ui-subagent`](../packages/client/ui-subagent) | `client` | — |
 | [`client-ui-theme`](../packages/client/ui-theme) | `client` | — |
 | [`client-ui-tool`](../packages/client/ui-tool) | `client` | — |
@@ -1331,6 +1322,7 @@ flowchart TD
 | [`credentials-local`](../packages/credentials/credentials-local) | `credentials` | [`atomic-write`](../packages/util/atomic-write), [`credentials`](../packages/credentials/credentials), [`home-paths`](../packages/util/home-paths), [`launch-environment`](../packages/util/launch-environment) |
 | [`subprocess-e2b`](../packages/e2b/subprocess-e2b) | `e2b` | [`e2b`](../packages/e2b/e2b), [`subprocess`](../packages/subprocess/subprocess), [`timeout`](../packages/util/timeout) |
 | [`host-git-summary`](../packages/host/git-summary) | `host` | [`subprocess`](../packages/subprocess/subprocess) |
+| [`host-workspace-search`](../packages/host/workspace-search) | `host` | [`subprocess`](../packages/subprocess/subprocess) |
 | [`subprocess-local`](../packages/subprocess/subprocess-local) | `subprocess` | [`subprocess`](../packages/subprocess/subprocess), [`timeout`](../packages/util/timeout) |
 | [`skill-badge`](../packages/skill/skill-badge) | `skill` | [`skill`](../packages/skill/skill) |
 | [`spill`](../packages/spill/spill) | `spill` | [`brand`](../packages/util/brand), [`llm`](../packages/llm/llm), [`session`](../packages/core/session) |
@@ -1366,7 +1358,8 @@ flowchart TD
 | [`skill-filesystem`](../packages/skill/skill-filesystem) | `skill` | [`fs`](../packages/fs/fs), [`home-paths`](../packages/util/home-paths), [`skill`](../packages/skill/skill) |
 | [`web-search-deepseek`](../packages/web/web-search-deepseek) | `web` | [`agent`](../packages/core/agent), [`credentials`](../packages/credentials/credentials), [`launch-environment`](../packages/util/launch-environment), [`session`](../packages/core/session), [`settings`](../packages/settings/settings), [`web`](../packages/web/web) |
 | [`hook-protocol`](../packages/hooks/hook-protocol) | `hooks` | [`invariants`](../packages/runtime-diagnostics/invariants), [`session`](../packages/core/session), [`shell`](../packages/shell/shell) |
-| [`api-workspace-controller`](../packages/api/workspace-controller) | `api` | [`api-gateway`](../packages/api/gateway), [`client-connection`](../packages/client/connection), [`host-directory-picker`](../packages/host/directory-picker), [`host-git-summary`](../packages/host/git-summary), [`session`](../packages/core/session), [`storage-domain`](../packages/storage/storage-domain), [`typert-protocol`](../packages/typert/protocol), [`workspace`](../packages/workspace/workspace) |
+| [`api-workspace-controller`](../packages/api/workspace-controller) | `api` | [`api-gateway`](../packages/api/gateway), [`client-connection`](../packages/client/connection), [`host-directory-picker`](../packages/host/directory-picker), [`host-git-summary`](../packages/host/git-summary), [`host-workspace-search`](../packages/host/workspace-search), [`session`](../packages/core/session), [`storage-domain`](../packages/storage/storage-domain), [`typert-protocol`](../packages/typert/protocol), [`workspace`](../packages/workspace/workspace) |
+| [`api-workspace-files`](../packages/api/workspace-files) | `api` | [`fs`](../packages/fs/fs) |
 | [`file-reference`](../packages/context/file-reference) | `context` | [`agent`](../packages/core/agent) |
 | [`time-context`](../packages/context/time-context) | `context` | [`agent`](../packages/core/agent), [`invariants`](../packages/runtime-diagnostics/invariants), [`llm`](../packages/llm/llm), [`session`](../packages/core/session), [`session-projection`](../packages/session/session-projection) |
 | [`tmux-context`](../packages/context/tmux-context) | `context` | [`agent`](../packages/core/agent), [`session`](../packages/core/session), [`session-projection`](../packages/session/session-projection), [`shell`](../packages/shell/shell) |
@@ -1466,7 +1459,6 @@ flowchart TD
 | [`workflow-worker-thread`](../packages/workflow/workflow-worker-thread) | `workflow` | [`agent`](../packages/core/agent), [`llm`](../packages/llm/llm), [`session`](../packages/core/session), [`subagent`](../packages/subagent/subagent), [`tools`](../packages/core/tools), [`workflow`](../packages/workflow/workflow) |
 | [`subagent-fork-in-process`](../packages/subagent/subagent-fork-in-process) | `subagent` | [`agent`](../packages/core/agent), [`session`](../packages/core/session), [`subagent`](../packages/subagent/subagent), [`subagent-in-process-driver`](../packages/subagent/subagent-in-process-driver) |
 | [`subagent-spawn-in-process`](../packages/subagent/subagent-spawn-in-process) | `subagent` | [`subagent`](../packages/subagent/subagent), [`subagent-in-process-driver`](../packages/subagent/subagent-in-process-driver) |
-| [`client-ui-studio`](../packages/client/ui-studio) | `client` | [`api-remotes`](../packages/api/remotes), [`api-session-controller`](../packages/api/session-controller), [`api-workspace-controller`](../packages/api/workspace-controller), [`client-locale`](../packages/client/locale), [`client-store`](../packages/client/store), [`client-ui-conversation`](../packages/client/ui-conversation), [`client-ui-layout`](../packages/client/ui-layout), [`client-ui-primitives`](../packages/client/ui-primitives), [`client-ui-slots`](../packages/client/ui-slots), [`client-ui-theme`](../packages/client/ui-theme), [`client-ui-workspace`](../packages/client/ui-workspace), [`invariants`](../packages/runtime-diagnostics/invariants), [`util-crypto`](../packages/util/crypto) |
 | [`experimental-client-ui-agent-team`](../packages/experimental/client-ui-agent-team) | `experimental` | [`api-remotes`](../packages/api/remotes), [`api-session-controller`](../packages/api/session-controller), [`client-locale`](../packages/client/locale), [`client-ui-conversation`](../packages/client/ui-conversation), [`client-ui-primitives`](../packages/client/ui-primitives), [`client-ui-renderer`](../packages/client/ui-renderer), [`client-ui-session`](../packages/client/ui-session), [`client-ui-slots`](../packages/client/ui-slots), [`experimental-agent-team`](../packages/experimental/agent-team), [`session`](../packages/core/session), [`typert-protocol`](../packages/typert/protocol) |
 | [`experimental-tool-agent-team`](../packages/experimental/tool-agent-team) | `experimental` | [`agent`](../packages/core/agent), [`experimental-agent-team`](../packages/experimental/agent-team), [`session`](../packages/core/session), [`system-prompt`](../packages/core/system-prompt), [`tools`](../packages/core/tools) |
 | [`sdk-client`](../packages/sdk/client) | `sdk` | [`llm`](../packages/llm/llm), [`sdk-protocol`](../packages/sdk/protocol), [`session`](../packages/core/session) |

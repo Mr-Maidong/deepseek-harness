@@ -45,6 +45,24 @@ export interface WorkspaceFileRange {
   readonly limit?: number
 }
 
+/**
+ * One complete replacement of an existing workspace text file.
+ *
+ * The write is narrower than a read: only the Session workspace root's own
+ * regular files are writable, and a version observed when the content was read
+ * refuses the write when the file changed in between.
+ */
+export interface WorkspaceFileWrite {
+  /** The complete new content, published atomically. */
+  readonly text: string
+  /**
+   * Version observed with the content being replaced. A mismatch refuses the
+   * write with `workspace-file/version-conflict`; omitted overwrites whatever
+   * the file holds now.
+   */
+  readonly version?: string
+}
+
 /** One page of a workspace text file as a Client reads it. */
 export interface WorkspaceFileText extends WorkspaceFileStat {
   /** First line of the page, as requested. */
@@ -162,5 +180,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
       readonly path: string
       readonly kind: 'file' | 'symlink' | 'other'
     }
+    /** The file changed after the version the write was based on; nothing was written. */
+    'workspace-file/version-conflict': { readonly path: string }
   }
 }

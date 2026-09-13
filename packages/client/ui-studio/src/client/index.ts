@@ -36,6 +36,7 @@ import { en as headerEn, NS as HEADER_NS, zh as headerZh } from './header-search
 import { HeaderSearch, type HeaderSearchInjected } from './header-search/HeaderSearch.tsx'
 import { en, NS, zh } from './left-panel/locales.ts'
 import { LeftPanelMain, type LeftPanelInjected } from './left-panel/LeftPanelMain.tsx'
+import { createPreviewEditFace } from './preview/edit-face.ts'
 import { PreviewCard, type PreviewCardInjected, type CodeReference } from './preview/PreviewCard.tsx'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
@@ -95,7 +96,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
  * so gating activation on uiWorkspace would deadlock the composition. The UI-time callbacks below
  * resolve it through `ctx.get` instead.
  */
-export const inject = ['slots', 'theme', 'locale', 'sessions', 'workspaces', 'remote', 'remote.workspace']
+export const inject = ['slots', 'theme', 'locale', 'sessions', 'workspaces', 'remote', 'remote.workspace', 'remote.workspaceFiles']
 
 /**
  * Client plugin body: provide ctx.layout, seat the theme presenter, and one
@@ -214,6 +215,21 @@ export function apply(ctx: ClientContext): void {
     })
     // Editor seat is root-scoped, so the current session is resolved at call
     // time (from the sessions list selection) rather than injected as a fixed id.
+    const currentSession = (): SessionId => {
+      const current = ctx.sessions.list.getSnapshot().current
+      if (current === undefined) throw new Error('ui-studio: no current session owns this file')
+      return current
+    }
+    // The edit buffer reads the complete file through `workspaceFiles`, the only
+    // face that also reports the version a save is guarded by; a saved file is
+    // re-read through the ordinary preview read so the store keeps one source of
+    // truth for the card's content and language label.
+    const previewEdit = createPreviewEditFace({
+      workspaceFiles: ctx.remote.workspaceFiles,
+      session: currentSession,
+      publish: (preview) => { bridge.require()(preview) },
+      readFile: path => studioSearchFace.readFile(path),
+    })
     const editorInjected = (): PreviewCardInjected => ({
       insertReference: (ref: CodeReference) => {
         const current = ctx.sessions.list.getSnapshot().current
@@ -234,6 +250,7 @@ export function apply(ctx: ClientContext): void {
           `L${ref.startLine}-L${ref.endLine}`,
         )
       },
+      ...previewEdit,
     })
     const disposeEditorRegistration = ctx.slots.register(
       { name: 'studio.center.editor', inject: editorInjected, locale: NS },

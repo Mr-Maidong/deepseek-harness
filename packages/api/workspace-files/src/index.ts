@@ -1,14 +1,17 @@
 /**
- * Workspace file service: read-only file previews, workspace directory
- * listings, and the filesystem-observation change feed, exposed as
- * `workspaceFiles`.
+ * Workspace file service: file previews, workspace directory listings, one
+ * guarded in-place write, and the filesystem-observation change feed, exposed
+ * as `workspaceFiles`.
  *
  * File reads follow the composed filesystem's read access, including paths
  * outside the workspace. The selected Session header supplies the base for
  * relative paths, with the sandbox policy root as its no-cwd fallback, not a
- * read-containment restriction. Directory listings and change observations
- * remain workspace-scoped. File-kind checks and configured read caps apply to
- * every preview; this service exposes no mutations.
+ * read-containment restriction. Directory listings, change observations, and
+ * the write remain workspace-scoped: `write` replaces one existing regular file
+ * the workspace root contains, refuses a symlink instead of following it,
+ * bounds the complete new text by `maxFileBytes`, and refuses a write whose
+ * observed version no longer matches unless the caller asked to overwrite
+ * unconditionally.
  *
  * A page is cut from `streamText`, which decodes and rejects non-UTF-8 as it
  * goes, so the file is read only up to the first character past the page and
@@ -22,7 +25,7 @@
 import { posix, win32 } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
-import type {} from '@deepseek-ai/dsh-fs'
+import { FsError, FsVersion } from '@deepseek-ai/dsh-fs'
 import type { FsDirEntry, FsInfo, FsPathInfo, FsTarget } from '@deepseek-ai/dsh-fs'
 import type {} from '@deepseek-ai/dsh-sandbox-policy'
 import type {} from '@deepseek-ai/dsh-session'
@@ -39,6 +42,7 @@ import type {
   WorkspaceFileStat,
   WorkspaceFileText,
   WorkspaceFileWatchFrame,
+  WorkspaceFileWrite,
 } from './types.ts'
 
 export type * from './types.ts'
@@ -311,6 +315,68 @@ export class WorkspaceFiles extends TypertRemoteService {
     const absolute = this.ctx.fs.processPath(target)
     const paths = absolute.startsWith('/') ? posix : win32
     return this.readAll(workspaceFileScope, paths.resolve(paths.dirname(absolute), relative), signal)
+  }
+
+  /**
+   * Replace the complete content of one existing regular file inside the Session's workspace.
+   *
+   * Writes are deliberately narrower than reads: the workspace root must contain
+   * the target and the path itself must already be a regular file, so a symlink
+   * is refused rather than followed and no file is created. The complete new text
+   * is bounded by `maxFileBytes` and published atomically by the filesystem
+   * backend. `request.version` carries the version the caller read; a file that
+   * changed since then is refused instead of overwritten.
+   * @param workspaceFileScope - header-derived workspace root for the Session identity on the wire.
+   * @param path - absolute or workspace-relative path inside the workspace root.
+   * @param request - the complete new text and the version it was based on.
+   * @param signal - caller cancellation.
+   * @returns the file's identity and the version this write produced.
+   */
+  @Remote
+  async write(
+    workspaceFileScope: WorkspaceFileScope,
+    path: string,
+    request: WorkspaceFileWrite,
+    signal: AbortSignal,
+  ): Promise<WorkspaceFileStat> {
+    const { workspaceRoot, entry } = await this.inspect(workspaceFileScope, path, signal)
+    if (entry.type !== 'file') {
+      throw new RemoteError('workspace-file/not-regular-file', `"${path}" is a ${entry.type}`, { path, kind: entry.type })
+    }
+    const bytes = Buffer.byteLength(request.text, 'utf8')
+    if (bytes > this.config.maxFileBytes) {
+      throw new RemoteError(
+        'workspace-file/too-large',
+        `${bytes} bytes of "${path}" exceed the ${this.config.maxFileBytes} byte cap`,
+        { path, limit: this.config.maxFileBytes },
+      )
+    }
+    const root = await this.ctx.fs.resolve(workspaceRoot, { signal })
+    const target = await this.confine(root, workspaceRoot, path, signal)
+    try {
+      await this.ctx.fs.writeText(
+        target,
+        request.text,
+        request.version === undefined
+          ? undefined
+          : { kind: 'replaceIfVersion', version: FsVersion(request.version) },
+        signal,
+      )
+    } catch (error) {
+      if (error instanceof FsError && error.code === 'FS_STALE_VERSION') {
+        throw new RemoteError(
+          'workspace-file/version-conflict',
+          `"${path}" changed after version "${request.version ?? ''}"`,
+          { path },
+        )
+      }
+      throw error
+    }
+    const info = await this.ctx.fs.stat(target, signal)
+    if (info === undefined) {
+      throw new RemoteError('workspace-file/not-found', `"${path}" is gone after the write`, { path })
+    }
+    return this.statOf(target, info)
   }
 
   /**

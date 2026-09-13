@@ -1,0 +1,33 @@
+# Agent Note: studio 预览卡片把工作区文件直接打开为编辑器
+
+Status: implemented
+
+[English](2026-09-12-studio-preview-in-place-edit.md) | 中文
+
+## Problem
+
+studio 的悬浮预览卡片只展示某个工作区文件的有界读取,而产品中其他预览同样都是只读的。浏览器到 Host 的工作区文件写入此前完全不存在:`workspaceFiles` 只提供 `read`、`readBytes`、`readAll`、`readRelated`、`stat`、`list` 与观察流,其模块文档也明确写着本服务不暴露变更操作。要修改卡片里显示的文件,只能离开卡片改用外部编辑器,或者让 agent 来做。
+
+## Decision
+
+在既有工作区文件能力上增加一次受守卫的写入,并给卡片增加编辑模式:
+
+- `workspaceFiles.write(scope, path, { text, version? }, signal)` 替换 Session 工作区根内某个已存在常规文件的完整文本。它经 `ctx.fs.writeText` 发布,由后端原子写入;返回该文件的 `WorkspaceFileStat`,携带本次写入产生的版本;`maxFileBytes` 限制完整的新文本。
+- 写入刻意比读取更窄。读取可以指向文件系统后端可读的任意路径(包括 `readRelated`);写入则额外要求经既有 `confine` 辅助函数确认工作区包含性,且末端组件本就必须是常规文件——符号链接被拒绝而不是跟随,也不会创建新文件。
+- `version` 就是守卫。卡片把源文件直接打开为带行号的编辑器——没有读/编辑模式切换——经由 `readAll` 读取缓冲区,而该结果携带内容读取时的版本,再把该版本发回;此后发生变化的文件以新的 `workspace-file/version-conflict` 错误被拒绝(由文件系统的 `FS_STALE_VERSION` 映射而来),合并与否留给用户决定。省略 `version` 时对确实要无条件覆盖的调用方做无条件覆盖。
+- 卡片把缓冲区保存在组件本地状态中,以 `Ctrl+S` 或保存控件保存,冲突拒绝写入时保留缓冲区并提供「重新加载」,保留写入产生的版本使下一次保存仍受守卫,并请求框架重新读取该文件,使 store 的内容与语言标签保持同一事实来源;卡片还抑制浏览器原生右键菜单,把该手势留给卡片自身的操作。
+
+## Alternatives considered
+
+- **通过 directory-picker 后端写入。** 拒绝:那个能力是目录选择交互——Host 路径、没有 Session 工作区根、也没有版本令牌。工作区文件服务已经拥有 Session 解析、包含性辅助函数与携带版本的读取。
+- **为写入新增一个能力包。** 拒绝:作用域解析、包含性、上限与版本报告在 `workspaceFiles` 中都已存在;第二条 seam 会重复同一套查找并把工作区文件策略拆到两个包。
+- **无条件保存,不带版本。** 拒绝作为卡片行为:agent 会写同样的文件,无守卫的保存会静默覆盖用户从未见过的改动。该动词仍显式允许这种写法。
+- **在同一个动词里加入创建、删除与重命名。** 延期:卡片需要的是就地编辑,而创建与删除需要各自的关卡,以及关于路径选择的产品决策。
+- **使用 `contenteditable` 或第三方编辑器。** 延期:等宽 `textarea` 让卡片保持零依赖,而编辑面只是一个模块,更丰富的编辑器替换文本框时无需改动 store 或槽位。
+
+## Consequences
+
+- `@deepseek-ai/dsh-fs` 成为 `dsh-api-workspace-files` 的 peer-required Host 依赖,因为过期版本映射依赖 `FsError` 的身份与 `FsVersion`;两者都在 `scripts/package-dependency-policy.ts` 中完成分类。
+- 服务的模块文档、web-app bundle 行注释与两个包的 README 现在都描述这次受守卫的写入;studio README 记录了保存只做版本守卫而不合并,以及只有已存在的常规文件可编辑。
+- 卡片的编辑器由组件 spec 覆盖(自动读取缓冲区、脏值守卫、`Ctrl+S` 与保存控件、写入期间的抑制、冲突与重新加载、被拒写入与写入抛错、读取失败与重试、无编辑面时的只读降级、预览被替换、卸载后到达的读取,以及被抑制的右键菜单),编辑面另有 spec;Host 动词自有 spec 覆盖包含性、符号链接、文件缺失、字节上限、过期版本与原子替换。
+- 保存本身不进入 Session 日志;只有当 agent 读取该文件或用户引用它时才会到达模型请求,这与外部编辑器具有相同的契约。

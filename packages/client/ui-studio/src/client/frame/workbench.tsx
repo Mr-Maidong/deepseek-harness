@@ -106,9 +106,12 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
     [projects, activeProjectId],
   )
 
-  // Cards list most-recently-updated first; equal timestamps keep store order.
+  // Uncompleted cards stay pinned above completed ones, and each group lists
+  // most-recently-updated first; equal timestamps keep store order.
   const todos = useMemo(
-    () => [...(activeProject?.todos ?? [])].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt)),
+    () => [...(activeProject?.todos ?? [])].sort((a, b) =>
+      (a.status === 'completed' ? 1 : 0) - (b.status === 'completed' ? 1 : 0)
+      || Date.parse(b.updatedAt) - Date.parse(a.updatedAt)),
     [activeProject],
   )
 

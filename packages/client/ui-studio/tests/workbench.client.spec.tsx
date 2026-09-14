@@ -272,21 +272,22 @@ describe('StudioWorkbench completion reconcile', () => {
     }
   })
 
-  it('lists a completed card by its completion time, not its creation time', () => {
+  it('pins an uncompleted card above a completed one whatever their update times', () => {
     vi.useFakeTimers()
     try {
       const { store } = renderWorkbench()
       const projectId = store.getSnapshot().projects[0]!.id
-      const first = store.getSnapshot().projects[0]!.todos[0]!.id
       act(() => {
         vi.advanceTimersByTime(1_000)
         store.actions.addTodo({ projectId, title: 'Second task', detail: '' })
       })
-      expect(renderedCardTitles()).toEqual(['Second task', 'Ship persistence'])
+      const second = store.getSnapshot().projects[0]!.todos[1]!.id
+      // Completing the newest card makes it the most recently updated one, yet
+      // the older uncompleted card stays pinned above it.
       act(() => {
         vi.advanceTimersByTime(1_000)
         store.actions.completeTodo({
-          todoId: first,
+          todoId: second,
           summary: 'Shipped the fold.',
           implementationPath: [],
           changedFiles: [],
@@ -296,6 +297,45 @@ describe('StudioWorkbench completion reconcile', () => {
         })
       })
       expect(renderedCardTitles()).toEqual(['Ship persistence', 'Second task'])
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('orders completed cards by their completion time, not their creation time', () => {
+    vi.useFakeTimers()
+    try {
+      const { store } = renderWorkbench()
+      const projectId = store.getSnapshot().projects[0]!.id
+      const first = store.getSnapshot().projects[0]!.todos[0]!.id
+      act(() => {
+        vi.advanceTimersByTime(1_000)
+        store.actions.addTodo({ projectId, title: 'Second task', detail: '' })
+      })
+      const second = store.getSnapshot().projects[0]!.todos[1]!.id
+      act(() => {
+        vi.advanceTimersByTime(1_000)
+        store.actions.completeTodo({
+          todoId: first,
+          summary: 'Shipped the first.',
+          implementationPath: [],
+          changedFiles: [],
+          verification: [],
+          completedAt: new Date().toISOString(),
+          completedBy: 'model',
+        })
+        vi.advanceTimersByTime(1_000)
+        store.actions.completeTodo({
+          todoId: second,
+          summary: 'Shipped the second.',
+          implementationPath: [],
+          changedFiles: [],
+          verification: [],
+          completedAt: new Date().toISOString(),
+          completedBy: 'model',
+        })
+      })
+      expect(renderedCardTitles()).toEqual(['Second task', 'Ship persistence'])
     } finally {
       vi.useRealTimers()
     }

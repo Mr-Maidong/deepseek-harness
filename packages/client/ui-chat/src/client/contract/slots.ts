@@ -66,6 +66,33 @@ declare module '@deepseek-ai/cordis' {
   }
 }
 
+/**
+ * Optional layout-side owner of the chat's file-open gesture, provided through
+ * `ctx.get('chatFileOpener')`. A layout that presents files itself — Studio's
+ * universal preview card — provides one, and every chat file gesture (tool-card
+ * path links, produced-file chips, closing-message mentions) opens there. The
+ * absence of a provider is the off state: `ui-chat` then opens files in the
+ * right Sidebar as usual, so neither package reaches into the other's store.
+ */
+export interface ChatFileOpener {
+  /**
+   * Open a workspace file for the viewed Session.
+   * @param sessionId - the Session whose workspace resolves the path.
+   * @param path - absolute or workspace-relative file path, as authored.
+   * @param line - 1-based line to reveal; absent = the file's beginning.
+   * @returns settles when the file is open, and rejects with the reason when the
+   *   gesture failed; the chat view surfaces a rejection as its open-error dialog.
+   */
+  open(sessionId: SessionId, path: string, line?: number): Promise<void>
+}
+
+declare module '@deepseek-ai/cordis' {
+  interface Context {
+    /** Optional layout-owned file opener consumed by Chat (`ctx.get`, never injected). */
+    chatFileOpener: ChatFileOpener
+  }
+}
+
 /** Hook constrained to business data published on the current Chat Node's Turn. */
 export type UseChatNodeTurnData = <Key extends Extract<keyof ConversationTurnDataMap, string>>(
   key: Key,

@@ -117,6 +117,11 @@
 .conversationCol :global([data-composer-seat]) {
   position: relative;
   z-index: 7;
+  /* The floating preview card anchors its bottom edge to this bar, so a rendered
+     HTML preview sizes itself from its own width instead of the space left above
+     the composer. Named here rather than in ui-conversation because the seat is
+     only an anchor for this layout. */
+  anchor-name: --studio-composer;
 }
 
 .statusCol {

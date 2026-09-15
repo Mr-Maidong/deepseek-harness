@@ -15,6 +15,24 @@
   background: var(--studio-panel);
   backdrop-filter: blur(18px);
 }
+/* A rendered artifact's card hugs its content instead of filling the column: the
+   stage below is 16:9 of the card's width, and this override replaces the base
+   rule's height pins with a fixed bottom edge above the composer bar, so the box
+   grows upward from there. A tall draft or a short viewport therefore pushes the
+   card over the conversation header rather than squeeze the stage out of
+   proportion, and the frame clips what would leave the window. On an engine
+   without anchor positioning the base rule's pins stay, and the stage simply sits
+   at the top of that full-height box. */
+@supports (anchor-name: --dsh-anchor) {
+  .preview[data-kind='iframe'] {
+    position-anchor: --studio-composer;
+    top: auto;
+    right: 16px;
+    bottom: calc(anchor(top) + 8px);
+    left: 16px;
+  }
+}
+
 .header { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--studio-line); color: var(--studio-muted); font-size: 12px; }
 .path { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .language { flex: none; color: var(--studio-gold); }
@@ -73,10 +91,14 @@
   white-space: nowrap;
 }
 .reference:hover { color: var(--studio-gold); }
-/* Embed rendered artifacts (HTML previews, etc.) at a fixed 16:9 stage below
-   the header, so the previewed document keeps a consistent aspect ratio. The
-   frame must not shrink in the flex column, or the ratio would collapse. */
-.iframe { flex: none; width: 100%; aspect-ratio: 16 / 9; border: 0; }
+/* Embed rendered artifacts (HTML previews, etc.) on a 16:9 stage sized from the
+   card's own width, so the previewed document keeps a consistent ratio and the
+   shell hugs it. The stage must not shrink in the flex column, or the ratio would
+   collapse. It carries the loading and error text too, at the same height, so a
+   read never resizes the card. */
+.stage { flex: none; display: grid; width: 100%; aspect-ratio: 16 / 10; }
+.stageFrame { width: 100%; height: 100%; border: 0; }
+.stageStatus { display: grid; place-items: center; padding: 14px; color: var(--studio-muted); font-size: 12px; }
 /* Reuse the file-tree scrollbar: a thin bar that stays invisible until the
    surface is hovered or focused, then shows the studio line color. */
 .editorWrap,

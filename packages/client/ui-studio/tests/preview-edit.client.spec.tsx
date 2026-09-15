@@ -260,4 +260,30 @@ describe('PreviewCard editor', () => {
     expect(view.container.querySelector('textarea')!.parentElement!.scrollTop).toBe(55)
     expect(document.querySelector('[data-line="3"]')!.getAttribute('data-focus')).toBe('true')
   })
+
+  it('keeps one stage box for a rendered artifact across its read states', async () => {
+    const loading: StudioPreview = { path: '/workspace/index.html', status: 'loading', kind: 'iframe' }
+    const ready: StudioPreview = { path: '/workspace/index.html', status: 'ready', kind: 'iframe', content: '<h1>hi</h1>' }
+    const failed: StudioPreview = { path: '/workspace/index.html', status: 'error', kind: 'iframe' }
+    const { view } = card({}, loading)
+    // While the read travels, the card shows its status inside the stage the frame
+    // later fills — one child of the card below its header — so settling a 16:9
+    // artifact never resizes the shell.
+    const stageText = (): string | undefined => view.container
+      .querySelector('[data-kind="iframe"]')!
+      .children[1]?.textContent
+    expect(stageText()).toBe('正在读取文件…')
+    view.rerender(<PreviewCard {...{ t, preview: ready, onClose: vi.fn() } as unknown as ComponentProps<typeof PreviewCard>} />)
+    expect(screen.getByTitle('/workspace/index.html').tagName).toBe('IFRAME')
+    view.rerender(<PreviewCard {...{ t, preview: failed, onClose: vi.fn() } as unknown as ComponentProps<typeof PreviewCard>} />)
+    expect(stageText()).toBe('无法读取此文件')
+  })
+
+  it('shows no editor or save control on a rendered artifact card', () => {
+    const iframePreview: StudioPreview = { path: '/workspace/index.html', status: 'ready', kind: 'iframe', content: '<b>x</b>' }
+    card({}, iframePreview)
+    // The artifact is embedded, not edited: no buffer and no write affordance.
+    expect(screen.queryByRole('textbox')).toBeNull()
+    expect(screen.queryByRole('button', { name: '保存' })).toBeNull()
+  })
 })

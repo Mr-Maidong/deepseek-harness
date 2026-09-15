@@ -15,7 +15,7 @@ import type { WorkspaceId, WorkspaceSearchResult } from '@deepseek-ai/dsh-api-wo
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
 import { IconSearchOutline16, useAnchoredPosition, useDismissOnOutsidePointer } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { StudioPreview } from '../frame/contract.ts'
+import { previewKindFor, type StudioPreview } from '../frame/contract.ts'
 import { NS } from './locales.ts'
 import css from './HeaderSearch.module.css'
 
@@ -144,24 +144,24 @@ export function HeaderSearch(props: HeaderSearchProps): React.ReactElement {
       : absolute
 
   const openMatch = useCallback((path: string, line: number, column: number) => {
-    const rendered = path.toLowerCase().endsWith('.html') || path.toLowerCase().endsWith('.htm')
-    onPreview({ path, status: 'loading', kind: rendered ? 'iframe' : 'code' })
+    const kind = previewKindFor(path)
+    onPreview({ path, status: 'loading', kind })
     setOpen(false)
     void readFile(path).then(({ content, language }) => {
       // A rendered artifact has no source line to scroll to, so only the code
       // state carries the match's focus line.
-      onPreview(rendered
-        ? { path, status: 'ready', kind: 'iframe', content }
+      onPreview(kind === 'iframe'
+        ? { path, status: 'ready', kind, content }
         : {
           path,
           status: 'ready',
-          kind: 'code',
+          kind,
           content,
           focus: { line, column },
           ...(language === undefined ? {} : { language }),
         })
     }).catch(() => {
-      onPreview({ path, status: 'error', kind: rendered ? 'iframe' : 'code' })
+      onPreview({ path, status: 'error', kind })
     })
   }, [onPreview, readFile])
 

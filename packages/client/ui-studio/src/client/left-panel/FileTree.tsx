@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { DirectoryListing } from '@deepseek-ai/dsh-api-remotes/client'
-import type { StudioPreview } from '../frame/contract.ts'
+import { previewKindFor, type StudioPreview } from '../frame/contract.ts'
 import { ChevronIcon, FolderIcon } from './icons/icons.tsx'
 import { NS } from './locales.ts'
 import css from './FileTree.module.css'
@@ -58,19 +58,17 @@ export function FileTree(props: FileTreeProps): React.ReactElement {
   }, [listDirectory, rootPath])
   const toggle = useCallback((path: string) => { onToggleExpanded(path) }, [onToggleExpanded])
   const onFile = useCallback((path: string) => {
-    // Rendered artifacts whose source should be embedded directly (e.g. HTML
-    // that the model produced) open in the iframe card; everything else shows
-    // as code. Default to code so unknown formats stay safe.
-    const rendered = path.toLowerCase().endsWith('.html') || path.toLowerCase().endsWith('.htm')
-    // The card opens immediately in its loading state; the tree keeps
-    // rendering while the read travels to the floating preview.
-    onPreview({ path, status: 'loading', kind: rendered ? 'iframe' : 'code' })
+    // The kind comes from the path before the read starts, so every state sizes
+    // the card the same way. The card opens immediately in its loading state; the
+    // tree keeps rendering while the read travels to the floating preview.
+    const kind = previewKindFor(path)
+    onPreview({ path, status: 'loading', kind })
     void readFile(path).then(({ content, language }) => {
-      onPreview(rendered
-        ? { path, status: 'ready', kind: 'iframe', content }
-        : { path, status: 'ready', kind: 'code', content, ...(language === undefined ? {} : { language }) })
+      onPreview(kind === 'iframe'
+        ? { path, status: 'ready', kind, content }
+        : { path, status: 'ready', kind, content, ...(language === undefined ? {} : { language }) })
     }).catch(() => {
-      onPreview({ path, status: 'error', kind: rendered ? 'iframe' : 'code' })
+      onPreview({ path, status: 'error', kind })
     })
   }, [onPreview, readFile])
   useEffect(() => {

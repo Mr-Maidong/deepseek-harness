@@ -272,62 +272,64 @@ export function PreviewCard({
         )}
       </div>
     )}
-    {preview.status === 'loading' && <div className={css.status}>{t('preview.loading')}</div>}
-    {preview.status === 'ready' && preview.kind === 'iframe'
+    {preview.status === 'loading' && preview.kind === 'code' && <div className={css.status}>{t('preview.loading')}</div>}
+    {preview.kind === 'iframe' && (preview.status === 'ready'
       // Scripts run in an opaque origin (no allow-same-origin): produced and
       // possibly untrusted HTML is embedded without access to the app origin.
-      ? <iframe className={css.iframe} title={preview.path} sandbox="allow-scripts allow-forms allow-popups" srcDoc={preview.content} />
-      : code !== undefined && (buffer === undefined
-        ? <div className={css.status}>{t('preview.loading')}</div>
-        : (
-          <div ref={wrapRef} className={css.editorWrap}>
-            <span className={css.gutter} aria-hidden="true" onClick={(event) => { handleGutterLine(event, code) }}>
-              {lines.map((_, index) => {
-                const line = index + 1
-                const quoted = span !== undefined && line >= span.start && line <= span.end
-                return <span
-                  key={line}
-                  data-line={line}
-                  data-quoted={quoted || undefined}
-                  data-focus={line === focusLine || undefined}
-                  className={css.line}
-                >{line}</span>
-              })}
-            </span>
-            <textarea
-              className={css.editor}
-              value={buffer.text}
-              rows={lines.length}
-              wrap="off"
-              spellCheck={false}
-              readOnly={saveEdit === undefined}
-              // The card opens as an editor, so the caret lands in the buffer
-              // without a click; a card with no write face takes no focus.
-              autoFocus={saveEdit !== undefined}
-              aria-label={t('preview.editor')}
-              onChange={(event) => { setBuffer({ ...buffer, text: event.target.value }); setFailure(undefined) }}
-              onKeyDown={(event) => { handleEditorKeyDown(event, buffer, saveEdit) }}
-              onMouseUp={(event) => { handleEditorSelect(event, code) }}
-              onKeyUp={(event) => { handleEditorSelect(event, code) }}
-            />
-            {live !== undefined && span !== undefined && (
-              <button
-                ref={bubbleRef}
-                type="button"
-                className={css.reference}
-                style={{ left: live.anchor.left, top: live.anchor.top }}
-                aria-label={t('preview.reference')}
-                title={t('preview.reference')}
-                onClick={() => { handleReference(code, span) }}
-              >
-                {t('preview.reference')}
-              </button>
-            )}
-          </div>
-        ))}
-    {preview.status === 'error' && <div className={css.status}>{t('preview.error')}</div>}
+      ? <div className={css.stage}><iframe className={css.stageFrame} title={preview.path} sandbox="allow-scripts allow-forms allow-popups" srcDoc={preview.content} /></div>
+      : <div className={css.stage}><div className={css.stageStatus}>{t(preview.status === 'loading' ? 'preview.loading' : 'preview.error')}</div></div>)}
+    {preview.status === 'error' && preview.kind === 'code' && <div className={css.status}>{t('preview.error')}</div>}
+    {code !== undefined && (buffer === undefined
+      ? <div className={css.status}>{t('preview.loading')}</div>
+      : (
+        <div ref={wrapRef} className={css.editorWrap}>
+          <span className={css.gutter} aria-hidden="true" onClick={(event) => { handleGutterLine(event, code) }}>
+            {lines.map((_, index) => {
+              const line = index + 1
+              const quoted = span !== undefined && line >= span.start && line <= span.end
+              return <span
+                key={line}
+                data-line={line}
+                data-quoted={quoted || undefined}
+                data-focus={line === focusLine || undefined}
+                className={css.line}
+              >{line}</span>
+            })}
+          </span>
+          <textarea
+            className={css.editor}
+            value={buffer.text}
+            rows={lines.length}
+            wrap="off"
+            spellCheck={false}
+            readOnly={saveEdit === undefined}
+            // The card opens as an editor, so the caret lands in the buffer
+            // without a click; a card with no write face takes no focus.
+            autoFocus={saveEdit !== undefined}
+            aria-label={t('preview.editor')}
+            onChange={(event) => { setBuffer({ ...buffer, text: event.target.value }); setFailure(undefined) }}
+            onKeyDown={(event) => { handleEditorKeyDown(event, buffer, saveEdit) }}
+            onMouseUp={(event) => { handleEditorSelect(event, code) }}
+            onKeyUp={(event) => { handleEditorSelect(event, code) }}
+          />
+          {live !== undefined && span !== undefined && (
+            <button
+              ref={bubbleRef}
+              type="button"
+              className={css.reference}
+              style={{ left: live.anchor.left, top: live.anchor.top }}
+              aria-label={t('preview.reference')}
+              title={t('preview.reference')}
+              onClick={() => { handleReference(code, span) }}
+            >
+              {t('preview.reference')}
+            </button>
+          )}
+        </div>
+      ))}
   </section>
 }
+
 
 /** 1-based line number containing the given character offset in `text`. */
 function lineAt(text: string, offset: number): number {

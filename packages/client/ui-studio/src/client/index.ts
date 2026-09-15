@@ -30,8 +30,10 @@ import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-theme/client'
+import type {} from '@deepseek-ai/dsh-client-ui-chat/client'
 import type {} from '@deepseek-ai/dsh-tool-todo/client'
 import type { BoundActions } from '@deepseek-ai/dsh-client-ui-slots'
+import { createChatFileOpener } from './preview/chat-opener.ts'
 import { en as headerEn, NS as HEADER_NS, zh as headerZh } from './header-search/locales.ts'
 import { HeaderSearch, type HeaderSearchInjected } from './header-search/HeaderSearch.tsx'
 import { en, NS, zh } from './left-panel/locales.ts'
@@ -225,6 +227,18 @@ export function apply(ctx: ClientContext): void {
       publish: (preview) => { bridge.require()(preview) },
       readFile: path => studioSearchFace.readFile(path),
     })
+    // The chat side of the same card: a conversation file gesture — a tool row's
+    // path link, a produced-file chip, a closing-message mention — opens here
+    // rather than in the right Sidebar. ui-chat reads this face through `ctx.get`,
+    // so composing this package out is the off state and leaves its Sidebar
+    // route intact; nothing is injected, which would deadlock the two packages
+    // against each other's activation order.
+    const chatFileOpener = createChatFileOpener({
+      readFile: path => studioSearchFace.readFile(path),
+      publish: (preview) => { bridge.require()(preview) },
+      cwdFor: sessionId => ctx.sessions.list.getSnapshot().byId[sessionId]?.cwd,
+    })
+    const disposeChatFileOpener = ctx.provide('chatFileOpener', chatFileOpener)
     const editorInjected = (): PreviewCardInjected => ({
       insertReference: (ref: CodeReference) => {
         const current = ctx.sessions.list.getSnapshot().current
@@ -308,6 +322,7 @@ export function apply(ctx: ClientContext): void {
       disposeEditorRegistration()
       disposeRootRegistration()
       // provide()'s disposer settles asynchronously; teardown is synchronous fire-and-forget.
+      void disposeChatFileOpener()
       void disposeService()
     }
   }, 'ui-studio: service + root registration')

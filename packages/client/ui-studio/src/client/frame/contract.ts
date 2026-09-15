@@ -12,6 +12,30 @@ export interface StudioNavigationOwnerProps {
 /** How the floating card renders a ready preview: native previews (code, …) or an embedded iframe for rendered artifacts such as HTML. */
 export type StudioPreviewKind = 'code' | 'iframe'
 
+/** Extensions whose files the card embeds as rendered documents rather than shows as source. */
+const RENDERED_EXTENSIONS = ['.html', '.htm']
+
+/** Whether a path names a document the universal preview card embeds instead of editing.
+ * A rendered artifact has no line grid, so it carries no language label and no focus line;
+ * every other file opens as a source buffer. The file tree, the header search, and the chat
+ * file opener share this one test so the same path reaches the card in the same kind from the
+ * first publication, while its read is still in flight.
+ * @param path - the file path as the producer authored it.
+ * @returns true for rendered artifacts, false for everything else.
+ */
+export function isRenderedArtifact(path: string): boolean {
+  const lower = path.toLowerCase()
+  return RENDERED_EXTENSIONS.some(extension => lower.endsWith(extension))
+}
+
+/** The preview kind the card shows one path as.
+ * @param path - the file path as the producer authored it.
+ * @returns `'iframe'` for rendered artifacts, `'code'` for source files.
+ */
+export function previewKindFor(path: string): StudioPreviewKind {
+  return isRenderedArtifact(path) ? 'iframe' : 'code'
+}
+
 /**
  * Read state of a workspace file as it travels from the tree click to the
  * floating card. A ready read discriminates on its kind: only source carries a

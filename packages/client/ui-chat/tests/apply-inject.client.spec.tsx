@@ -46,13 +46,16 @@ function sessionFakeFor() {
   } satisfies SessionBehaviorOverrides
 }
 
-async function bench() {
+async function bench(chatFileOpener?: { open: (sessionId: SessionId, path: string, line?: number) => Promise<void> }) {
   const runtime = await SlotTestRuntime.create()
   runtime.ctx.provide('settingsScope', { bind: () => stubSettingsScope().scope } as never)
   const layout = { closeRightbar: vi.fn(), openRightbar: vi.fn() }
   runtime.ctx.provide('layout', layout as never)
   const sidebarRight = { openResource: vi.fn<(address: string) => void>() }
   runtime.ctx.provide('sidebarRight', sidebarRight as never)
+  if (chatFileOpener !== undefined) {
+    runtime.ctx.provide('chatFileOpener', chatFileOpener as never)
+  }
   const openWorkspacePath = vi.fn<ClientRemote['session']['openWorkspacePath']>(
     () => Promise.resolve({ ok: true, value: { opened: true } }),
   )
@@ -121,9 +124,10 @@ describe('Chat inject API', () => {
   it('addresses file paths under the Session\'s scope and opens them in the right Sidebar', async () => {
     const b = await bench()
     const { injected } = b.chatViewApi(ROOT)
+    // With no layout-owned opener provided, files stay in the product: a relative
+    // path is handed to the Sidebar as an address under this session's scope, not
+    // to a desktop opener.
     await injected.openFile('src/a.ts')
-    // Files stay in the product: a relative path is handed to the Sidebar as an
-    // address under this session's scope, not to a desktop opener.
     expect(b.sidebarRight.openResource).toHaveBeenCalledWith('dsh-resource://file/session/root-1/src/a.ts')
     expect(b.openWorkspacePath).not.toHaveBeenCalled()
 
@@ -138,6 +142,31 @@ describe('Chat inject API', () => {
     // A line travels as the `file` type's navigation parameter, not in the address.
     await injected.openFile('src/a.ts', { line: 7 })
     expect(b.sidebarRight.openResource).toHaveBeenLastCalledWith('dsh-resource://file/session/root-1/src/a.ts', { params: { line: 7 } })
+    await b.runtime.dispose()
+  })
+
+  it('hands every file gesture to the layout-owned opener when one is provided', async () => {
+    const open = vi.fn<(sessionId: SessionId, path: string, line?: number) => Promise<void>>()
+      .mockResolvedValue(undefined)
+    const b = await bench({ open })
+    const { injected } = b.chatViewApi(ROOT)
+
+    await injected.openFile('src/a.ts')
+    expect(open).toHaveBeenCalledWith(ROOT, 'src/a.ts', undefined)
+    await injected.openFile('src/a.ts', { line: 7 })
+    expect(open).toHaveBeenLastCalledWith(ROOT, 'src/a.ts', 7)
+    // The Sidebar route stays closed while a layout owns the gesture.
+    expect(b.sidebarRight.openResource).not.toHaveBeenCalled()
+    await b.runtime.dispose()
+  })
+
+  it('surfaces the layout opener\'s refusal through the injected promise', async () => {
+    const b = await bench({
+      open: vi.fn(async () => { throw new Error('no workspace root') }),
+    })
+    const { injected } = b.chatViewApi(ROOT)
+    await expect(injected.openFile('src/a.ts')).rejects.toThrow('no workspace root')
+    expect(b.sidebarRight.openResource).not.toHaveBeenCalled()
     await b.runtime.dispose()
   })
 

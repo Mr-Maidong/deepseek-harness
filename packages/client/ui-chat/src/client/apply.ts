@@ -118,19 +118,26 @@ export function apply(ctx: Context): void {
             chatNodeProcess: key => chat.getSnapshot().nodes.processSource(key),
           },
           fileMentions: (owner: TurnTailOwnerProps) => ctx.get('chatFileMentions')?.forClosing(owner, sessionId),
-          // Files open in the right Sidebar, not in a desktop application: the
-          // content stays in the product, beside the conversation that produced
-          // it. A relative path, or an absolute one inside the session's
-          // workspace, is addressed under this session's scope,
-          // `dsh-resource://file/session/<id>/<path>`; an absolute path
+          // A layout that presents files itself — Studio's universal preview
+          // card — owns the gesture through `ctx.get('chatFileOpener')`, and a
+          // rejection reaches the view's open-error dialog unchanged. Without a
+          // provider, files open in the right Sidebar, not in a desktop
+          // application: the content stays in the product, beside the
+          // conversation that produced it. A relative path, or an absolute one
+          // inside the session's workspace, is addressed under this session's
+          // scope, `dsh-resource://file/session/<id>/<path>`; an absolute path
           // elsewhere keeps its absolute spelling in the same Session's address.
           // Which tab type claims the
           // address is the Sidebar's decision, not this call site's.
           // A line travels as a navigation parameter, not as part of the
           // address: the file is one piece of content whether it is opened at
-          // its top or at line 400, so the same tab is revealed and told where
-          // to land.
+          // its top or at line 400, so the same surface is told where to land.
           openFile: async (path, options) => {
+            const opener = ctx.get('chatFileOpener')
+            if (opener !== undefined) {
+              await opener.open(sessionId, path, options?.line)
+              return
+            }
             const cwd = ctx.sessions.list.getSnapshot().byId[sessionId]?.cwd
             const url = fileAddressFor(sessionId, cwd, path)
             if (options?.line === undefined) ctx.sidebarRight.openResource(url)

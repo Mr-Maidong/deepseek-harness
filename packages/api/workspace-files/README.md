@@ -56,7 +56,7 @@ Every operation first uses `lstat` to reject a missing path, a final symlink, or
 
 ### The guarded write
 
-`write` replaces the complete text of one existing regular file inside the workspace root. The text is capped by `maxFileBytes` and published atomically by the filesystem backend. `request.version` is the version the caller read: when the file's current version differs, the write is refused with `workspace-file/version-conflict` and nothing changes; omitting `version` overwrites whatever the file holds now. The response is the file's `WorkspaceFileStat`, carrying the version the write produced. Creation, deletion, and rename have no endpoint.
+`write` replaces the complete text of one existing regular file inside the workspace root. The text is capped by `maxFileBytes` and published atomically by the filesystem backend under the calling Session's own sandbox policy, so that Session's workspace and mode decide the write: a deployment whose fallback root is elsewhere — an app launched outside the project — still accepts a save inside the session's workspace, while a Session switched to `read-only` refuses one. `request.version` is the version the caller read: when the file's current version differs, the write is refused with `workspace-file/version-conflict` and nothing changes; omitting `version` overwrites whatever the file holds now. The response is the file's `WorkspaceFileStat`, carrying the version the write produced. Creation, deletion, and rename have no endpoint.
 
 ### The change feed
 
@@ -75,7 +75,7 @@ The generated [configuration catalog](../../../docs/config-catalog.md#deepseek-a
 
 ### Failures
 
-Each failure is one `RemoteError` code with typed details, declared in [`src/types.ts`](src/types.ts): `workspace-file/not-found`, `workspace-file/outside-workspace` (directory listing and write), `workspace-file/too-large` (with `limit`, the applicable page, window, or complete-file cap), `workspace-file/not-text`, `workspace-file/not-regular-file` (`kind`: `directory`, `symlink`, or `other`), and `workspace-file/not-directory` (`kind`: `file`, `symlink`, or `other`), and `workspace-file/version-conflict` (write only). Callers branch on the code, never on message text.
+Each failure is one `RemoteError` code with typed details, declared in [`src/types.ts`](src/types.ts): `workspace-file/not-found`, `workspace-file/outside-workspace` (directory listing and write), `workspace-file/too-large` (with `limit`, the applicable page, window, or complete-file cap), `workspace-file/not-text`, `workspace-file/not-regular-file` (`kind`: `directory`, `symlink`, or `other`), and `workspace-file/not-directory` (`kind`: `file`, `symlink`, or `other`), and `workspace-file/version-conflict` (write only). Callers branch on the code, never on message text. A refusal by the file sandbox is not one of these codes: the fence's `FS_SANDBOX_DENIED` crosses the Gateway as `gateway/internal`, naming the path and the mode (`workspace-write` or `read-only`) in its message.
 
 ### Client file resources
 

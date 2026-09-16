@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-09-15-workspace-write-fenced-by-session-policy.md
+2026-09-15-workspace-write-fenced-by-session-policy.md: af3fe858125781c3b9d7898f3399396c483d358a
+2026-09-15-workspace-write-fenced-by-session-policy.zh.md: b7f35ad752a6574aca6b75bda8dfb1ff3ebccbc1

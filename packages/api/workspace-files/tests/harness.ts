@@ -56,6 +56,10 @@ export async function openWorkspace(prefix: string): Promise<Harness> {
     workspaceRoot: workspace,
     resolve: () => ({ mode: 'workspace-write', workspaceRoot: workspace }),
   } as never)
+  // Direct construction skips the service's declared inject, so every service it
+  // reads at call time needs a stand-in. This fixture holds no session, so the
+  // write's fence always sees a scope whose session is not live.
+  ctx.provide('sessions', { get: () => undefined } as never)
   let service: WorkspaceFiles | undefined
   return {
     workspace,

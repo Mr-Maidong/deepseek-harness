@@ -56,7 +56,7 @@ kind: "package-reference"
 
 ### 受守卫的写入
 
-`write` 替换工作区根内某个已存在常规文件的完整文本。文本受 `maxFileBytes` 限制，并由文件系统后端原子发布。`request.version` 是调用方读取时的版本：文件当前版本不同时，写入以 `workspace-file/version-conflict` 被拒绝且不产生任何改动；省略 `version` 则覆盖文件当前内容。响应是该文件的 `WorkspaceFileStat`，携带本次写入产生的版本。创建、删除与重命名没有对应端点。
+`write` 替换工作区根内某个已存在常规文件的完整文本。文本受 `maxFileBytes` 限制，并由文件系统后端在调用方 Session 自身的沙箱策略下原子发布，因此决定这次写入的是该 Session 的工作区与模式：部署的回退根在别处时（例如应用从项目之外启动），Session 工作区内的保存仍被接受；被切换为 `read-only` 的 Session 则拒绝保存。`request.version` 是调用方读取时的版本：文件当前版本不同时，写入以 `workspace-file/version-conflict` 被拒绝且不产生任何改动；省略 `version` 则覆盖文件当前内容。响应是该文件的 `WorkspaceFileStat`，携带本次写入产生的版本。创建、删除与重命名没有对应端点。
 
 ### 变更流
 
@@ -75,7 +75,7 @@ kind: "package-reference"
 
 ### 失败
 
-每种失败都是一个带类型化 details 的 `RemoteError` 代码，声明于 [`src/types.ts`](src/types.ts)：`workspace-file/not-found`、`workspace-file/outside-workspace`（目录列举与写入）、`workspace-file/too-large`（带 `limit`，即适用的页、窗口或完整文件上限）、`workspace-file/not-text`、`workspace-file/not-regular-file`（`kind` 为 `directory`、`symlink` 或 `other`）、`workspace-file/not-directory`（`kind` 为 `file`、`symlink` 或 `other`）以及 `workspace-file/version-conflict`（仅写入）。调用方按代码分支，绝不按消息文本。
+每种失败都是一个带类型化 details 的 `RemoteError` 代码，声明于 [`src/types.ts`](src/types.ts)：`workspace-file/not-found`、`workspace-file/outside-workspace`（目录列举与写入）、`workspace-file/too-large`（带 `limit`，即适用的页、窗口或完整文件上限）、`workspace-file/not-text`、`workspace-file/not-regular-file`（`kind` 为 `directory`、`symlink` 或 `other`）、`workspace-file/not-directory`（`kind` 为 `file`、`symlink` 或 `other`）以及 `workspace-file/version-conflict`（仅写入）。调用方按代码分支，绝不按消息文本。文件沙箱的拒绝不属于上述任何代码：围栏的 `FS_SANDBOX_DENIED` 以 `gateway/internal` 穿过 Gateway，并在消息中点名路径与模式（`workspace-write` 或 `read-only`）。
 
 ### Client 文件资源
 

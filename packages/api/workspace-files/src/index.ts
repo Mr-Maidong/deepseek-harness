@@ -11,7 +11,9 @@
  * the workspace root contains, refuses a symlink instead of following it,
  * bounds the complete new text by `maxFileBytes`, and refuses a write whose
  * observed version no longer matches unless the caller asked to overwrite
- * unconditionally.
+ * unconditionally. The filesystem sandbox fences that write with the calling
+ * Session's own policy, so the session workspace and mode decide it rather than
+ * the deployment's fallback root.
  *
  * A page is cut from `streamText`, which decodes and rejects non-UTF-8 as it
  * goes, so the file is read only up to the first character past the page and
@@ -353,6 +355,13 @@ export class WorkspaceFiles extends TypertRemoteService {
     }
     const root = await this.ctx.fs.resolve(workspaceRoot, { signal })
     const target = await this.confine(root, workspaceRoot, path, signal)
+    // The fence must consume THIS session's policy. Omitting it falls back to the
+    // deployment root — the process cwd for an app launched outside the project —
+    // which refuses every save inside a session workspace that differs from it. A
+    // live session also supplies the mode it last chose; a scope whose session is
+    // no longer live keeps the deployment mode with the root resolved above.
+    const session = this.ctx.sessions.get(workspaceFileScope.sessionId)
+    const fence = { ...this.ctx.sandboxPolicy.resolve(session === undefined ? {} : { session }), workspaceRoot }
     try {
       await this.ctx.fs.writeText(
         target,
@@ -361,6 +370,7 @@ export class WorkspaceFiles extends TypertRemoteService {
           ? undefined
           : { kind: 'replaceIfVersion', version: FsVersion(request.version) },
         signal,
+        fence,
       )
     } catch (error) {
       if (error instanceof FsError && error.code === 'FS_STALE_VERSION') {

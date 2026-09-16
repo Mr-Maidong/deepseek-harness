@@ -53,6 +53,8 @@ Studio also provides the `chatFileOpener` service that ui-chat reads through `ct
 
 A workbench todo never leaves the client on a click. The send controls stage the todo's heading, id, and detail into the Session's composer draft — appended after whatever the user already typed, so staging cannot discard a draft in progress — and the user sends it. The card's status therefore stays as it was, because nothing has reached the model; only write-back still sends straight to the chat, since that action exists to make the model answer.
 
+Each workspace card carries its sessions' live state: a running session's row shows the ongoing status animation in place of the conversation icon, and a collapsed card shows that animation immediately before the workspace name, because collapsing hides the rows that would otherwise carry it.
+
 </details>
 
 -----

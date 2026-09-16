@@ -12,7 +12,7 @@ import type { SessionListState } from '@deepseek-ai/dsh-api-session-controller/c
 import type { WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-api-workspace-controller/client'
 import type { DirectoryFlowOwnerProps } from '@deepseek-ai/dsh-client-ui-workspace/client'
 import type { WorkspaceSnapshot } from '@deepseek-ai/dsh-api-workspace-controller/client'
-import { Modal } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Modal, StateDot } from '@deepseek-ai/dsh-client-ui-primitives'
 import dialogTheme from '../../styles/StudioDialog.module.css'
 import { ChevronIcon, SessionIcon } from './icons/icons.tsx'
 import { NS } from './locales.ts'
@@ -35,7 +35,7 @@ function WorkspaceCard({
   workspace, sessions, current, archivingSessionIds, onArchive, expanded, onToggle, onNewSession, onRename, onDelete, deps,
 }: {
   workspace: WorkspaceView
-  sessions: readonly { id: SessionId; title: string }[]
+  sessions: readonly { id: SessionId; title: string; running: boolean }[]
   current: SessionId | undefined
   archivingSessionIds: ReadonlySet<SessionId>
   onArchive: (sessionId: SessionId) => void
@@ -48,11 +48,20 @@ function WorkspaceCard({
 }): React.ReactElement {
   const { t } = deps
   const hasCurrentSession = sessions.some(session => session.id === current)
+  const anyRunning = sessions.some(session => session.running)
   return (
     <div className={css.workspaceGroup} data-current={hasCurrentSession || undefined}>
       <div className={css.workspaceHeader}>
         <button type="button" className={css.workspaceToggle} onClick={onToggle} aria-expanded={expanded}>
           <ChevronIcon open={expanded} className={css.chevron} />
+          {/* A collapsed card hides its session rows, so the running signal
+              moves onto the name instead. */}
+          {!expanded && anyRunning && (
+            <span className={css.workspaceStatus}>
+              <StateDot state="ongoing" />
+              <span className={css.visuallyHidden}>{t('session.running')}</span>
+            </span>
+          )}
           <span className={css.workspaceTitle}>{workspace.title}</span>
         </button>
         <div className={css.workspaceActions}>
@@ -75,6 +84,7 @@ function WorkspaceCard({
               key={session.id}
               sessionId={session.id}
               title={session.title}
+              running={session.running}
               current={current === session.id}
               archiving={archivingSessionIds.has(session.id)}
               onArchive={() => { onArchive(session.id) }}
@@ -88,9 +98,10 @@ function WorkspaceCard({
 }
 
 /** One session row: click to open; hover reveals rename and archive actions. */
-function SessionRow({ sessionId, title, current, archiving, onArchive, deps }: {
+function SessionRow({ sessionId, title, running, current, archiving, onArchive, deps }: {
   sessionId: SessionId
   title: string
+  running: boolean
   current: boolean
   archiving: boolean
   onArchive: () => void
@@ -119,7 +130,10 @@ function SessionRow({ sessionId, title, current, archiving, onArchive, deps }: {
   return (
     <div className={css.sessionRow} data-current={current || undefined}>
       <button type="button" className={css.sessionButton} disabled={archiving} onClick={() => { deps.open(sessionId) }}>
-        <SessionIcon className={css.sessionIcon} />
+        <span className={css.sessionIconSlot}>
+          {running ? <StateDot state="ongoing" /> : <SessionIcon className={css.sessionIcon} />}
+        </span>
+        {running && <span className={css.visuallyHidden}>{t('session.running')}</span>}
         <span className={css.sessionTitle}>{title}</span>
       </button>
       <div className={css.rowActions}>
@@ -187,12 +201,12 @@ export function WorkBase(props: WorkBaseProps): React.ReactElement {
     }
   }
 
-  const sessionTitles = (sessionIds: readonly SessionId[]): { id: SessionId; title: string }[] =>
+  const sessionTitles = (sessionIds: readonly SessionId[]): { id: SessionId; title: string; running: boolean }[] =>
     sessionIds
       .filter(id => !optimisticallyArchivedIds.has(id) && !archivedSessionSet.has(id))
       .map(id => byId[id])
       .filter((s): s is NonNullable<typeof s> => s !== undefined)
-      .map(s => ({ id: s.id, title: s.displayTitle }))
+      .map(s => ({ id: s.id, title: s.displayTitle, running: s.running }))
 
   return (
     <div className={css.root}>

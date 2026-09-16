@@ -162,6 +162,36 @@
   font: 500 14px/20px 'YaHei Consolas Hybrid', monospace;
 }
 
+/* Leading 16px slot: the running matrix replaces the static session icon while
+   the row title keeps its x position. */
+.sessionIconSlot {
+  display: grid;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+}
+
+/* Status slot before a collapsed workspace name: rendered only while one of
+   its sessions runs, so an idle collapsed card leaves no placeholder, and the
+   16px box keeps the 10px animation on the chevron's row. */
+.workspaceStatus {
+  display: grid;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 .workspaceActions,
 .rowActions {
   display: flex;

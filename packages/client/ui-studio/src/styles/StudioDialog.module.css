@@ -22,7 +22,7 @@
 .danger {
   padding: 7px 13px;
   border: 1px solid var(--studio-red-line);
-  border-radius: 3px;
+  border-radius: 8px;
   background: var(--studio-red-wash-strong);
   color: var(--studio-ink);
   font: 500 14px/20px var(--dsw-font-family);

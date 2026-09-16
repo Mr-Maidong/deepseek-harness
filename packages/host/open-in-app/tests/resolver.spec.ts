@@ -52,9 +52,14 @@ function byId(id: string): OpenInAppApp {
   return app
 }
 
-/** Internals baseline every call completes: a rejecting runner and an empty PATH. */
+/**
+ * Internals baseline every call completes: a rejecting runner, an empty PATH,
+ * and a desktop-Linux kernel. The kernel is pinned because WSL reports itself
+ * through `os.release()`, so a spec that left it to the host would offer the
+ * Linux file manager on a WSL machine and withhold it elsewhere.
+ */
 function bare(overrides: OpenInAppInternals): OpenInAppInternals {
-  return { env: {}, run: runner(() => null), resolveExecutable: pathTable(), ...overrides }
+  return { osRelease: '6.8.0-generic', env: {}, run: runner(() => null), resolveExecutable: pathTable(), ...overrides }
 }
 
 /** Hermetic Linux environment: XDG lookups stay inside the temp home. */

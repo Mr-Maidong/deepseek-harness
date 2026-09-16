@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-09-15-open-in-app-kernel-pinned-resolution.md
+2026-09-15-open-in-app-kernel-pinned-resolution.md: 36402d4307a00256cdaaf4c72131ed98c6da61b5
+2026-09-15-open-in-app-kernel-pinned-resolution.zh.md: 398d5b27ccfcdf376fdd46276e134531c508f723

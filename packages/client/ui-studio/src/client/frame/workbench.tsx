@@ -178,10 +178,14 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
    *  edge lands above the list's bottom padding, keeping its border visible. */
   const scrollTodoIntoView = (todoId: string): void => {
     setTimeout(() => {
-      const card = document.querySelector(`article[data-todoid="${CSS.escape(todoId)}"]`) as HTMLElement | null
+      // Compare the dataset value instead of interpolating the id into an
+      // attribute selector: a todo id needs no escaping as data, and jsdom
+      // omits `CSS` entirely, where this timer would otherwise throw unhandled.
+      const card = [...document.querySelectorAll<HTMLElement>('article[data-todoid]')]
+        .find(element => element.dataset.todoid === todoId)
       // Card is a direct child of the scrollable list; parentElement is stable
       // across CSS Module hash changes and avoids an extra data-attribute seam.
-      const list = card?.parentElement as HTMLElement | null
+      const list = card?.parentElement
       if (!card || !list) return
       const listRect = list.getBoundingClientRect()
       const cardRect = card.getBoundingClientRect()

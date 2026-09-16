@@ -51,6 +51,8 @@ Workspace search lives in the conversation titleRow's rightmost utilities seat (
 
 Studio also provides the `chatFileOpener` service that ui-chat reads through `ctx.get`: every chat file gesture — a tool row's path link, a produced-file chip, a closing-message mention — opens in the universal preview card instead of the right Sidebar when Studio is composed. The opener resolves relative paths against the viewed Session's workspace root, publishes the loading → ready/error flow at the kind the path names — produced HTML opens as a rendered artifact on the 16:9 stage, not as source — carries an optional focus line for source files only, and rejects with the reason so the chat view's open-error dialog surfaces failures unchanged. Composing this package out is the off state: ui-chat falls back to its Sidebar route.
 
+A workbench todo never leaves the client on a click. The send controls stage the todo's heading, id, and detail into the Session's composer draft — appended after whatever the user already typed, so staging cannot discard a draft in progress — and the user sends it. The card's status therefore stays as it was, because nothing has reached the model; only write-back still sends straight to the chat, since that action exists to make the model answer.
+
 </details>
 
 -----

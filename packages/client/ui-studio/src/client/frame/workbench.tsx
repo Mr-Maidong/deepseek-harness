@@ -47,6 +47,17 @@ function todoMessage(todo: ProjectTodo, detailIndent: string): string {
 }
 
 /**
+ * Compose what staging writes into the composer: the todo text follows whatever
+ * the user already typed, so staging a todo never discards a draft in progress.
+ * A draft that is only whitespace counts as empty, matching the composer's own
+ * empty-draft rule.
+ */
+function stagedDraft(draft: string, text: string): string {
+  const typed = draft.replace(/\s+$/, '')
+  return typed === '' ? text : typed + '\n' + text
+}
+
+/**
  * Fold model-written completions from the bound session's projection into the
  * workspace todo store. Completions live durably in the workspace store; the
  * session projection is only the channel that carries the model's
@@ -69,7 +80,8 @@ function reconcileCompletions(
 
 /** Render the workspace-shared project todo workbench. */
 export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement {
-  const { t, sendToChat, sessionId, actions } = props
+  const { t, sendToChat, sessionId, actions, inputActions } = props
+  const draft = props.useInput(state => state.draft)
   const projects = props.useStore(state => state.projects)
   const projectedCompletions = props.useProjection('studioTodoCompletions')
   const [activeProjectId, setActiveProjectId] = useState('')
@@ -232,16 +244,14 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
     cancelEditingDetail()
   }
 
-  const sendTodo = async (todo: ProjectTodo): Promise<void> => {
+  /**
+   * Stage one todo in the composer and leave sending to the user: the click
+   * only writes the message, so the todo's status stays whatever it was.
+   */
+  const stageTodo = (todo: ProjectTodo): void => {
     if (todo.status === 'completed') return
     setError(undefined)
-    actions.updateTodoStatus(todo.id, 'in_progress')
-    try {
-      await sendToChat(todoMessage(todo, ''))
-    } catch {
-      actions.updateTodoStatus(todo.id, 'blocked')
-      setError(t('workbench.sendFailed'))
-    }
+    inputActions.setDraft(stagedDraft(draft, todoMessage(todo, '')))
   }
 
   const writeBackTodo = async (todo: ProjectTodo): Promise<void> => {
@@ -254,18 +264,13 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
     }
   }
 
-  const sendProject = async (): Promise<void> => {
+  /** Stage every pending todo in the composer as one bullet each. */
+  const stageProject = (): void => {
     if (activeProject === undefined) return
     const pendingTodos = todos.filter(todo => todo.status !== 'completed')
     if (pendingTodos.length === 0) return
     setError(undefined)
-    for (const todo of pendingTodos) actions.updateTodoStatus(todo.id, 'in_progress')
-    try {
-      await sendToChat(pendingTodos.map(todo => '- ' + todoMessage(todo, '  ')).join('\n'))
-    } catch {
-      for (const todo of pendingTodos) actions.updateTodoStatus(todo.id, 'blocked')
-      setError(t('workbench.sendFailed'))
-    }
+    inputActions.setDraft(stagedDraft(draft, pendingTodos.map(todo => '- ' + todoMessage(todo, '  ')).join('\n')))
   }
 
   return <section className={css.workbench} aria-labelledby="studio-workbench-title">
@@ -281,7 +286,7 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
       </div>
       <div className={css.projectActions}>
         <button className={css.iconButton} type="button" aria-label={t('workbench.addProject')} title={t('workbench.addProject')} onClick={() => { setProjectDraftOpen(open => !open); setProjectTitle('') }}><span className={css.newIcon} aria-hidden="true" /></button>
-        <button className={css.quietButton} type="button" disabled={activeProject === undefined || !activeProject.todos.some(todo => todo.status !== 'completed')} aria-label={t('workbench.sendAll')} title={t('workbench.sendAll')} onClick={() => { void sendProject() }}><span className={css.sendIcon} aria-hidden="true" /></button>
+        <button className={css.quietButton} type="button" disabled={activeProject === undefined || !activeProject.todos.some(todo => todo.status !== 'completed')} aria-label={t('workbench.sendAll')} title={t('workbench.sendAll')} onClick={stageProject}><span className={css.sendIcon} aria-hidden="true" /></button>
         <button className={css.quietButton} type="button" disabled={activeProject === undefined} aria-label={t('workbench.removeProject')} title={t('workbench.removeProject')} onClick={() => { if (activeProject !== undefined) setRemovingProjectId(activeProject.id) }}><span className={css.deleteIcon} aria-hidden="true" /></button>
       </div>
     </div>
@@ -293,7 +298,7 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
         {todos.map(todo => <article className={css.todoCard} key={todo.id} data-todoid={todo.id} data-done={todo.status === 'completed' || undefined}>
           <div className={css.todoCardHead}>
             <label className={css.todoTitleRow}><input className={css.todoCheckbox} type="checkbox" checked={todo.status === 'completed'} disabled={todo.status === 'completed'} onChange={() => { markDone(todo) }} aria-label={todo.status === 'completed' ? t('workbench.done') : t('workbench.markDone')} /><span className={css.todoTitle}>{todo.title}</span></label>
-            <div className={css.todoActions}><button className={css.todoSend} type="button" disabled={todo.status === 'completed'} aria-label={t('workbench.sendOne')} title={t('workbench.sendOne')} onClick={() => { void sendTodo(todo) }}><span className={css.sendIcon} aria-hidden="true" /></button><button className={css.todoWriteBack} type="button" disabled={todo.status === 'completed' || todo.sourceSessionId !== sessionId} aria-label={t('workbench.writeBack')} title={t('workbench.writeBack')} onClick={() => { void writeBackTodo(todo) }}><span className={css.summaryIcon} aria-hidden="true" /></button>{todo.status === 'completed' ? undefined : <button className={css.todoDelete} type="button" aria-label={t('workbench.removeTodo')} title={t('workbench.removeTodo')} onClick={() => { removeTodo(todo.id) }}><span className={css.deleteIcon} aria-hidden="true" /></button>}</div>
+            <div className={css.todoActions}><button className={css.todoSend} type="button" disabled={todo.status === 'completed'} aria-label={t('workbench.sendOne')} title={t('workbench.sendOne')} onClick={() => { stageTodo(todo) }}><span className={css.sendIcon} aria-hidden="true" /></button><button className={css.todoWriteBack} type="button" disabled={todo.status === 'completed' || todo.sourceSessionId !== sessionId} aria-label={t('workbench.writeBack')} title={t('workbench.writeBack')} onClick={() => { void writeBackTodo(todo) }}><span className={css.summaryIcon} aria-hidden="true" /></button>{todo.status === 'completed' ? undefined : <button className={css.todoDelete} type="button" aria-label={t('workbench.removeTodo')} title={t('workbench.removeTodo')} onClick={() => { removeTodo(todo.id) }}><span className={css.deleteIcon} aria-hidden="true" /></button>}</div>
           </div>
           <div className={css.todoCardBody} data-collapsed={collapsedFor(todo) || undefined}>
             {editingTodoId === todo.id ? <div className={css.todoDetailEditor}><textarea className={css.todoDetailInput} value={editingDetail} onChange={(event) => { setEditingDetail(event.target.value) }} aria-label={t('workbench.editDetail')} rows={3} placeholder={t('workbench.todoDetailPrompt')} autoFocus /><div className={css.todoDetailActions}><button className={css.textButton} type="button" onClick={saveEditingDetail}>{t('workbench.saveDetail')}</button><button className={css.quietTextButton} type="button" onClick={cancelEditingDetail}>{t('workbench.cancelEdit')}</button></div></div> : <button className={css.todoDetail} type="button" onClick={() => { startEditingDetail(todo) }} disabled={todo.status === 'completed'} aria-label={t('workbench.editDetail')} title={t('workbench.editDetail')}>{todo.detail === '' ? t('workbench.todoDetailPrompt') : <MarkdownText text={todo.detail} labels={MARKDOWN_LABELS} />}</button>}

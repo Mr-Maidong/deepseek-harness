@@ -6,7 +6,7 @@
  * into that store — so a completion recorded in one session stays visible to
  * every session sharing the workspace.
  */
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 // The plugin entry carries the SlotMap/LocaleNamespaceMap declaration merges the
 // components' props resolve against; load it type-only so the aggregate client
@@ -54,33 +54,86 @@ function completion(todoId: string, summary: string, completedAt: string): Workb
 interface Harness {
   store: ReturnType<ReturnType<typeof createProjectTodoStore>['create']>
   projection: ReturnType<typeof createSnapshotStore<{ value: Record<string, WorkbenchTodoCompletion> | null | undefined }>>
+  /** Composer writes the workbench staged instead of sending. */
+  setDraft: ReturnType<typeof vi.fn>
+  /** Chat sends: write-back is the only action that still sends directly. */
+  sendToChat: ReturnType<typeof vi.fn>
   rerender: (sessionId?: string) => void
   unmount: () => void
 }
 
-function renderWorkbench(): Harness {
+/**
+ * Composer stubs standing in for the session-scope standard shares: the
+ * workbench reads the live draft through `useInput` and stages text with
+ * `inputActions.setDraft`.
+ */
+function composerStubs(draft: string): {
+  setDraft: ReturnType<typeof vi.fn>
+  useInput: StudioWorkbenchProps['useInput']
+  inputActions: StudioWorkbenchProps['inputActions']
+} {
+  const setDraft = vi.fn()
+  const snapshot = { draft }
+  return {
+    setDraft,
+    useInput: (<S,>(selector: (state: { draft: string }) => S): S => selector(snapshot)) as StudioWorkbenchProps['useInput'],
+    inputActions: {
+      setDraft,
+      addAttachments: vi.fn(() => true),
+      removeAttachment: vi.fn(() => true),
+      pruneAttachments: vi.fn(),
+      submit: vi.fn(),
+    },
+  }
+}
+
+/** Props for one workbench render: the injected handlers plus the framework hooks. */
+function workbenchProps(options: {
+  store: Harness['store']
+  useProjection: StudioWorkbenchProps['useProjection']
+  composer: ReturnType<typeof composerStubs>
+  sendToChat: ReturnType<typeof vi.fn>
+  sessionId?: string
+}): StudioWorkbenchProps {
+  return {
+    sessionId: (options.sessionId ?? 'session-a') as never,
+    sendToChat: options.sendToChat,
+    useInput: options.composer.useInput,
+    inputActions: options.composer.inputActions,
+    t,
+    useStore: bindSnapshotSelector(options.store),
+    actions: options.store.actions,
+    useProjection: options.useProjection,
+  } as unknown as StudioWorkbenchProps
+}
+
+function renderWorkbench(options: { draft?: string; sourceSessionId?: string } = {}): Harness {
   const store = createProjectTodoStore().create('workspace-1')
   store.actions.addProject({ title: 'Studio' })
   const projectId = store.getSnapshot().projects[0]!.id
-  store.actions.addTodo({ projectId, title: 'Ship persistence', detail: 'Keep it durable.' })
+  store.actions.addTodo({
+    projectId,
+    title: 'Ship persistence',
+    detail: 'Keep it durable.',
+    // exactOptionalPropertyTypes: an absent source is expressed by omission.
+    ...(options.sourceSessionId === undefined ? {} : { sourceSessionId: options.sourceSessionId }),
+  })
   const projection = createSnapshotStore<{ value: Record<string, WorkbenchTodoCompletion> | null | undefined }>({ value: undefined })
 
-  const useProjection = (_key: string, selector?: (v: unknown) => unknown) =>
-    bindSnapshotSelector(projection)(s => (selector ?? (v => v))(s.value))
+  const useProjection = ((_key: string, selector?: (v: unknown) => unknown) =>
+    bindSnapshotSelector(projection)(s => (selector ?? (v => v))(s.value))) as StudioWorkbenchProps['useProjection']
 
-  const props = (sessionId: string): StudioWorkbenchProps => ({
-    sessionId: sessionId as never,
-    sendToChat: vi.fn(async () => {}),
-    t,
-    useStore: bindSnapshotSelector(store),
-    actions: store.actions,
-    useProjection: useProjection as StudioWorkbenchProps['useProjection'],
-  } as unknown as StudioWorkbenchProps)
+  const composer = composerStubs(options.draft ?? '')
+  const sendToChat = vi.fn(async () => {})
+  const props = (sessionId: string): StudioWorkbenchProps =>
+    workbenchProps({ store, useProjection, composer, sendToChat, sessionId })
 
   const view = render(<StudioWorkbench {...props('session-a')} />)
   return {
     store,
     projection,
+    setDraft: composer.setDraft,
+    sendToChat,
     rerender: (sessionId = 'session-b') => view.rerender(<StudioWorkbench {...props(sessionId)} />),
     unmount: () => view.unmount(),
   }
@@ -137,14 +190,12 @@ describe('StudioWorkbench completion reconcile', () => {
     })
     const useProjection = (_key: string, selector?: (v: unknown) => unknown) =>
       bindSnapshotSelector(projection)(s => (selector ?? (v => v))(s.value))
-    const props: StudioWorkbenchProps = {
-      sessionId: 'session-a' as never,
+    const props = workbenchProps({
+      store,
+      useProjection,
+      composer: composerStubs(''),
       sendToChat: vi.fn(async () => {}),
-      t,
-      useStore: bindSnapshotSelector(store),
-      actions: store.actions,
-      useProjection: useProjection as StudioWorkbenchProps['useProjection'],
-    } as unknown as StudioWorkbenchProps
+    })
     render(<StudioWorkbench {...props} />)
     const stored = store.getSnapshot().projects[0]!.todos[0]!
     expect(stored.status).toBe('completed')
@@ -163,14 +214,12 @@ describe('StudioWorkbench completion reconcile', () => {
     const projection = createSnapshotStore<{ value: Record<string, WorkbenchTodoCompletion> | null | undefined }>({ value: undefined })
     const useProjection = (_key: string, selector?: (v: unknown) => unknown) =>
       bindSnapshotSelector(projection)(s => (selector ?? (v => v))(s.value))
-    const props: StudioWorkbenchProps = {
-      sessionId: 'session-a' as never,
+    const props = workbenchProps({
+      store,
+      useProjection,
+      composer: composerStubs(''),
       sendToChat: vi.fn(async () => {}),
-      t,
-      useStore: bindSnapshotSelector(store),
-      actions: store.actions,
-      useProjection: useProjection as StudioWorkbenchProps['useProjection'],
-    } as unknown as StudioWorkbenchProps
+    })
     render(<StudioWorkbench {...props} />)
     const titles = [...document.querySelectorAll(`.${titleClass}`)]
     expect(titles).toHaveLength(1)
@@ -386,6 +435,65 @@ describe('StudioWorkbench completion reconcile', () => {
     fireEvent.click(screen.getByRole('button', { name: '展开详情' }))
     expect(body.hasAttribute('data-collapsed')).toBe(false)
     expect(screen.getByText('Shipped the fold.')).toBeTruthy()
+  })
+})
+
+describe('StudioWorkbench staging into the composer', () => {
+  /** The staged text for the harness's single todo, as the composer receives it. */
+  function stagedSingle(store: Harness['store']): string {
+    const todo = store.getSnapshot().projects[0]!.todos[0]!
+    return `${todo.title}（todoId: ${todo.id}）\n${todo.detail}`
+  }
+
+  it('stages one todo in the composer instead of sending it, leaving its status alone', () => {
+    const { store, setDraft, sendToChat } = renderWorkbench()
+    fireEvent.click(screen.getByRole('button', { name: '发送单条事项到输入框' }))
+    expect(setDraft).toHaveBeenCalledWith(stagedSingle(store))
+    // Staging hands the message to the user, so nothing reaches the model yet.
+    expect(sendToChat).not.toHaveBeenCalled()
+    expect(store.getSnapshot().projects[0]!.todos[0]!.status).toBe('pending')
+  })
+
+  it('appends the staged todo to the draft already in the composer', () => {
+    const { store, setDraft } = renderWorkbench({ draft: '已经打好的内容' })
+    fireEvent.click(screen.getByRole('button', { name: '发送单条事项到输入框' }))
+    expect(setDraft).toHaveBeenCalledWith(`已经打好的内容\n${stagedSingle(store)}`)
+  })
+
+  it('treats a whitespace-only draft as empty rather than stacking blank lines', () => {
+    const { store, setDraft } = renderWorkbench({ draft: '  \n ' })
+    fireEvent.click(screen.getByRole('button', { name: '发送单条事项到输入框' }))
+    expect(setDraft).toHaveBeenCalledWith(stagedSingle(store))
+  })
+
+  it('stages every pending todo as bullets and skips the completed ones', () => {
+    const { store, setDraft, sendToChat } = renderWorkbench()
+    const projectId = store.getSnapshot().projects[0]!.id
+    store.actions.addTodo({ projectId, title: 'Second task', detail: 'Also durable.' })
+    const first = store.getSnapshot().projects[0]!.todos[0]!
+    act(() => {
+      store.actions.completeTodo({
+        todoId: first.id,
+        summary: 'Done first.',
+        implementationPath: [],
+        changedFiles: [],
+        verification: [],
+        completedAt: '2026-01-01T00:00:00.000Z',
+        completedBy: 'model',
+      })
+    })
+    fireEvent.click(screen.getByRole('button', { name: '发送事项到输入框' }))
+    const pending = store.getSnapshot().projects[0]!.todos.find(todo => todo.status !== 'completed')!
+    expect(setDraft).toHaveBeenCalledWith(`- ${pending.title}（todoId: ${pending.id}）\n  ${pending.detail}`)
+    expect(sendToChat).not.toHaveBeenCalled()
+  })
+
+  it('still sends the write-back request straight to the chat without staging it', async () => {
+    // Write-back is offered only on a todo this session authored.
+    const { setDraft, sendToChat } = renderWorkbench({ sourceSessionId: 'session-a' })
+    fireEvent.click(screen.getByRole('button', { name: '调用模型生成总结并写回' }))
+    await waitFor(() => { expect(sendToChat).toHaveBeenCalledTimes(1) })
+    expect(setDraft).not.toHaveBeenCalled()
   })
 })
 

@@ -258,7 +258,9 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
     if (todo.status === 'completed') return
     setError(undefined)
     try {
-      await sendToChat(todoHeading(todo) + '已执行。请调用 workbench_complete，将本次执行的整体方案、实现路径、修改文件与验证结果写回。不要重新执行任务。')
+      // The record is the whole task, so the request asks for every round of it:
+      // `workbench_complete` replaces this todo's earlier record on recall.
+      await sendToChat(todoHeading(todo) + '已执行。请调用 workbench_complete，把该事项从开始到现在的完整成果（整体方案、实现路径、修改文件与验证结果，含后续追加的修正）一次性写回；不要只写最后一轮改动，也不要重新执行任务。')
     } catch {
       setError(t('workbench.sendFailed'))
     }

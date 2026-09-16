@@ -490,10 +490,17 @@ describe('StudioWorkbench staging into the composer', () => {
 
   it('still sends the write-back request straight to the chat without staging it', async () => {
     // Write-back is offered only on a todo this session authored.
-    const { setDraft, sendToChat } = renderWorkbench({ sourceSessionId: 'session-a' })
+    const { store, setDraft, sendToChat } = renderWorkbench({ sourceSessionId: 'session-a' })
     fireEvent.click(screen.getByRole('button', { name: '调用模型生成总结并写回' }))
     await waitFor(() => { expect(sendToChat).toHaveBeenCalledTimes(1) })
     expect(setDraft).not.toHaveBeenCalled()
+    // The record is the whole task, so the request asks for every round of it:
+    // `workbench_complete` replaces this todo's earlier record on recall.
+    const todo = store.getSnapshot().projects[0]!.todos[0]!
+    const [request] = sendToChat.mock.calls[0] as [string]
+    expect(request).toContain(`Ship persistence（todoId: ${todo.id}）`)
+    expect(request).toContain('从开始到现在的完整成果')
+    expect(request).toContain('不要只写最后一轮改动')
   })
 })
 

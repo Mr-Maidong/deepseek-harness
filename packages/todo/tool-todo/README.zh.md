@@ -55,6 +55,10 @@ agent 每次更新都发送完整列表；新列表替换旧列表，因此没�
 
 任务列表属于创建它的那一个 agent 会话——subagent 与其他 agent 各自维护自己的列表，不存在跨 agent 共享列表的方式。来自 agent 会话之外的调用会被拒绝，因此 agent 会得知更新失败，而不是被静默丢弃。如果你需要多个 agent 共享同一份列表，本包不提供该能力。
 
+### 完成写回
+
+`workbench_complete` 为一个灵光工作室工作项记录一份执行结果：模型原样回显任务提示中的 `todoId`，并提交摘要、实现路径、修改文件，以及它实际运行过的验证命令。对同一 `todoId` 的后续调用会替换先前的记录，因此该记录覆盖的是整份任务——替换必须保留先前记录携带的每个文件与每条命令，丢掉其中任何一项的调用会被拒绝，并返回被丢掉的条目与被替换的记录。
+
 -----
 
 <a id="understand-the-implementation"></a>
@@ -80,8 +84,8 @@ agent 每次更新都发送完整列表；新列表替换旧列表，因此没�
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | 插件入口：`Config` schema、工具注册、`todos` 投影单元 |
-| [`src/types.ts`](src/types.ts) | `todos` 投影键声明及其载荷类型的唯一归属地 |
+| [`src/index.ts`](src/index.ts) | 插件入口：`Config` schema、`todo_write` 与 `workbench_complete` 注册、`todos` 与 `studioTodoCompletions` 投影单元 |
+| [`src/types.ts`](src/types.ts) | 两个投影键声明及其载荷类型的唯一归属地 |
 | [`src/client.ts`](src/client.ts) | 客户端命名空间对类型出口的再导出 |
 | [`src/invariant.ts`](src/invariant.ts) | 不变式伴生插件：校验持久整表快照与开放轮次归属 |
 
@@ -91,7 +95,7 @@ agent 每次更新都发送完整列表；新列表替换旧列表，因此没�
 
 ### 会话投影
 
-当组合挂载 `ctx.sessionProjections`（[`@deepseek-ai/dsh-session-projection`](../../session/session-projection/README.zh.md)）时，本包在注入的子插件中注册 `todos` 单元：投影即有效计划——最新的整份 `todo/write` 列表，首次写入前为 `null`，下一轮次开始时清空，而 `turn/end` 保留刚完成的清单。该键在此处合并进 `SessionProjectionMap`；载体通过历史尾页与 `session/projection` 推送帧提供该值。未挂载注册表的组合不受影响；单元注册见 [src/index.ts](src/index.ts)。
+当组合挂载 `ctx.sessionProjections`（[`@deepseek-ai/dsh-session-projection`](../../session/session-projection/README.zh.md)）时，本包在注入的子插件中注册 `todos` 单元：投影即有效计划——最新的整份 `todo/write` 列表，首次写入前为 `null`，下一轮次开始时清空，而 `turn/end` 保留刚完成的清单。同一处注册还提供 `studioTodoCompletions`：按 Studio 工作项 id 记录的最新 `studio/todo-complete`，首次写入前为 `null`。两个键都在此处合并进 `SessionProjectionMap`；载体通过历史尾页与 `session/projection` 推送帧提供这些值。未挂载注册表的组合不受影响；单元注册见 [src/index.ts](src/index.ts)。
 
 ### 持久日志不变式
 
@@ -126,7 +130,7 @@ agent 每次更新都发送完整列表；新列表替换旧列表，因此没�
 
 #### 模型看到什么
 
-模型会看到生成的 [`todo_write` schema](../../../docs/tool-catalog.zh.md#deepseek-aidsh-tool-todo)：一个对象，含一个必填的 `todos` 数组，元素为 `{ content, status }`，其中 `status` 为 `pending`、`in_progress` 或 `completed`。描述是组合后的整表指令，其活跃状态条款跟随 `allowParallelInProgress`。
+模型会看到生成的 [`todo_write` schema](../../../docs/tool-catalog.zh.md#deepseek-aidsh-tool-todo)：一个对象，含一个必填的 `todos` 数组，元素为 `{ content, status }`，其中 `status` 为 `pending`、`in_progress` 或 `completed`。描述是组合后的整表指令，其活跃状态条款跟随 `allowParallelInProgress`。本包还提供 `workbench_complete`，其描述说明一份记录覆盖整份任务，且对同一 `todoId` 的后续调用会替换先前记录，除非替换保留了该记录携带的每个文件与每条命令。
 
 #### Token 影响
 

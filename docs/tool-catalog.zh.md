@@ -2131,7 +2131,7 @@ todo_write 是会话所有的状态；UI 将最新的 todo/write 事件渲染为
 
 ### `workbench_complete`
 
-为一个灵光工作室工作项写入完成执行摘要。原样回显任务提示中的 todoId。仅在任务完成后调用，并只报告实际运行过的验证命令。
+为一个灵光工作室工作项写入完成执行摘要。原样回显任务提示中的 todoId。仅在任务完成后调用，并只报告实际运行过的验证命令。每次调用记录的都是整份任务：对同一 todoId 的后续调用会替换先前的记录，因此重写时要让摘要、实现路径、修改文件与验证覆盖任务做过的全部内容——每一项需求以及之后的每一次修正——而不是只写最新一次改动。若替换丢掉了先前记录已经携带的文件或命令，该调用会被拒绝。
 
 ```json
 {
@@ -2143,17 +2143,18 @@ todo_write 是会话所有的状态；UI 将最新的 todo/write 事件渲染为
     },
     "summary": {
       "type": "string",
-      "description": "User-facing result summary."
+      "description": "Complete result summary for the whole task, not only the latest change."
     },
     "implementationPath": {
       "type": "array",
-      "description": "Actual implementation steps.",
+      "description": "Every implementation step of the task, not only the latest change.",
       "items": {
         "type": "string"
       }
     },
     "changedFiles": {
       "type": "array",
+      "description": "Every file the task changed; a later call keeps the earlier entries.",
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -2173,6 +2174,7 @@ todo_write 是会话所有的状态；UI 将最新的 todo/write 事件渲染为
     },
     "verification": {
       "type": "array",
+      "description": "Every command the task actually ran; a later call keeps the earlier entries.",
       "items": {
         "type": "object",
         "additionalProperties": false,

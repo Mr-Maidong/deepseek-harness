@@ -55,6 +55,10 @@ The agent sends the ENTIRE list on every update; the new list replaces the previ
 
 The task list belongs to the one agent session that created it — subagents and other agents each keep their own list, and there is no way to share a list between agents. A call from outside an agent session is rejected, so the agent learns the update failed instead of silently writing nowhere. If you need a list shared across agents, this package does not provide it.
 
+### The completion write-back
+
+`workbench_complete` records one execution result for a Lingguang Studio work item: the model echoes the task prompt's `todoId` and submits the summary, the implementation path, the changed files, and the verification commands it actually ran. A later call for the same `todoId` replaces the earlier record, so that record covers the whole task — a replacement must keep every file and command the earlier one carried, and a call that drops one is refused with the dropped entries and the superseded record.
+
 -----
 
 <a id="understand-the-implementation"></a>
@@ -80,8 +84,8 @@ The [todo_write tool Agent Note](../../../.agents/notes/archived/feature/2026-06
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Plugin entry: `Config` schema, tool registration, `todos` projection unit |
-| [`src/types.ts`](src/types.ts) | The one home of the `todos` projection-key declaration and its payload types |
+| [`src/index.ts`](src/index.ts) | Plugin entry: `Config` schema, `todo_write` and `workbench_complete` registration, and the `todos` + `studioTodoCompletions` projection units |
+| [`src/types.ts`](src/types.ts) | The one home of both projection-key declarations and their payload types |
 | [`src/client.ts`](src/client.ts) | Client-namespace re-export of the types outlet |
 | [`src/invariant.ts`](src/invariant.ts) | Invariant companion: validates durable whole-list snapshots and open-turn ownership |
 
@@ -91,7 +95,7 @@ The plugin is a function/namespace plugin: it exports `name` / `inject` / `apply
 
 ### Session projection
 
-When the composition mounts `ctx.sessionProjections` ([`@deepseek-ai/dsh-session-projection`](../../session/session-projection/README.md)), this package registers the `todos` unit on an injected child: the projection is the standing plan — the latest whole `todo/write` list, `null` before the first write, cleared when the next turn starts while `turn/end` keeps the finished checklist visible. The key merges into `SessionProjectionMap` here; carriers serve the value on the history tail page and the `session/projection` push frame. Compositions without the registry are unaffected; see [src/index.ts](src/index.ts) for the unit registration.
+When the composition mounts `ctx.sessionProjections` ([`@deepseek-ai/dsh-session-projection`](../../session/session-projection/README.md)), this package registers the `todos` unit on an injected child: the projection is the standing plan — the latest whole `todo/write` list, `null` before the first write, cleared when the next turn starts while `turn/end` keeps the finished checklist visible. The same registration serves `studioTodoCompletions`: the latest `studio/todo-complete` record per Studio work-item id, `null` before the first write. Both keys merge into `SessionProjectionMap` here; carriers serve the values on the history tail page and the `session/projection` push frame. Compositions without the registry are unaffected; see [src/index.ts](src/index.ts) for the unit registrations.
 
 ### Durable-log invariant
 
@@ -126,7 +130,7 @@ Read these pages when the package-level contract is not enough. They move from t
 
 #### What the model sees
 
-The model sees the generated [`todo_write` schema](../../../docs/tool-catalog.md#deepseek-aidsh-tool-todo): an object with one required `todos` array of `{ content, status }` items, where `status` is `pending`, `in_progress`, or `completed`. The description is the composed whole-list instruction whose active-status clause follows `allowParallelInProgress`.
+The model sees the generated [`todo_write` schema](../../../docs/tool-catalog.md#deepseek-aidsh-tool-todo): an object with one required `todos` array of `{ content, status }` items, where `status` is `pending`, `in_progress`, or `completed`. The description is the composed whole-list instruction whose active-status clause follows `allowParallelInProgress`. The package also exposes `workbench_complete`, whose description states that one record covers the whole task and that a later call for the same `todoId` replaces the earlier record unless the replacement keeps every file and command that record carried.
 
 #### Token effect
 

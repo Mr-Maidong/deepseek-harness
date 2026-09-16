@@ -2122,7 +2122,7 @@ Source: [`packages/todo/tool-todo/src/index.ts`](../packages/todo/tool-todo/src/
 
 ### `workbench_complete`
 
-Write the completed execution summary for one Lingguang Studio work item. Echo the todoId from the task prompt exactly. Call only after the task is complete and report only verification commands actually run.
+Write the completed execution summary for one Lingguang Studio work item. Echo the todoId from the task prompt exactly. Call only after the task is complete and report only verification commands actually run. Each call records the whole task: a later call for the same todoId replaces the earlier record, so rewrite the summary, implementation path, changed files, and verification to cover everything the task did — every requirement and every later correction — rather than only the latest change. A replacement that drops a file or a command the earlier record already carries is rejected.
 
 ```json
 {
@@ -2134,17 +2134,18 @@ Write the completed execution summary for one Lingguang Studio work item. Echo t
     },
     "summary": {
       "type": "string",
-      "description": "User-facing result summary."
+      "description": "Complete result summary for the whole task, not only the latest change."
     },
     "implementationPath": {
       "type": "array",
-      "description": "Actual implementation steps.",
+      "description": "Every implementation step of the task, not only the latest change.",
       "items": {
         "type": "string"
       }
     },
     "changedFiles": {
       "type": "array",
+      "description": "Every file the task changed; a later call keeps the earlier entries.",
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -2164,6 +2165,7 @@ Write the completed execution summary for one Lingguang Studio work item. Echo t
     },
     "verification": {
       "type": "array",
+      "description": "Every command the task actually ran; a later call keeps the earlier entries.",
       "items": {
         "type": "object",
         "additionalProperties": false,

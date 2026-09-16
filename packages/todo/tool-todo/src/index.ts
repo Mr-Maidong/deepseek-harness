@@ -130,6 +130,43 @@ const todosProjectionSchema: ZodType<TodoItem[] | null> = zod.union([
   zod.null(),
 ])
 
+/** The completion lists one call submits, as the drop check reads them. */
+type CompletionEntries = {
+  changedFiles: readonly { path: string }[]
+  verification: readonly { command: string }[]
+}
+
+/**
+ * Entries an earlier completion carries that the submitted one would drop.
+ * Changed-file paths and verification commands are facts about what the task
+ * did, so a replacement keeps every one of them; implementation steps are prose
+ * and are not compared.
+ * @param earlier - the completion the previous call recorded for this todo.
+ * @param next - the completion lists this call submits.
+ * @returns the dropped file paths and commands, each empty when nothing is dropped.
+ */
+function droppedEntries(earlier: WorkbenchTodoCompletion, next: CompletionEntries): { files: string[]; commands: string[] } {
+  const paths = new Set(next.changedFiles.map(file => file.path))
+  const commands = new Set(next.verification.map(item => item.command))
+  return {
+    files: earlier.changedFiles.filter(file => !paths.has(file.path)).map(file => file.path),
+    commands: earlier.verification.filter(item => !commands.has(item.command)).map(item => item.command),
+  }
+}
+
+/**
+ * The model-facing refusal for a call that would drop recorded entries.
+ * @param earlier - the completion the previous call recorded for this todo.
+ * @param dropped - the file paths and commands the submitted record omits.
+ * @returns the error message, naming only the lists that lost entries.
+ */
+function droppedEntriesMessage(earlier: WorkbenchTodoCompletion, dropped: { files: string[]; commands: string[] }): string {
+  const missing: string[] = []
+  if (dropped.files.length > 0) missing.push(`files ${dropped.files.join(', ')}`)
+  if (dropped.commands.length > 0) missing.push(`commands ${dropped.commands.join(', ')}`)
+  return `workbench_complete would drop entries the earlier record for this todo carries: ${missing.join('; ')}. Pass the whole-task record — a replacement keeps every file the task changed and every command it ran. The earlier record, written at ${earlier.completedAt}, said: ${earlier.summary}`
+}
+
 /**
  * Register the `todo_write` tool on `ctx.tools` and the `todos` unit on
  * `ctx.sessionProjections`.
@@ -167,23 +204,55 @@ export function apply(ctx: Context, config: Config): void {
 
   ctx.tools.register(defineTool({
     name: 'workbench_complete',
-    description: 'Write the completed execution summary for one Lingguang Studio work item. Echo the todoId from the task prompt exactly. Call only after the task is complete and report only verification commands actually run.',
+    description: 'Write the completed execution summary for one Lingguang Studio work item. Echo the todoId from the task prompt exactly. Call only after the task is complete and report only verification commands actually run. Each call records the whole task: a later call for the same todoId replaces the earlier record, so rewrite the summary, implementation path, changed files, and verification to cover everything the task did — every requirement and every later correction — rather than only the latest change. A replacement that drops a file or a command the earlier record already carries is rejected.',
     parameters: {
       todoId: { type: 'string', required: true, description: 'Stable todo id from the task prompt.' },
-      summary: { type: 'string', required: true, description: 'User-facing result summary.' },
-      implementationPath: { type: 'array', required: true, items: { type: 'string' }, description: 'Actual implementation steps.' },
-      changedFiles: { type: 'array', required: true, items: { type: 'object', additionalProperties: false, properties: { path: { type: 'string', required: true }, purpose: { type: 'string', required: true } } } },
-      verification: { type: 'array', required: true, items: { type: 'object', additionalProperties: false, properties: { command: { type: 'string', required: true }, result: { type: 'string', required: true, enum: ['passed', 'failed', 'skipped'] }, note: { type: 'string' } } } },
+      summary: { type: 'string', required: true, description: 'Complete result summary for the whole task, not only the latest change.' },
+      implementationPath: { type: 'array', required: true, items: { type: 'string' }, description: 'Every implementation step of the task, not only the latest change.' },
+      changedFiles: { type: 'array', required: true, description: 'Every file the task changed; a later call keeps the earlier entries.', items: { type: 'object', additionalProperties: false, properties: { path: { type: 'string', required: true }, purpose: { type: 'string', required: true } } } },
+      verification: { type: 'array', required: true, description: 'Every command the task actually ran; a later call keeps the earlier entries.', items: { type: 'object', additionalProperties: false, properties: { command: { type: 'string', required: true }, result: { type: 'string', required: true, enum: ['passed', 'failed', 'skipped'] }, note: { type: 'string' } } } },
     },
-    output: { schema: { type: 'object', additionalProperties: false, properties: { todoId: { type: 'string', required: true }, recorded: { type: 'boolean', required: true } } }, render: (_args, value) => [{ type: 'text', text: `Recorded completion for todo ${value.todoId}.` }] },
+    output: {
+      schema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          todoId: { type: 'string', required: true },
+          recorded: { type: 'boolean', required: true },
+          replaced: { type: 'boolean', required: true },
+          replacedAt: { type: 'string' },
+          replacedSummary: { type: 'string' },
+        },
+      },
+      render: (_args, value) => [{
+        type: 'text',
+        text: value.replaced
+          ? `Recorded completion for todo ${value.todoId}, replacing the record written at ${value.replacedAt}. Make sure this record covers the whole task: if the summary or any list describes only the latest change, call workbench_complete again with the complete record. The replaced record said: ${value.replacedSummary}`
+          : `Recorded completion for todo ${value.todoId}.`,
+      }],
+    },
     execute(args, exec) {
       const todoId = args.todoId.trim(); const summary = args.summary.trim()
       if (todoId === '') throw new Error('workbench_complete requires a non-empty todoId')
       if (summary === '') throw new Error('workbench_complete requires a non-empty summary')
       if (!exec.agent) throw new Error('workbench_complete requires an owning agent session')
+      // The earlier record comes from the calling session's own projection, so
+      // the check reads exactly what this tool's previous calls wrote there.
+      const earlier = ctx.sessionProjections
+        .snapshot(exec.agent.session, ['studioTodoCompletions'])
+        .values.studioTodoCompletions?.[todoId]
+      if (earlier !== undefined) {
+        const dropped = droppedEntries(earlier, args)
+        if (dropped.files.length > 0 || dropped.commands.length > 0) throw new Error(droppedEntriesMessage(earlier, dropped))
+      }
       const data: WorkbenchTodoCompletion = { ...args, todoId, summary, completedAt: new Date().toISOString(), completedBy: 'model' }
       exec.agent.session.append('studio/todo-complete', data)
-      return Promise.resolve({ todoId, recorded: true })
+      return Promise.resolve({
+        todoId,
+        recorded: true,
+        replaced: earlier !== undefined,
+        ...(earlier === undefined ? {} : { replacedAt: earlier.completedAt, replacedSummary: earlier.summary }),
+      })
     },
     presentCall: args => ({ card: 'generic', title: 'Write Lingguang completion', kind: 'other', rawInput: args }),
   }))

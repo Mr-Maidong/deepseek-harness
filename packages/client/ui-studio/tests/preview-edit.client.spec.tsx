@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 // The card opens a workspace file as a line-numbered editor: the buffer is read
-// with the version it is based on, Ctrl+S (or the Save control) writes it back
-// under that version, and a file that changed underneath is refused rather than
-// clobbered. The card also suppresses the browser's own context menu.
+// with the version it is based on, Ctrl+S (or the dot before the file name)
+// writes it back under that version, and a file that changed underneath is
+// refused rather than clobbered. The card also suppresses the browser's own
+// context menu.
 import type {} from '../src/client/index.ts'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ComponentProps } from 'react'
@@ -40,7 +41,9 @@ function card(overrides: Partial<Record<typeof MEMBERS[number], unknown>> = {}, 
 }
 
 const editor = (): HTMLTextAreaElement => screen.getByRole('textbox', { name: '编辑文件内容' }) as HTMLTextAreaElement
-const saveButton = (): HTMLButtonElement => screen.getByRole('button', { name: '保存' }) as HTMLButtonElement
+const saveDot = (): HTMLButtonElement => screen.getByRole('button', { name: '保存' }) as HTMLButtonElement
+/** The dot is gold exactly while the buffer differs from the file. */
+const dotIsGold = (): boolean => saveDot().hasAttribute('data-modified')
 const ctrlS = (target: HTMLElement): void => { fireEvent.keyDown(target, { key: 's', ctrlKey: true }) }
 
 afterEach(cleanup)
@@ -58,7 +61,7 @@ describe('PreviewCard editor', () => {
     // Always editable: no control switches the card into (or out of) an edit mode.
     expect(screen.queryByRole('button', { name: '编辑' })).toBeNull()
     expect(screen.queryByRole('button', { name: '取消' })).toBeNull()
-    expect(saveButton().disabled).toBe(true)
+    expect(saveDot().disabled).toBe(true)
   })
 
   it('lands the caret in the buffer as soon as it opens, and takes none without a write face', async () => {
@@ -71,16 +74,31 @@ describe('PreviewCard editor', () => {
     expect(document.activeElement).not.toBe(editor())
   })
 
+  it('draws the modified state as a dot before the file name, gold only while the buffer differs', async () => {
+    card()
+    await screen.findByRole('textbox', { name: '编辑文件内容' })
+    // The dot is the header's first child and the file name follows it; its
+    // circle is the control's own content, so the control carries no text.
+    expect(saveDot().querySelector('circle')).not.toBeNull()
+    expect(saveDot().nextElementSibling?.textContent).toBe(PATH)
+    // Unmodified: muted, so the dot reports that the buffer matches the file.
+    expect(dotIsGold()).toBe(false)
+    fireEvent.change(editor(), { target: { value: 'mine' } })
+    expect(dotIsGold()).toBe(true)
+    fireEvent.click(saveDot())
+    await waitFor(() => { expect(dotIsGold()).toBe(false) })
+  })
+
   it('saves the edited buffer with Ctrl+S and keeps the next save guarded by the new version', async () => {
     const injected = card()
     await screen.findByRole('textbox', { name: '编辑文件内容' })
     fireEvent.change(editor(), { target: { value: 'export const x = 1\n' } })
-    expect(saveButton().disabled).toBe(false)
+    expect(saveDot().disabled).toBe(false)
     ctrlS(editor())
     await waitFor(() => { expect(injected.saveEdit).toHaveBeenCalledWith(PATH, 'export const x = 1\n', 'v1') })
     await waitFor(() => { expect(injected.reloadPreview).toHaveBeenCalledWith(PATH) })
     // The written version is the next guard, and a saved buffer is clean again.
-    await waitFor(() => { expect(saveButton().disabled).toBe(true) })
+    await waitFor(() => { expect(saveDot().disabled).toBe(true) })
     fireEvent.change(editor(), { target: { value: 'export const y = 2\n' } })
     ctrlS(editor())
     await waitFor(() => { expect(injected.saveEdit).toHaveBeenLastCalledWith(PATH, 'export const y = 2\n', 'v2') })
@@ -90,7 +108,7 @@ describe('PreviewCard editor', () => {
     const injected = card()
     await screen.findByRole('textbox', { name: '编辑文件内容' })
     fireEvent.change(editor(), { target: { value: 'mine' } })
-    fireEvent.click(saveButton())
+    fireEvent.click(saveDot())
     await waitFor(() => { expect(injected.saveEdit).toHaveBeenCalledWith(PATH, 'mine', 'v1') })
     fireEvent.change(editor(), { target: { value: 'mine again' } })
     fireEvent.keyDown(editor(), { key: 's', metaKey: true })
@@ -118,13 +136,16 @@ describe('PreviewCard editor', () => {
     await screen.findByRole('textbox', { name: '编辑文件内容' })
     fireEvent.change(editor(), { target: { value: 'mine' } })
     ctrlS(editor())
-    expect(saveButton().textContent).toBe('保存中…')
-    expect(saveButton().disabled).toBe(true)
+    // The write in flight keeps the dot gold — the buffer still differs from the
+    // file until the write lands — and its tooltip names the step.
+    expect(dotIsGold()).toBe(true)
+    expect(saveDot().title).toBe('保存中…')
+    expect(saveDot().disabled).toBe(true)
     // The write in flight is not restarted by another press.
     ctrlS(editor())
     expect(injected.saveEdit).toHaveBeenCalledOnce()
     release?.({ ok: true, version: 'v2' })
-    await waitFor(() => { expect(saveButton().disabled).toBe(true) })
+    await waitFor(() => { expect(saveDot().disabled).toBe(true) })
   })
 
   it('keeps the edited buffer and offers a reload when the file changed underneath', async () => {

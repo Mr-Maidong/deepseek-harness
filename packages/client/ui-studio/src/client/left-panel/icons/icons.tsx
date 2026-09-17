@@ -75,3 +75,8 @@ export function SendIcon(props: IconProps): ReactElement {
 export function CloseIcon(props: IconProps): ReactElement {
   return <Icon {...props}><path d="m4.25 4.25 7.5 7.5M11.75 4.25l-7.5 7.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></Icon>
 }
+
+/** File-modified dot: filled, so its container's color reports the buffer's state. */
+export function ModifiedDotIcon(props: IconProps): ReactElement {
+  return <Icon {...props}><circle cx="8" cy="8" r="3.25" fill="currentColor" /></Icon>
+}

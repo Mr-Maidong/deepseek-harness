@@ -38,11 +38,11 @@
 .language { flex: none; color: var(--studio-gold); }
 .close { flex: none; margin-left: auto; display: grid; width: 22px; height: 22px; place-items: center; padding: 0; border: 1px solid var(--studio-line); border-radius: 50%; corner-shape: round; color: var(--studio-muted); background: transparent; cursor: pointer; }
 .close:hover { color: var(--studio-gold); border-color: var(--studio-gold); }
-/* The Save control sits before the close control, which keeps `margin-left:
-   auto` and therefore stays at the far edge. Ctrl+S saves from the editor. */
-.action { flex: none; padding: 3px 10px; border: 1px solid var(--studio-line); border-radius: 6px; color: var(--studio-muted); background: transparent; font: inherit; cursor: pointer; }
-.action:hover:not(:disabled) { color: var(--studio-gold); border-color: var(--studio-gold); }
-.action:disabled { opacity: 0.5; cursor: default; }
+/* The file's save state, drawn as the dot before its name: gold once the buffer
+   differs from the file, muted while the two still match. The dot saves too, so
+   a pointer keeps the control Ctrl+S already gives the editor. */
+.stateDot { margin: 2px -8px 0 0; flex: none; display: grid; width: 16px; height: 16px; place-items: center; padding: 0; border: 0; color: var(--studio-muted); background: transparent; cursor: default; }
+.stateDot[data-modified] { color: var(--studio-gold); cursor: pointer; }
 /* A refused or failed edit step, above the buffer: the message plus the
    reload affordance for a file that changed under the buffer. */
 .editFailure { flex: none; display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-bottom: 1px solid var(--studio-line); color: var(--studio-gold); background: var(--studio-gold-wash); font-size: 12px; }

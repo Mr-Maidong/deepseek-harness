@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { StudioPreview } from '../frame/contract.ts'
-import { CloseIcon } from '../left-panel/icons/icons.tsx'
+import { CloseIcon, ModifiedDotIcon } from '../left-panel/icons/icons.tsx'
 import { NS } from '../left-panel/locales.ts'
 import css from './PreviewCard.module.css'
 
@@ -77,13 +77,14 @@ const LINE_HEIGHT_PX = 22
 /**
  * Floating editor card for a selected workspace file, anchored above the
  * composer bar. Opening a source file reads it and shows a line-numbered
- * editor; Ctrl+S (or the Save control) writes the complete text back under the
- * version it was read at, and a file that changed since is refused with a
- * reload offer rather than overwritten. Selecting text or clicking a line
- * number raises an "insert reference" bubble whose inserted text quotes the
- * file path and the selected line range. Rendered artifacts (`iframe`) open
- * read-only, and the card suppresses the browser's own context menu so a
- * future card menu can own that gesture.
+ * editor; Ctrl+S (or a click on the dot before the file name) writes the
+ * complete text back under the version it was read at, and a file that changed
+ * since is refused with a reload offer rather than overwritten. That dot is
+ * gold while the buffer differs from the file and muted while the two match.
+ * Selecting text or clicking a line number raises an "insert reference" bubble
+ * whose inserted text quotes the file path and the selected line range. Rendered
+ * artifacts (`iframe`) open read-only, and the card suppresses the browser's own
+ * context menu so a future card menu can own that gesture.
  */
 export function PreviewCard({
   preview, onClose, t, insertReference, loadForEdit, saveEdit, reloadPreview,
@@ -250,18 +251,19 @@ export function PreviewCard({
     onContextMenu={(event) => { event.preventDefault() }}
   >
     <header className={css.header}>
-      <span className={css.path}>{preview.path}</span>
-      {preview.kind === 'code' && <span className={css.language}>{preview.status === 'ready' ? preview.language ?? t('preview.plain') : ''}</span>}
       {code !== undefined && saveEdit !== undefined && buffer !== undefined && (
         <button
           type="button"
-          className={css.action}
+          className={css.stateDot}
+          data-modified={dirty || undefined}
           onClick={() => { save(buffer, saveEdit) }}
           disabled={!dirty || saving}
           aria-label={t('preview.save')}
-          title={t('preview.saveHint')}
-        >{saving ? t('preview.saving') : t('preview.save')}</button>
+          title={saving ? t('preview.saving') : t('preview.saveHint')}
+        ><ModifiedDotIcon /></button>
       )}
+      <span className={css.path}>{preview.path}</span>
+      {preview.kind === 'code' && <span className={css.language}>{preview.status === 'ready' ? preview.language ?? t('preview.plain') : ''}</span>}
       <button type="button" className={css.close} aria-label={t('preview.close')} title={t('preview.close')} onClick={onClose}><CloseIcon /></button>
     </header>
     {failure !== undefined && (

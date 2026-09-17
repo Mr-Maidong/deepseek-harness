@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { MarkdownText, Modal, relativeTime } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { PropsLocale, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
 import type { WorkbenchTodoCompletion } from '@deepseek-ai/dsh-tool-todo/client'
@@ -55,6 +55,25 @@ function todoMessage(todo: ProjectTodo, detailIndent: string): string {
 function stagedDraft(draft: string, text: string): string {
   const typed = draft.replace(/\s+$/, '')
   return typed === '' ? text : typed + '\n' + text
+}
+
+/** Whether the todo list still has content past each end; its fades read this. */
+interface TodoListEnds {
+  readonly up: boolean
+  readonly down: boolean
+}
+
+const TODO_LIST_AT_REST: TodoListEnds = { up: false, down: false }
+
+/**
+ * Ends of the todo list that can still scroll. The 1px tolerance keeps a
+ * fractional-pixel layout from reporting an end that is already at rest.
+ */
+function todoListEnds(list: HTMLElement): TodoListEnds {
+  return {
+    up: list.scrollTop > 1,
+    down: list.scrollTop < list.scrollHeight - list.clientHeight - 1,
+  }
 }
 
 /**
@@ -117,6 +136,28 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
     () => projects.find(project => project.id === activeProjectId) ?? projects[0],
     [projects, activeProjectId],
   )
+
+  const [listEnds, setListEnds] = useState<TodoListEnds>(TODO_LIST_AT_REST)
+  const listRef = useRef<HTMLDivElement | null>(null)
+
+  /** Re-read the list's scrollable ends; state moves only when one of them does. */
+  const syncListEnds = (): void => {
+    const list = listRef.current
+    if (list === null) return
+    const next = todoListEnds(list)
+    setListEnds(current => current.up === next.up && current.down === next.down ? current : next)
+  }
+
+  // Adding, expanding, or collapsing a card moves an overflow edge with no
+  // scroll event, so every render re-reads both ends; a resize moves them too.
+  useEffect(syncListEnds)
+  useEffect(() => {
+    const list = listRef.current
+    if (list === null || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(syncListEnds)
+    observer.observe(list)
+    return () => { observer.disconnect() }
+  }, [])
 
   // Uncompleted cards stay pinned above completed ones, and each group lists
   // most-recently-updated first; equal timestamps keep store order.
@@ -295,7 +336,7 @@ export function StudioWorkbench(props: StudioWorkbenchProps): React.ReactElement
     {projectDraftOpen && <form className={css.inlineForm} onSubmit={(event) => { event.preventDefault(); addProject() }}><input value={projectTitle} onChange={(event) => { setProjectTitle(event.target.value) }} placeholder={t('workbench.projectPrompt')} aria-label={t('workbench.projectPrompt')} autoFocus /><button className={css.textButton} type="submit" disabled={projectTitle.trim() === ''}>{t('workbench.addProject')}</button></form>}
     {activeProject === undefined && <div className={css.emptyState}><span className={css.emptyArtwork} aria-hidden="true" /></div>}
     {activeProject !== undefined && <>
-      <div className={css.todoList}>
+      <div ref={listRef} className={[css.todoList, listEnds.up ? css.fadeTop : '', listEnds.down ? css.fadeBottom : ''].filter(Boolean).join(' ')} onScroll={syncListEnds}>
         {todos.length === 0 && <div className={css.emptyState}><span className={css.emptyArtwork} aria-hidden="true" /></div>}
         {todos.map(todo => <article className={css.todoCard} key={todo.id} data-todoid={todo.id} data-done={todo.status === 'completed' || undefined}>
           <div className={css.todoCardHead}>

@@ -31,13 +31,25 @@ if (cardClass === undefined) throw new Error('todoCard class missing from Workbe
 const titleClass = css.todoTitle
 if (titleClass === undefined) throw new Error('todoTitle class missing from Workbench.module.css')
 
+const listClass = css.todoList
+if (listClass === undefined) throw new Error('todoList class missing from Workbench.module.css')
+
+const fadeTopClass = css.fadeTop
+if (fadeTopClass === undefined) throw new Error('fadeTop class missing from Workbench.module.css')
+
+const fadeBottomClass = css.fadeBottom
+if (fadeBottomClass === undefined) throw new Error('fadeBottom class missing from Workbench.module.css')
+
 /** Card titles in rendered (top-to-bottom) order. */
 function renderedCardTitles(): string[] {
   return [...document.querySelectorAll(`.${cardClass} .${titleClass}`)].map(title => title.textContent ?? '')
 }
 
 beforeEach(() => { localStorage.clear() })
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.unstubAllGlobals()
+})
 
 function completion(todoId: string, summary: string, completedAt: string): WorkbenchTodoCompletion {
   return {
@@ -435,6 +447,84 @@ describe('StudioWorkbench completion reconcile', () => {
     fireEvent.click(screen.getByRole('button', { name: '展开详情' }))
     expect(body.hasAttribute('data-collapsed')).toBe(false)
     expect(screen.getByText('Shipped the fold.')).toBeTruthy()
+  })
+})
+
+describe('StudioWorkbench todo list end fades', () => {
+  /** Scroll metrics jsdom never lays out: the list as a scroller taller than its box. */
+  function scrollable(list: HTMLElement, scrollHeight: number, clientHeight: number): void {
+    Object.defineProperty(list, 'scrollHeight', { value: scrollHeight, configurable: true })
+    Object.defineProperty(list, 'clientHeight', { value: clientHeight, configurable: true })
+  }
+
+  it('fades only the ends the list can still scroll toward', () => {
+    renderWorkbench()
+    const list = document.querySelector(`.${listClass}`) as HTMLElement
+    // Content that fits its scrollport scrolls nowhere, so neither end fades.
+    expect(list.className).not.toContain(fadeTopClass)
+    expect(list.className).not.toContain(fadeBottomClass)
+
+    scrollable(list, 600, 200)
+    fireEvent.scroll(list)
+    expect(list.className).not.toContain(fadeTopClass)
+    expect(list.className).toContain(fadeBottomClass)
+
+    // Mid-list: each end hides a card.
+    list.scrollTop = 200
+    fireEvent.scroll(list)
+    expect(list.className).toContain(fadeTopClass)
+    expect(list.className).toContain(fadeBottomClass)
+
+    // Last screen: only the top end still hides a card.
+    list.scrollTop = 400
+    fireEvent.scroll(list)
+    expect(list.className).toContain(fadeTopClass)
+    expect(list.className).not.toContain(fadeBottomClass)
+
+    // Re-reading ends that did not move leaves the classes alone.
+    fireEvent.scroll(list)
+    expect(list.className).toContain(fadeTopClass)
+    expect(list.className).not.toContain(fadeBottomClass)
+  })
+
+  it('re-reads the ends when the list box resizes, and stops watching on unmount', () => {
+    const observed: Element[] = []
+    const disconnect = vi.fn()
+    let resize: ResizeObserverCallback | undefined
+    class ResizeObserverStub {
+      constructor(callback: ResizeObserverCallback) { resize = callback }
+      observe(target: Element): void { observed.push(target) }
+      disconnect(): void { disconnect() }
+    }
+    vi.stubGlobal('ResizeObserver', ResizeObserverStub)
+
+    const { unmount } = renderWorkbench()
+    const list = document.querySelector(`.${listClass}`) as HTMLElement
+    expect(observed).toEqual([list])
+
+    // A panel resize moves the overflow edge with no scroll and no render.
+    scrollable(list, 600, 200)
+    act(() => { resize!([], {} as ResizeObserver) })
+    expect(list.className).toContain(fadeBottomClass)
+
+    unmount()
+    expect(disconnect).toHaveBeenCalledTimes(1)
+  })
+
+  it('fades nothing while the workspace has no project, because it renders no list', () => {
+    const store = createProjectTodoStore().create('workspace-1')
+    const projection = createSnapshotStore<{ value: Record<string, WorkbenchTodoCompletion> | null | undefined }>({ value: undefined })
+    const useProjection = (_key: string, selector?: (v: unknown) => unknown) =>
+      bindSnapshotSelector(projection)(s => (selector ?? (v => v))(s.value))
+    const props = workbenchProps({
+      store,
+      useProjection,
+      composer: composerStubs(''),
+      sendToChat: vi.fn(async () => {}),
+    })
+    const view = render(<StudioWorkbench {...props} />)
+    expect(document.querySelector(`.${listClass}`)).toBeNull()
+    view.unmount()
   })
 })
 

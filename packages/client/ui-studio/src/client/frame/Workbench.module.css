@@ -219,6 +219,26 @@ textarea:focus-visible {
   scrollbar-color: var(--studio-line) transparent;
 }
 
+/* Gradient fades over the ends that can still scroll: the panel clips the list,
+   so a card cut off at the edge would otherwise read as the list's end. */
+.fadeTop {
+  mask-image: linear-gradient(to bottom, transparent 0, #000 16px, #000 100%);
+}
+
+.fadeBottom {
+  mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 16px), transparent 100%);
+}
+
+.fadeTop.fadeBottom {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 16px,
+    #000 calc(100% - 16px),
+    transparent 100%
+  );
+}
+
 .todoList::-webkit-scrollbar { width: 6px; }
 .todoList::-webkit-scrollbar-thumb { background: transparent; }
 .todoList:hover::-webkit-scrollbar-thumb,

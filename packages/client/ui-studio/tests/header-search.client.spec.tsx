@@ -192,6 +192,28 @@ describe('HeaderSearch', () => {
     })
   })
 
+  it('opens a media match in the card\'s player without a text read', async () => {
+    const mediaResult: WorkspaceSearchResult = {
+      ...result,
+      files: [{ path: `${WS_ROOT}/assets/logo.png`, matches: result.files[0]!.matches }],
+    }
+    const searchWorkspace = vi.fn(async () => mediaResult)
+    const readFile = vi.fn()
+    const { onPreview } = renderSearch({ searchWorkspace, readFile })
+    const input = openPanel()
+    fireEvent.change(input, { target: { value: 'hello' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    fireEvent.click(await screen.findByRole('button', { name: /1:17/ }))
+    expect(onPreview).toHaveBeenCalledTimes(1)
+    expect(onPreview).toHaveBeenCalledWith({
+      path: `${WS_ROOT}/assets/logo.png`, status: 'ready', kind: 'image', mediaType: 'image/png',
+    })
+    expect(readFile).not.toHaveBeenCalled()
+    // The panel closes behind the card whatever kind the match opens, and a
+    // media path carries no line to land on.
+    await waitFor(() => { expect(screen.queryByRole('searchbox')).toBeNull() })
+  })
+
   it('only the latest request commits when an earlier one settles late', async () => {
     let releaseFirst: ((value: WorkspaceSearchResult) => void) | undefined
     const searchWorkspace = vi.fn((_id: string, query: string) => {

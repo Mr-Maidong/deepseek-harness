@@ -2586,7 +2586,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     ],
     replaceRisk: 'shadows-shipped-ui',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'studio.center.editor\', () => ctx.slots.register(\n      { name: \'studio.center.editor\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-    source: 'packages/client/ui-studio/src/client/index.ts:89',
+    source: 'packages/client/ui-studio/src/client/index.ts:90',
   },
   {
     key: 'studio.center.toolbar',
@@ -2622,7 +2622,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     occupants: [],
     replaceRisk: 'none',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'studio.center.toolbar\', () => ctx.slots.register(\n      { name: \'studio.center.toolbar\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-    source: 'packages/client/ui-studio/src/client/index.ts:91',
+    source: 'packages/client/ui-studio/src/client/index.ts:92',
   },
   {
     key: 'studio.left.main',
@@ -2650,7 +2650,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     occupants: [],
     replaceRisk: 'none',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'studio.left.main\', () => ctx.slots.register(\n      { name: \'studio.left.main\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-    source: 'packages/client/ui-studio/src/client/index.ts:81',
+    source: 'packages/client/ui-studio/src/client/index.ts:82',
   },
   {
     key: 'studio.navigation',
@@ -2680,7 +2680,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     occupants: [],
     replaceRisk: 'none',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'studio.navigation\', () => ctx.slots.register(\n      { name: \'studio.navigation\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-    source: 'packages/client/ui-studio/src/client/index.ts:79',
+    source: 'packages/client/ui-studio/src/client/index.ts:80',
   },
   {
     key: 'studio.status',
@@ -2710,7 +2710,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     occupants: [],
     replaceRisk: 'none',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'studio.status\', () => ctx.slots.register(\n      { name: \'studio.status\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-    source: 'packages/client/ui-studio/src/client/index.ts:85',
+    source: 'packages/client/ui-studio/src/client/index.ts:86',
   },
   {
     key: 'studio.workbench',
@@ -2750,7 +2750,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     ],
     replaceRisk: 'shadows-shipped-ui',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'studio.workbench\', () => ctx.slots.register(\n      { name: \'studio.workbench\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-    source: 'packages/client/ui-studio/src/client/index.ts:87',
+    source: 'packages/client/ui-studio/src/client/index.ts:88',
   },
   {
     key: 'studio.workspace',
@@ -2784,7 +2784,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     ],
     replaceRisk: 'shadows-shipped-ui',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'studio.workspace\', () => ctx.slots.register(\n      { name: \'studio.workspace\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-    source: 'packages/client/ui-studio/src/client/index.ts:83',
+    source: 'packages/client/ui-studio/src/client/index.ts:84',
   },
   {
     key: 'studio.workspace.directoryFlow',

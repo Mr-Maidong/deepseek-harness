@@ -10,7 +10,7 @@ The Studio floating read-only preview card could only show source as code. The s
 
 ## Decision
 
-The `StudioPreview` owner data gains a `kind` discriminator: `'code'` (the existing language-tagged source view) or `'iframe'` (a sandboxed frame embedding the produced content). Every status carries a kind so the card stays consistent while a read is loading or has failed. `CodePreview` was renamed `PreviewCard` and dispatches on `kind`: code kinds render the `<pre>/<code>` source view; iframe kinds render a `<iframe>` with `srcDoc` set to the content inside a sandbox (`allow-scripts allow-forms allow-popups`, deliberately without `allow-same-origin`) so scripts run in an opaque origin and model-produced HTML cannot reach the app origin. The file tree picks the kind from the selected file's extension — `.html`/`.htm` open as iframe, everything else as code — so selecting a produced HTML file immediately shows the rendered artifact instead of raw source, with no new user-visible control. The card's `aria-label`/title region stays localized (`preview.title` vs the new `preview.html`).
+The `StudioPreview` owner data gains a `kind` discriminator: `'code'` (the existing language-tagged source view) or `'iframe'` (a sandboxed frame embedding the produced content). Every status carries a kind so the card stays consistent while a read is loading or has failed. `CodePreview` was renamed `PreviewCard` and dispatches on `kind`: code kinds render the `<pre>/<code>` source view; iframe kinds render a `<iframe>` with `srcDoc` set to the content inside a sandbox (`allow-scripts allow-forms allow-popups`, deliberately without `allow-same-origin`) so scripts run in an opaque origin and model-produced HTML cannot reach the app origin. The file tree picks the kind from the selected file's extension — `.html`/`.htm` open as iframe, everything else as code — so selecting a produced HTML file immediately shows the rendered artifact instead of raw source, with no new user-visible control. The kind set has since grown to images, videos, and the refusal for binary formats, decided by `previewKindFor(path)` in `frame/contract.ts`; [that decision](2026-09-18-studio-media-preview.md) owns the current set and the flow that publishes it. The card's `aria-label`/title region stays localized (`preview.title` vs the new `preview.html`).
 
 ## Alternatives considered
 
@@ -22,7 +22,7 @@ The `StudioPreview` owner data gains a `kind` discriminator: `'code'` (the exist
 
 - The card is now a universal, kind-determined container: adding another display mode is a new kind + a render branch, no change to the floating card or slot wiring.
 - Produced HTML files now render (sandboxed, non-interactive host access) instead of showing as source.
-- `kind` appears on every `StudioPreview` status, so all preview producers must set it; the file tree is the one producer today.
+- `kind` appears on every `StudioPreview` status, so all preview producers must set it; the file tree was the only producer then, and the header search and the chat opener later classified through the same predicate.
 - Locale keys grew by one (`preview.html`) in both dictionaries; the region label/aria-label localizes "HTML 预览".
 
 ## Testing

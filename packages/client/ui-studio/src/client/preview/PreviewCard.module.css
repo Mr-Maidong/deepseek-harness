@@ -99,6 +99,16 @@
 .stage { flex: none; display: grid; width: 100%; aspect-ratio: 16 / 10; }
 .stageFrame { width: 100%; height: 100%; border: 0; }
 .stageStatus { display: grid; place-items: center; padding: 14px; color: var(--studio-muted); font-size: 12px; }
+/* A media file's card fills the column and letterboxes the bytes it read: the
+   stage owns the remaining height, and the picture or video scales to fit it
+   without ever upscaling past its own size (a small image stays small, a video
+   keeps its ratio inside the box). The status the card shows before and after a
+   refused read sits on that same surface, so a failure never resizes the card. */
+.mediaStage { flex: 1; place-items: center; min-height: 0; padding: 14px; overflow: hidden; background: var(--studio-input); }
+.mediaVideo, .mediaImage { width: 100%; height: 100%; object-fit: contain; }
+.mediaStatus { display: flex; flex-direction: column; align-items: center; gap: 10px; color: var(--studio-muted); font-size: 13px; }
+/* The retry the failure message offers, drawn like the edit banner's own. */
+.mediaStatus button { padding: 3px 10px; border: 1px solid var(--studio-gold); border-radius: 6px; color: var(--studio-ink); background: var(--studio-panel); font: inherit; font-size: 12px; cursor: pointer; }
 /* Reuse the file-tree scrollbar: a thin bar that stays invisible until the
    surface is hovered or focused, then shows the studio line color. */
 .editorWrap,

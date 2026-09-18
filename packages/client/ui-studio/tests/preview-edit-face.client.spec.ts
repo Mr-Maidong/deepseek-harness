@@ -6,7 +6,9 @@
  */
 import { describe, expect, it, vi } from 'vitest'
 import { SessionId } from '@deepseek-ai/dsh-session/types'
-import { createPreviewEditFace, decodeBase64Text, type PreviewEditFaceOptions, type SessionSelection } from '../src/client/preview/edit-face.ts'
+import { decodeBase64Text } from '../src/client/preview/base64.ts'
+import { createPreviewEditFace, type PreviewEditFaceOptions } from '../src/client/preview/edit-face.ts'
+import type { SessionSelection } from '../src/client/preview/session-selection.ts'
 
 const SESSION = SessionId('s-edit')
 const PATH = '/workspace/main.ts'

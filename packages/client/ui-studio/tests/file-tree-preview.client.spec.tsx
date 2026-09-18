@@ -101,6 +101,36 @@ describe('FileTree', () => {
     expect(onPreview).toHaveBeenLastCalledWith({ path: '/workspace/main.ts', status: 'error', kind: 'code' })
   })
 
+  it('opens a media file without the tree reading any text', async () => {
+    const onPreview = vi.fn()
+    const readFile = vi.fn()
+    const mediaListing: DirectoryListing = {
+      path: '/workspace', home: '/workspace', crumbs: [], truncated: false,
+      entries: [{ kind: 'file', name: 'logo.png', path: '/workspace/logo.png', hidden: false }],
+    }
+    render(<FileTree {...globalStandardProps} t={t} activeSection="project" rootPath="/workspace" listDirectory={vi.fn(async () => mediaListing)} readFile={readFile} onPreview={onPreview} expandedPaths={[]} onToggleExpanded={vi.fn()} />)
+    fireEvent.click(await screen.findByRole('button', { name: 'logo.png' }))
+    // The card reads media bytes itself, so one publication carries the path and
+    // the type, and the bounded text read never runs.
+    expect(readFile).not.toHaveBeenCalled()
+    expect(onPreview).toHaveBeenCalledTimes(1)
+    expect(onPreview).toHaveBeenCalledWith({ path: '/workspace/logo.png', status: 'ready', kind: 'image', mediaType: 'image/png' })
+  })
+
+  it('refuses a binary format rather than opening it as source', async () => {
+    const onPreview = vi.fn()
+    const readFile = vi.fn()
+    const binaryListing: DirectoryListing = {
+      path: '/workspace', home: '/workspace', crumbs: [], truncated: false,
+      entries: [{ kind: 'file', name: 'report.pdf', path: '/workspace/report.pdf', hidden: false }],
+    }
+    render(<FileTree {...globalStandardProps} t={t} activeSection="project" rootPath="/workspace" listDirectory={vi.fn(async () => binaryListing)} readFile={readFile} onPreview={onPreview} expandedPaths={[]} onToggleExpanded={vi.fn()} />)
+    fireEvent.click(await screen.findByRole('button', { name: 'report.pdf' }))
+    expect(readFile).not.toHaveBeenCalled()
+    expect(onPreview).toHaveBeenCalledTimes(1)
+    expect(onPreview).toHaveBeenCalledWith({ path: '/workspace/report.pdf', status: 'error', kind: 'binary' })
+  })
+
   it('reveals an insert-reference bubble over a buffer selection and quotes file + line range', () => {
     const onClose = vi.fn()
     const insertReference = vi.fn()

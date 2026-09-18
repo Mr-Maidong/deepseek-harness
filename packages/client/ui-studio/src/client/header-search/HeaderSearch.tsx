@@ -15,7 +15,8 @@ import type { WorkspaceId, WorkspaceSearchResult } from '@deepseek-ai/dsh-api-wo
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-workspace/client'
 import { IconSearchOutline16, useAnchoredPosition, useDismissOnOutsidePointer } from '@deepseek-ai/dsh-client-ui-primitives'
-import { previewKindFor, type StudioPreview } from '../frame/contract.ts'
+import type { StudioPreview } from '../frame/contract.ts'
+import { openPreview } from '../preview/open-preview.ts'
 import { NS } from './locales.ts'
 import css from './HeaderSearch.module.css'
 
@@ -144,24 +145,13 @@ export function HeaderSearch(props: HeaderSearchProps): React.ReactElement {
       : absolute
 
   const openMatch = useCallback((path: string, line: number, column: number) => {
-    const kind = previewKindFor(path)
-    onPreview({ path, status: 'loading', kind })
     setOpen(false)
-    void readFile(path).then(({ content, language }) => {
-      // A rendered artifact has no source line to scroll to, so only the code
-      // state carries the match's focus line.
-      onPreview(kind === 'iframe'
-        ? { path, status: 'ready', kind, content }
-        : {
-          path,
-          status: 'ready',
-          kind,
-          content,
-          focus: { line, column },
-          ...(language === undefined ? {} : { language }),
-        })
-    }).catch(() => {
-      onPreview({ path, status: 'error', kind })
+    // One shared flow for every match: a text match carries the line and column
+    // it hit, a media match opens the card's own player, and a refused binary
+    // format lands on its message — none of which the panel waits on.
+    void openPreview(readFile, onPreview, path, line, column).catch(() => {
+      // The failure state is already published; the panel has nothing else to do
+      // with the refusal.
     })
   }, [onPreview, readFile])
 

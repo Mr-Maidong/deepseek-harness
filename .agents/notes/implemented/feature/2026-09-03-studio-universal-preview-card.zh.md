@@ -10,7 +10,7 @@ Studio 的浮动只读预览卡片只能把源文件当代码展示。同样的�
 
 ## 决策
 
-`StudioPreview` 所有者数据新增 `kind` 判别字段：`'code'`（既有带语言标签的源码视图）或 `'iframe'`（内嵌产物内容的沙箱 frame）。每个状态都携带 kind，使读取进行中或失败时卡片保持一致。`CodePreview` 更名为 `PreviewCard`，并按 `kind` 分发：code 渲染 `<pre>/<code>` 源码视图；iframe 渲染 `<iframe>`，把内容经 `srcDoc` 放进沙箱（`allow-scripts allow-forms allow-popups`，刻意不含 `allow-same-origin`），使脚本在完全不透明的源中运行，模型产出的 HTML 无法触及应用源。文件树按所选文件扩展名选定 kind——`.html`/`.htm` 打开为 iframe，其余均按代码——因此选中产物 HTML 文件会立刻显示渲染后的制品而非原始源码，无需新的人机可见控件。卡片的 `aria-label`/区域标题保持本地化（`preview.title` 对新增的 `preview.html`）。
+`StudioPreview` 所有者数据新增 `kind` 判别字段：`'code'`（既有带语言标签的源码视图）或 `'iframe'`（内嵌产物内容的沙箱 frame）。每个状态都携带 kind，使读取进行中或失败时卡片保持一致。`CodePreview` 更名为 `PreviewCard`，并按 `kind` 分发：code 渲染 `<pre>/<code>` 源码视图；iframe 渲染 `<iframe>`，把内容经 `srcDoc` 放进沙箱（`allow-scripts allow-forms allow-popups`，刻意不含 `allow-same-origin`），使脚本在完全不透明的源中运行，模型产出的 HTML 无法触及应用源。文件树按所选文件扩展名选定 kind——`.html`/`.htm` 打开为 iframe，其余均按代码——因此选中产物 HTML 文件会立刻显示渲染后的制品而非原始源码，无需新的人机可见控件。此后 kind 集合扩展出图片、视频，以及对二进制格式的拒绝，由 `frame/contract.ts` 的 `previewKindFor(path)` 判定；[该决定](2026-09-18-studio-media-preview.zh.md)拥有当前的 kind 集合与发布链路。卡片的 `aria-label`/区域标题保持本地化（`preview.title` 对新增的 `preview.html`）。
 
 ## Alternatives considered
 
@@ -22,7 +22,7 @@ Studio 的浮动只读预览卡片只能把源文件当代码展示。同样的�
 
 - 卡片成为按 kind 决定的万能容器：新增展示模式只需要新的 kind 加一个渲染分支，无需改动浮动卡片或插槽接线。
 - 产物 HTML 文件现在直接渲染（沙箱化、无交互主访问），不再显示为源码。
-- `kind` 出现在每个 `StudioPreview` 状态上，所有预览生产者都必须设置它；今日的唯一生产者是文件树。
+- `kind` 出现在每个 `StudioPreview` 状态上，所有预览生产者都必须设置它；当时的唯一生产者是文件树，此后头部搜索与聊天 opener 也通过同一谓词分类。
 - 字典新增一个键（`preview.html`），两个词典同步；区域标签/aria-label 本地化为「HTML 预览」。
 
 ## Testing

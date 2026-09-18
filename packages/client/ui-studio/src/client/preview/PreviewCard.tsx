@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type { StudioPreview } from '../frame/contract.ts'
+import { pathPartsOf } from '@deepseek-ai/dsh-util-workspace-path'
+import type { StudioPreview, StudioPreviewKind } from '../frame/contract.ts'
 import { CloseIcon, ModifiedDotIcon } from '../left-panel/icons/icons.tsx'
-import { NS } from '../left-panel/locales.ts'
+import { NS, type LeftPanelKey } from '../left-panel/locales.ts'
 import css from './PreviewCard.module.css'
 
 /** Structured code-selection reference passed to the composer. */
@@ -13,7 +14,15 @@ export interface CodeReference {
   readonly endLine: number
 }
 
-/** Injected editor callbacks: composer references plus the in-place file edit. */
+/** Why the card could not show a media file: past the Host's complete-file cap, or otherwise unavailable. */
+export type MediaFailureReason = 'too-large' | 'unavailable'
+
+/** One media read's outcome: the bytes the card turns into a blob URL, or the refusal to report. */
+export type MediaLoadResult =
+  | { readonly ok: true; readonly data: Uint8Array<ArrayBuffer> }
+  | { readonly ok: false; readonly reason: MediaFailureReason }
+
+/** Injected editor callbacks: composer references plus the in-place file edit and the media read. */
 export interface PreviewCardInjected {
   /** Insert a file-reference chip followed by the selected line range. */
   insertReference?: (ref: CodeReference) => void
@@ -40,12 +49,47 @@ export interface PreviewCardInjected {
    * @param path - the previewed file's path.
    */
   reloadPreview?: (path: string) => void
+  /**
+   * Read one media file's complete bytes. The card performs this read itself
+   * because the bytes must not enter the frame's persisted preview store.
+   * @param path - the previewed file's path.
+   * @returns the bytes to play, or the reason they are unavailable.
+   */
+  loadMedia?: (path: string) => Promise<MediaLoadResult>
 }
 
 type Props = PropsRuntime<'studio.center.editor'> & PropsLocale<typeof NS> & PreviewCardInjected
 
 /** Ready source file: the only preview kind the editor opens. */
 type CodePreview = Extract<StudioPreview, { status: 'ready'; kind: 'code' }>
+
+/**
+ * The preview states the media surface handles: a media path whose bytes the
+ * card has not read yet (including one that never resolved to a readable path),
+ * and the read's own outcome.
+ */
+type MediaPreview =
+  | Extract<StudioPreview, { status: 'loading' | 'error' }>
+  | Extract<StudioPreview, { status: 'ready'; kind: 'image' | 'video' }>
+
+/**
+ * The card's own read of one media path. The bytes become one object URL, which
+ * the card revokes when it moves to another file or unmounts — nothing here
+ * reaches the persisted preview store.
+ */
+type MediaState =
+  | { status: 'loading' }
+  | { status: 'ready'; url: string }
+  | { status: 'failed'; reason: MediaFailureReason }
+
+/** The section label each preview kind opens under. */
+const PREVIEW_LABELS = {
+  code: 'preview.title',
+  iframe: 'preview.html',
+  image: 'preview.image',
+  video: 'preview.video',
+  binary: 'preview.binary',
+} as const satisfies Record<StudioPreviewKind, LeftPanelKey>
 
 /** Inclusive 1-based line span that the insertion bubble quotes. */
 interface LineSpan {
@@ -83,11 +127,13 @@ const LINE_HEIGHT_PX = 22
  * gold while the buffer differs from the file and muted while the two match.
  * Selecting text or clicking a line number raises an "insert reference" bubble
  * whose inserted text quotes the file path and the selected line range. Rendered
- * artifacts (`iframe`) open read-only, and the card suppresses the browser's own
- * context menu so a future card menu can own that gesture.
+ * artifacts (`iframe`) open read-only; image and video files open in a read-only
+ * player the card fills from its own read of their bytes, and a binary format
+ * with no surface opens on the message saying so. The card suppresses the
+ * browser's own context menu so a future card menu can own that gesture.
  */
 export function PreviewCard({
-  preview, onClose, t, insertReference, loadForEdit, saveEdit, reloadPreview,
+  preview, onClose, t, insertReference, loadForEdit, saveEdit, reloadPreview, loadMedia,
 }: Props): React.ReactElement | null {
   const wrapRef = useRef<HTMLDivElement>(null)
   const bubbleRef = useRef<HTMLButtonElement>(null)
@@ -96,10 +142,18 @@ export function PreviewCard({
   const [saving, setSaving] = useState(false)
   const [bubble, setBubble] = useState<Bubble | undefined>()
   const [reloadKey, setReloadKey] = useState(0)
+  const [mediaState, setMediaState] = useState<MediaState>()
 
   const code = preview !== undefined && preview.status === 'ready' && preview.kind === 'code'
     ? preview
     : undefined
+  // A media publication carries the path and the type and no content, so the
+  // published state itself is this read's trigger: opening the same file again
+  // re-reads it, and the object URL below belongs to that one publication.
+  const media = preview !== undefined && (preview.kind === 'image' || preview.kind === 'video')
+    ? preview
+    : undefined
+  const mediaReady = media !== undefined && media.status === 'ready' ? media : undefined
   const path = preview?.path
   const lines = buffer === undefined ? [] : buffer.text.split('\n')
   // A search jump names the line it matched; clamp it to the open file so a
@@ -136,6 +190,45 @@ export function PreviewCard({
     })
     return () => { live = false }
   }, [path, code !== undefined, loadForEdit, reloadKey])
+
+  // The media read is the card's own, because the store kept only the path and
+  // type: the bytes stay out of browser storage, and the URL they become is
+  // revoked when the card moves to another file or unmounts. A read the card has
+  // moved on from writes nothing and creates no URL, and the reload request the
+  // failure message offers is this effect running again.
+  useEffect(() => {
+    setMediaState(undefined)
+    if (mediaReady === undefined) return
+    if (loadMedia === undefined) {
+      setMediaState({ status: 'failed', reason: 'unavailable' })
+      return
+    }
+    let live = true
+    let url: string | undefined
+    setMediaState({ status: 'loading' })
+    void loadMedia(mediaReady.path).then((result) => {
+      if (!live) return
+      if (!result.ok) {
+        setMediaState({ status: 'failed', reason: result.reason })
+        return
+      }
+      try {
+        url = URL.createObjectURL(new Blob([result.data], { type: mediaReady.mediaType }))
+      } catch {
+        // The only handle the card can play is that URL, so a browser that
+        // refuses to mint one leaves the file unavailable like a refused read.
+        setMediaState({ status: 'failed', reason: 'unavailable' })
+        return
+      }
+      setMediaState({ status: 'ready', url })
+    }, () => {
+      if (live) setMediaState({ status: 'failed', reason: 'unavailable' })
+    })
+    return () => {
+      live = false
+      if (url !== undefined) URL.revokeObjectURL(url)
+    }
+  }, [mediaReady, loadMedia, reloadKey])
 
   // A search jump lands the editor near the hit line. Rows are fixed-height
   // because the editor never wraps, so the offset needs no DOM measurement.
@@ -245,7 +338,7 @@ export function PreviewCard({
   return <section
     className={css.preview}
     data-kind={preview.kind}
-    aria-label={preview.kind === 'iframe' ? t('preview.html') : t('preview.title')}
+    aria-label={t(PREVIEW_LABELS[preview.kind])}
     // The card owns its context menu; suppressing the browser's leaves the
     // gesture free for the card's own actions.
     onContextMenu={(event) => { event.preventDefault() }}
@@ -270,7 +363,7 @@ export function PreviewCard({
       <div className={css.editFailure} role="alert">
         <span>{t(failure === 'conflict' ? 'preview.editConflict' : failure === 'load' ? 'preview.editLoadFailed' : 'preview.editFailed')}</span>
         {path !== undefined && loadForEdit !== undefined && (
-          <button type="button" onClick={requestReload}>{t('preview.editReload')}</button>
+          <button type="button" onClick={requestReload}>{t('preview.reload')}</button>
         )}
       </div>
     )}
@@ -280,7 +373,20 @@ export function PreviewCard({
       // possibly untrusted HTML is embedded without access to the app origin.
       ? <div className={css.stage}><iframe className={css.stageFrame} title={preview.path} sandbox="allow-scripts allow-forms allow-popups" srcDoc={preview.content} /></div>
       : <div className={css.stage}><div className={css.stageStatus}>{t(preview.status === 'loading' ? 'preview.loading' : 'preview.error')}</div></div>)}
-    {preview.status === 'error' && preview.kind === 'code' && <div className={css.status}>{t('preview.error')}</div>}
+    {preview.status === 'error' && (preview.kind === 'code' || preview.kind === 'binary') && (
+      <div className={css.status}>
+        {t(preview.kind === 'binary' ? 'preview.binaryUnsupported' : 'preview.error')}
+      </div>
+    )}
+    {media !== undefined && (
+      <MediaBody
+        file={media}
+        state={mediaState}
+        onDecodeFailed={() => { setMediaState({ status: 'failed', reason: 'unavailable' }) }}
+        onRetry={() => { setReloadKey(key => key + 1) }}
+        t={t}
+      />
+    )}
     {code !== undefined && (buffer === undefined
       ? <div className={css.status}>{t('preview.loading')}</div>
       : (
@@ -332,6 +438,63 @@ export function PreviewCard({
   </section>
 }
 
+
+/**
+ * The card's body for one media path: the image or video its bytes decoded to,
+ * the status shown while its own read is in flight or refused, and the retry
+ * that performs that read again.
+ * @param props - the published media state, the card's read state, and the locale seat.
+ * @returns the media surface, or the status the card shows instead.
+ */
+function MediaBody({ file, state, onDecodeFailed, onRetry, t }: {
+  readonly file: MediaPreview
+  readonly state: MediaState | undefined
+  readonly onDecodeFailed: () => void
+  readonly onRetry: () => void
+  readonly t: PropsLocale<typeof NS>['t']
+}): React.ReactElement {
+  if (file.status === 'ready' && state?.status === 'ready') {
+    return <div className={css.mediaStage}>
+      {file.kind === 'image'
+        // The alt text names the file, because a workspace picture has no
+        // authored description to quote.
+        ? <img
+          className={css.mediaImage}
+          src={state.url}
+          alt={t('preview.imageAlt', { name: pathPartsOf(file.path).name })}
+          decoding="async"
+          draggable={false}
+          referrerPolicy="no-referrer"
+          onError={onDecodeFailed}
+        />
+        : <video
+          className={css.mediaVideo}
+          src={state.url}
+          controls
+          playsInline
+          preload="metadata"
+          aria-label={t('preview.video')}
+          onError={onDecodeFailed}
+        />}
+    </div>
+  }
+  // A path that never resolved to a readable file and a read that failed say the
+  // same thing; only a read this card performed is worth offering again.
+  const failed = file.status === 'error' || state?.status === 'failed'
+  const message = state?.status === 'failed'
+    ? t(state.reason === 'too-large' ? 'preview.mediaTooLarge' : 'preview.mediaFailed')
+    : file.status === 'error'
+      ? t('preview.mediaFailed')
+      : t('preview.loading')
+  return <div className={css.mediaStage}>
+    <div className={css.mediaStatus}>
+      <span role={failed ? 'alert' : undefined}>{message}</span>
+      {state?.status === 'failed' && (
+        <button type="button" onClick={onRetry}>{t('preview.reload')}</button>
+      )}
+    </div>
+  </div>
+}
 
 /** 1-based line number containing the given character offset in `text`. */
 function lineAt(text: string, offset: number): number {

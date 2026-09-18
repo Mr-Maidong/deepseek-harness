@@ -5,7 +5,8 @@
  * fully qualified under the viewed Session's workspace root before the read,
  * the card follows its loading → ready flow with the line as focus, and a failed
  * read leaves the card in its error state while the rejection travels back to
- * the chat view's open-error dialog.
+ * the chat view's open-error dialog. Media and refused binary paths settle on
+ * one publication and never reach the text read.
  */
 import { describe, expect, it, vi } from 'vitest'
 import { SessionId } from '@deepseek-ai/dsh-session/types'
@@ -98,5 +99,49 @@ describe('createChatFileOpener', () => {
     // Nothing half-resolved reaches the read, and the card shows the failure.
     expect(readFile).not.toHaveBeenCalled()
     expect(publish).toHaveBeenCalledWith({ path: 'src/a.ts', status: 'error', kind: 'code' })
+  })
+
+  it('opens an image as media without any text read', async () => {
+    const { face, readFile, publish } = opener()
+    await face.open(SESSION, 'assets/logo.png')
+    // The card reads media bytes itself, so one publication carries the path and
+    // the type it will be played as, and the bounded text read never runs.
+    expect(readFile).not.toHaveBeenCalled()
+    expect(publish).toHaveBeenCalledTimes(1)
+    expect(publish).toHaveBeenCalledWith({
+      path: '/work/demo/assets/logo.png', status: 'ready', kind: 'image', mediaType: 'image/png',
+    })
+  })
+
+  it('opens a video with the type its extension assigns', async () => {
+    const { face, readFile, publish } = opener()
+    await face.open(SESSION, '/work/demo/clip.mov')
+    expect(readFile).not.toHaveBeenCalled()
+    expect(publish).toHaveBeenCalledWith({
+      path: '/work/demo/clip.mov', status: 'ready', kind: 'video', mediaType: 'video/quicktime',
+    })
+  })
+
+  it('refuses a binary format before reading it', async () => {
+    const { face, readFile, publish } = opener()
+    await face.open(SESSION, 'docs/report.pdf')
+    // The refusal is decided from the path, so a large binary never travels the
+    // read that would only have produced replacement characters.
+    expect(readFile).not.toHaveBeenCalled()
+    expect(publish).toHaveBeenCalledTimes(1)
+    expect(publish).toHaveBeenCalledWith({ path: '/work/demo/docs/report.pdf', status: 'error', kind: 'binary' })
+  })
+
+  it('reports a text read that decoded invalid bytes as an unsupported binary', async () => {
+    const { face, publish } = opener({ readFile: async () => ({ content: 'PK\u0003\u0004\uFFFD' }) })
+    await face.open(SESSION, '/work/demo/archive.unknown')
+    expect(publish).toHaveBeenNthCalledWith(1, { path: '/work/demo/archive.unknown', status: 'loading', kind: 'code' })
+    expect(publish).toHaveBeenLastCalledWith({ path: '/work/demo/archive.unknown', status: 'error', kind: 'binary' })
+  })
+
+  it('classifies an unresolvable media path as its media kind rather than source', async () => {
+    const { face, publish } = opener({ cwdFor: () => undefined })
+    await expect(face.open(SESSION, 'assets/logo.png')).rejects.toThrow(/no workspace root/u)
+    expect(publish).toHaveBeenCalledWith({ path: 'assets/logo.png', status: 'error', kind: 'image' })
   })
 })

@@ -39,6 +39,7 @@ import { HeaderSearch, type HeaderSearchInjected } from './header-search/HeaderS
 import { en, NS, zh } from './left-panel/locales.ts'
 import { LeftPanelMain, type LeftPanelInjected } from './left-panel/LeftPanelMain.tsx'
 import { createPreviewEditFace } from './preview/edit-face.ts'
+import { createPreviewMediaFace } from './preview/media-face.ts'
 import { PreviewCard, type PreviewCardInjected, type CodeReference } from './preview/PreviewCard.tsx'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
@@ -227,6 +228,14 @@ export function apply(ctx: ClientContext): void {
       publish: (preview) => { bridge.require()(preview) },
       readFile: path => studioSearchFace.readFile(path),
     })
+    // A media file's bytes are the card's own read: they must not enter the
+    // persisted preview store, and the card that plays them owns the object URL
+    // they become. The Session comes from the same list, waited for the same
+    // way, because a reload restores a media preview before that list arrives.
+    const previewMedia = createPreviewMediaFace({
+      workspaceFiles: ctx.remote.workspaceFiles,
+      sessions: ctx.sessions.list,
+    })
     // The chat side of the same card: a conversation file gesture — a tool row's
     // path link, a produced-file chip, a closing-message mention — opens here
     // rather than in the right Sidebar. ui-chat reads this face through `ctx.get`,
@@ -260,6 +269,7 @@ export function apply(ctx: ClientContext): void {
         )
       },
       ...previewEdit,
+      ...previewMedia,
     })
     const disposeEditorRegistration = ctx.slots.register(
       { name: 'studio.center.editor', inject: editorInjected, locale: NS },

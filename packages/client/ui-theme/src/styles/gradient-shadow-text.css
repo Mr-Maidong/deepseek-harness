@@ -163,11 +163,11 @@ body {
   --dsw-font-markdown-code-font-size: 12px;
   --dsw-font-markdown-code-font-style: normal;
 
-  --dsw-font-markdown-code-block: 11px/19px var(--ds-font-family-code);
+  --dsw-font-markdown-code-block: 12px/19px var(--ds-font-family-code);
   --dsw-font-markdown-code-block-font-family: var(--ds-font-family-code);
   --dsw-font-markdown-code-block-font-weight: 400;
   --dsw-font-markdown-code-block-line-height: 19px;
-  --dsw-font-markdown-code-block-font-size: 11px;
+  --dsw-font-markdown-code-block-font-size: 12px;
   --dsw-font-markdown-code-block-font-style: normal;
 
   /* 手工补充（非插件导出）：tool row 展开卡片内的小号 code 字体。 */

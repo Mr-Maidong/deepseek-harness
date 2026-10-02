@@ -1,0 +1,20 @@
+/* Albert Sans carries Latin text and YaHei Consolas Hybrid the CJK text;
+ * base.css names both through --dsw-font-family. Albert Sans is variable across
+ * weights 100-900 and ships under the SIL Open Font License in
+ * AlbertSans-OFL.txt. The CJK face prefers the family installed on the host
+ * and falls back to the bundled WOFF2. */
+@font-face {
+  font-family: 'Albert Sans';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url(./albert-sans.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'YaHei Consolas Hybrid';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('YaHei Consolas Hybrid'), url(./yahei-consolas-hybrid.woff2) format('woff2');
+}

@@ -9,6 +9,7 @@
 .root {
   display: flex;
   flex-direction: column;
+  font-weight: 350;
 }
 
 .leading {
@@ -20,7 +21,8 @@
 }
 
 .title {
-  font-weight: 400;
+  font-weight: inherit;
+  transition: color 100ms ease;
 }
 
 .sep {

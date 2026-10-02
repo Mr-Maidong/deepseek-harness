@@ -1,6 +1,7 @@
 .root {
   display: flex;
   flex-direction: column;
+  font-weight: 350;
 }
 
 .root:not([data-expanded]) {
@@ -26,7 +27,7 @@
 }
 
 .title {
-  font-weight: 400;
+  font-weight: inherit;
 }
 
 .separator {

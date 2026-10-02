@@ -112,6 +112,24 @@ export interface PackageRegistration {
   readonly exportSubpaths?: readonly string[]
 }
 
+/**
+ * Package that owns a declaration the analysis reached. A workspace package
+ * comes from the aggregate project references and is emitted for; a declaration
+ * resolved from an installed dependency belongs to the package whose manifest
+ * contains it, so a package outside this workspace can still publish Remote
+ * annotations and boundary types the generator recognizes.
+ */
+interface PackageOwner {
+  /** The package manifest name. */
+  readonly name: string
+  /** Real package root directory. */
+  readonly root: string
+  /** The parsed package.json content. */
+  readonly manifest: Record<string, unknown>
+  /** Whether the root is a workspace package this generator emits artifacts for. */
+  readonly workspace: boolean
+}
+
 interface ExportRecord {
   readonly model: ExportModel
   readonly symbol: ts.Symbol
@@ -627,6 +645,7 @@ class FaceAnalyzer {
   private readonly queueEdit: (edit: SourceEdit) => void
   private readonly crossFaceLinks: Map<string, CrossFaceLink>
   private readonly sourceFiles = new Map<string, ts.SourceFile>()
+  private readonly installedOwners = new Map<string, PackageOwner | undefined>()
   private readonly declarations = new Map<SymbolId, TypeDeclarationModel>()
   private readonly declarationStates = new Set<SymbolId>()
   private readonly nodes = new Map<TypeNodeId, TypeNodeModel>()
@@ -1524,7 +1543,7 @@ class FaceAnalyzer {
       : declaredType
     const codecType = this.resolvedRemoteCodecType(authoredType, resolvedType, topLevelAbsence, allowBytes)
     const acceptsUndefined = topLevelAbsence !== 'reject' && this.includesRemoteAbsence(resolvedType)
-    const rootSymbol = this.namedWorkspaceType(authoredType)
+    const root = this.namedOwnedType(authoredType)
     const imports = new Map<SymbolId, RemoteTypeImportModel>()
     const visit = (node: ts.Node): void => {
       if ((ts.isTypeReferenceNode(node) || ts.isImportTypeNode(node))) {
@@ -1534,10 +1553,12 @@ class FaceAnalyzer {
         if (symbol !== undefined) {
           const resolved = this.resolveSymbol(symbol)
           const declaration = preferredDeclaration(resolved)
-          if (declaration !== undefined
-            && !isStandardLibraryFile(declaration.getSourceFile().fileName)
-            && this.registrationForFile(declaration.getSourceFile().fileName) !== undefined) {
-            const imported = this.publicRemoteType(resolved, node)
+          const owner = declaration === undefined
+            ? undefined
+            : this.ownerForFile(declaration.getSourceFile().fileName)
+          if (declaration !== undefined && owner !== undefined
+            && !isStandardLibraryFile(declaration.getSourceFile().fileName)) {
+            const imported = this.publicRemoteType(resolved, owner, node)
             imports.set(imported.symbol, imported)
           }
         }
@@ -1545,8 +1566,8 @@ class FaceAnalyzer {
       ts.forEachChild(node, visit)
     }
     visit(authoredType)
-    if (rootSymbol !== undefined) {
-      const imported = this.publicRemoteType(rootSymbol, authoredType)
+    if (root !== undefined) {
+      const imported = this.publicRemoteType(root.symbol, root.owner, authoredType)
       return {
         type,
         codecType,
@@ -1920,7 +1941,13 @@ class FaceAnalyzer {
     })
   }
 
-  private namedWorkspaceType(node: ts.TypeNode): ts.Symbol | undefined {
+  /**
+   * Resolve a type node naming a type some package owns, so a Remote boundary
+   * can import it from wherever it is declared.
+   * @param node - The authored type node.
+   * @returns the named type's symbol with its owning package, or undefined for an unowned or standard-library type.
+   */
+  private namedOwnedType(node: ts.TypeNode): { readonly symbol: ts.Symbol; readonly owner: PackageOwner } | undefined {
     if (!ts.isTypeReferenceNode(node) && !ts.isImportTypeNode(node)) return undefined
     const symbol = ts.isTypeReferenceNode(node)
       ? this.checker.getSymbolAtLocation(node.typeName)
@@ -1928,23 +1955,33 @@ class FaceAnalyzer {
     if (symbol === undefined) return undefined
     const resolved = this.resolveSymbol(symbol)
     const declaration = preferredDeclaration(resolved)
-    if (declaration === undefined
-      || isStandardLibraryFile(declaration.getSourceFile().fileName)
-      || this.registrationForFile(declaration.getSourceFile().fileName) === undefined) return undefined
-    return resolved
+    if (declaration === undefined || isStandardLibraryFile(declaration.getSourceFile().fileName)) return undefined
+    const owner = this.ownerForFile(declaration.getSourceFile().fileName)
+    return owner === undefined ? undefined : { symbol: resolved, owner }
   }
 
-  private publicRemoteType(symbol: ts.Symbol, site: ts.Node): RemoteTypeImportModel {
+  /**
+   * Import model for one Remote boundary type, resolved through the package
+   * that owns its declaration.
+   * @param symbol - The boundary type's symbol.
+   * @param owner - The package owning that symbol's declaration.
+   * @param site - The authored type node that referenced the type.
+   * @returns the import the generated Remote artifact declares for the type.
+   */
+  private publicRemoteType(symbol: ts.Symbol, owner: PackageOwner, site: ts.Node): RemoteTypeImportModel {
     const declaration = preferredDeclaration(symbol)
     if (declaration === undefined) this.fail(site, `type ${symbol.name} has no declaration`)
-    const registration = this.registrationForFile(declaration.getSourceFile().fileName)
-    if (registration === undefined) this.fail(site, `type ${symbol.name} is not owned by a workspace package`)
     const candidates: RemoteTypeImportModel[] = []
-    for (const [subpath, target] of packageExportTargets(registration.manifest)) {
-      if ((subpath === '.' && !PUBLIC_REMOTE_TYPE_ROOTS.has(registration.name))
+    for (const [subpath, target] of packageExportTargets(owner.manifest)) {
+      if ((subpath === '.' && !PUBLIC_REMOTE_TYPE_ROOTS.has(owner.name))
         || subpath === './package.json' || subpath === './typert'
         || subpath === './client/typert' || subpath === './remote' || target.includes('*')) continue
-      const sourceFile = this.sourceFiles.get(realPath(sourcePathForExport(registration.root, target)))
+      // A workspace package resolves its export target to the source plane; an
+      // installed dependency publishes the declaration the manifest names.
+      const sourcePath = owner.workspace
+        ? sourcePathForExport(owner.root, target)
+        : resolve(owner.root, target.replace(/^\.\//, ''))
+      const sourceFile = this.sourceFiles.get(realPath(sourcePath))
       if (sourceFile === undefined) continue
       const moduleSymbol = this.checker.getSymbolAtLocation(sourceFile)
       if (moduleSymbol === undefined) continue
@@ -1952,7 +1989,7 @@ class FaceAnalyzer {
         if (this.resolveSymbol(exported) !== symbol) continue
         candidates.push({
           symbol: this.symbolId(symbol),
-          specifier: packageExportSpecifier(registration.name, subpath),
+          specifier: packageExportSpecifier(owner.name, subpath),
           name: exported.name,
         })
       }
@@ -1979,8 +2016,8 @@ class FaceAnalyzer {
     if (resolved.name !== name) return false
     const declaration = preferredDeclaration(resolved)
     if (declaration === undefined) return false
-    const registration = this.registrationForFile(declaration.getSourceFile().fileName)
-    if (registration?.name === '@deepseek-ai/dsh-typert-protocol') return true
+    const owner = this.ownerForFile(declaration.getSourceFile().fileName)
+    if (owner?.name === '@deepseek-ai/dsh-typert-protocol') return true
     for (let current: ts.Node | undefined = declaration; current !== undefined; current = optionalParent(current)) {
       if (ts.isModuleDeclaration(current)
         && ts.isStringLiteral(current.name)
@@ -2664,6 +2701,45 @@ class FaceAnalyzer {
       .find(registration => registration.face === this.face && isWithin(path, registration.root))
   }
 
+  /**
+   * Package that owns a declaration file, whether the generator emits for that
+   * package or the declaration belongs to an installed dependency.
+   * @param file - Declaration file path.
+   * @returns the owning package, or undefined when no package manifest contains the file.
+   */
+  private ownerForFile(file: string): PackageOwner | undefined {
+    const registration = this.registrationForFile(file)
+    if (registration !== undefined) {
+      return {
+        name: registration.name,
+        root: registration.root,
+        manifest: registration.manifest,
+        workspace: true,
+      }
+    }
+    return this.installedOwner(realPath(file))
+  }
+
+  /**
+   * Owner of a declaration installed under `node_modules`, found by walking up
+   * to the nearest package manifest. Files inside the workspace resolve through
+   * {@link registrationForFile} instead, so a repository directory outside
+   * `node_modules` never becomes an owner through this path.
+   * @param path - Real path of the declaration file.
+   * @returns the installed package owner, or undefined outside `node_modules`.
+   */
+  private installedOwner(path: string): PackageOwner | undefined {
+    const root = installedPackageRoot(path)
+    if (root === undefined) return undefined
+    if (this.installedOwners.has(root)) return this.installedOwners.get(root)
+    const manifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as Record<string, unknown>
+    const owner = typeof manifest.name === 'string'
+      ? { name: manifest.name, root, manifest, workspace: false }
+      : undefined
+    this.installedOwners.set(root, owner)
+    return owner
+  }
+
   private packageNameForFile(file: string): string {
     const path = realPath(file)
     return this.allRegistrations.find(registration => isWithin(path, registration.root))?.name ?? '<external>'
@@ -2880,6 +2956,26 @@ function sourcePathForExport(packageRoot: string, target: string): string {
     return resolve(packageRoot, 'src', normalized.slice('lib/'.length).replace(/\.(?:mjs|cjs|js|d\.ts)$/, '.ts'))
   }
   return resolve(packageRoot, normalized)
+}
+
+/**
+ * Nearest package root above an installed declaration file.
+ * @param path - Real path of the declaration file.
+ * @returns the closest ancestor directory holding a package manifest within `node_modules`, or undefined.
+ */
+function installedPackageRoot(path: string): string | undefined {
+  for (let directory = dirname(path); isInstalledPath(directory); directory = dirname(directory)) {
+    if (existsSync(join(directory, 'package.json'))) return directory
+  }
+  return undefined
+}
+
+/**
+ * @param path - Any file or directory path.
+ * @returns whether the path lies inside a `node_modules` directory.
+ */
+function isInstalledPath(path: string): boolean {
+  return /[/\\]node_modules[/\\]/.test(path)
 }
 
 function preferredDeclaration(symbol: ts.Symbol): ts.Declaration | undefined {

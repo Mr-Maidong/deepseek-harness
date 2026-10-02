@@ -1,0 +1,19 @@
+# Bilingual-pair consistency record for 2026-10-02-typert-installed-package-ownership.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-10-02-typert-installed-package-ownership.md
+/agent-note-typert-recognizes-annotations-and-boundary-types-owned-by-installed-packages:
+  en: eb0c8a766ee298d0
+  zh: 819509036a4e2b80
+/agent-note-typert-recognizes-annotations-and-boundary-types-owned-by-installed-packages/problem:
+  en: 99a10315bb25305b
+  zh: 9f81db1f171f334f
+/agent-note-typert-recognizes-annotations-and-boundary-types-owned-by-installed-packages/decision:
+  en: 5d5845fdd5b64fbe
+  zh: 1b0b47500848d5c6
+/agent-note-typert-recognizes-annotations-and-boundary-types-owned-by-installed-packages/alternatives-considered:
+  en: 89d02dcc7c99e0cc
+  zh: de731c87aaa5ace1
+/agent-note-typert-recognizes-annotations-and-boundary-types-owned-by-installed-packages/consequences:
+  en: 7a18f2a229692ed2
+  zh: c196902d629f69cc

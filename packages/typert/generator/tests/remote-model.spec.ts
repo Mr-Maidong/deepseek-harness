@@ -1,6 +1,6 @@
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import ts from 'typescript'
 import { afterEach, describe, expect, it } from 'vitest'
 import { WorkspaceAnalyzer } from '../src/analyzer.ts'
@@ -938,6 +938,123 @@ export class DuplicateGoalService extends TypertRemoteService {
     expect(() => analyzeRemote(root, false)).toThrow(/Remote endpoint goals\/create conflicts/)
   })
 })
+
+describe('installed package ownership', { timeout: 60_000 }, () => {
+  it('recognizes Remote annotations declared by an installed dependency', () => {
+    const root = copyFixture()
+    installProtocolPackage(root)
+    const [artifact] = new WorkspaceTypertGenerator(root).generate()
+    expect(artifact?.remote?.js).toContain('goals/create')
+  })
+
+  it('imports a Remote boundary type from the installed package that declares it', () => {
+    const root = copyFixture()
+    installEnvelopePackage(root, true)
+    addEnvelopeMethods(root)
+    const [artifact] = new WorkspaceTypertGenerator(root).generate()
+    expect(artifact?.remote?.dts).toContain("from '@fixture/installed/types'")
+  })
+
+  it('leaves a Remote boundary type unimported when its installed package declares no name', () => {
+    const root = copyFixture()
+    installEnvelopePackage(root, false)
+    addEnvelopeMethods(root)
+    const [artifact] = new WorkspaceTypertGenerator(root).generate()
+    expect(artifact?.remote?.dts).not.toContain('@fixture/installed/types')
+  })
+})
+
+/**
+ * Move the fixture's ambient protocol declaration into an installed package, so
+ * the analysis has to recognize the decorators through that package's manifest.
+ * @param root - Copied fixture root.
+ */
+function installProtocolPackage(root: string): void {
+  writeInstalledPackage(root, '@deepseek-ai/dsh-typert-protocol', '@deepseek-ai/dsh-typert-protocol', {
+    '.': { types: './lib/types/index.d.ts' },
+  }, {
+    'lib/types/index.d.ts': moduleBody(readFileSync(join(root, 'typert-protocol.d.ts'), 'utf8')),
+  })
+  rmSync(join(root, 'typert-protocol.d.ts'))
+  const configPath = join(root, 'tsconfig.base.json')
+  const config = JSON.parse(readFileSync(configPath, 'utf8')) as {
+    compilerOptions: { paths: Record<string, readonly string[]> }
+  }
+  delete config.compilerOptions.paths['@deepseek-ai/dsh-typert-protocol']
+  writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`)
+}
+
+/**
+ * Install a package exporting one boundary type.
+ * @param root - Copied fixture root.
+ * @param named - Whether the installed manifest declares its package name.
+ */
+function installEnvelopePackage(root: string, named: boolean): void {
+  writeInstalledPackage(root, '@fixture/installed', named ? '@fixture/installed' : undefined, {
+    './types': { types: './lib/types/types.d.ts' },
+  }, {
+    'lib/types/types.d.ts': '/** One boundary type declared outside the workspace. */\nexport interface InstalledEnvelope {\n  /** Title carried across the wire. */\n  readonly title: string\n}\n',
+  })
+}
+
+/**
+ * Add Remote methods whose boundary type the installed package declares.
+ * @param root - Copied fixture root.
+ */
+function addEnvelopeMethods(root: string): void {
+  editFile(root, 'packages/remote/src/index.ts', source => source
+    .replace(
+      "import type { Agent } from '@fixture/domain'",
+      "import type { Agent } from '@fixture/domain'\nimport type { InstalledEnvelope } from '@fixture/installed/types'",
+    )
+    .replace(
+      '  @RemoteScope',
+      "  @Remote\n  envelope(): InstalledEnvelope {\n    return { title: 'envelope' }\n  }\n\n  @Remote\n  envelopes(items: readonly InstalledEnvelope[]): readonly InstalledEnvelope[] {\n    return items\n  }\n\n  @RemoteScope",
+    ))
+}
+
+/**
+ * Write one installed dependency package under the fixture's `node_modules`.
+ * @param root - Copied fixture root.
+ * @param directory - Package directory below `node_modules`, as it is imported.
+ * @param name - Manifest package name; absent writes a manifest without one.
+ * @param exportsMap - The manifest's export map.
+ * @param files - Package-relative files to write.
+ */
+function writeInstalledPackage(
+  root: string,
+  directory: string,
+  name: string | undefined,
+  exportsMap: Record<string, unknown>,
+  files: Record<string, string>,
+): void {
+  const packageRoot = join(root, 'node_modules', ...directory.split('/'))
+  for (const [relativePath, content] of Object.entries(files)) {
+    const target = join(packageRoot, relativePath)
+    mkdirSync(dirname(target), { recursive: true })
+    writeFileSync(target, content)
+  }
+  writeFileSync(join(packageRoot, 'package.json'), `${JSON.stringify({
+    ...(name === undefined ? {} : { name }),
+    type: 'module',
+    exports: exportsMap,
+  }, null, 2)}\n`)
+}
+
+/**
+ * Strip the ambient module wrapper from the fixture's protocol declaration.
+ * @param source - The fixture's `typert-protocol.d.ts` content.
+ * @returns the same declarations as a module.
+ */
+function moduleBody(source: string): string {
+  const lines = source.split('\n')
+  const start = lines.findIndex(line => line.endsWith('{')) + 1
+  const end = lines.findLastIndex(line => line.trim() === '}')
+  return lines.slice(start, end)
+    .map(line => (line.startsWith('  ') ? line.slice(2) : line))
+    .join('\n')
+    .concat('\n')
+}
 
 function analyzeRemote(root: string, checkDiagnostics = true): ReturnType<WorkspaceAnalyzer['analyze']> {
   return new WorkspaceAnalyzer({ root, checkDiagnostics }).analyze()

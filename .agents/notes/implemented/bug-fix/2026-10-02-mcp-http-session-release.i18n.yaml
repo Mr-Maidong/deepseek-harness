@@ -1,0 +1,19 @@
+# Bilingual-pair consistency record for 2026-10-02-mcp-http-session-release.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-10-02-mcp-http-session-release.md
+/agent-note-mcp-http-session-release-on-connection-abandonment:
+  en: 034828cf89f5119f
+  zh: 042253a44ae4b5d6
+/agent-note-mcp-http-session-release-on-connection-abandonment/problem:
+  en: a5f2920bc5d22ac7
+  zh: 598a83a02ad1ecce
+/agent-note-mcp-http-session-release-on-connection-abandonment/decision:
+  en: a042c3e7d6d03e25
+  zh: c3f53a50d5dd3a52
+/agent-note-mcp-http-session-release-on-connection-abandonment/alternatives-considered:
+  en: 92497fdaf9950819
+  zh: 004765fc969b644a
+/agent-note-mcp-http-session-release-on-connection-abandonment/consequences:
+  en: c2a22764f396ba0d
+  zh: 698798a1305906c7

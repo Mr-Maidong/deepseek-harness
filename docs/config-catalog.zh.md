@@ -2016,7 +2016,7 @@ export interface LspLocalServerConfig {
 ## `@deepseek-ai/dsh-mcp-client`
 
 - `inject`: `tools`
-- `source`: [`packages/mcp/mcp-client/src/index.ts:104`](../packages/mcp/mcp-client/src/index.ts)
+- `source`: [`packages/mcp/mcp-client/src/index.ts:111`](../packages/mcp/mcp-client/src/index.ts)
 
 ```ts config-catalog
 /** Configuration for one stdio or Streamable HTTP MCP server. */
@@ -2082,7 +2082,7 @@ export interface ReconnectConfig {
   initialDelayMs?: number
   /** Backoff ceiling in milliseconds; also the uptime after which the attempt budget resets (default 30000). */
   maxDelayMs?: number
-  /** Consecutive failed attempts per outage before giving up for good (default 10). */
+  /** Consecutive failed attempts per outage before the tools are unregistered and retries drop to one per `maxDelayMs` (default 10). */
   maxAttempts?: number
 }
 ```

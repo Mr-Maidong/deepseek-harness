@@ -64,7 +64,7 @@ Add one entry per server; nothing else is required. After the harness starts, th
 | `reconnect.enabled` | `true` | Reconnect automatically after a lost connection |
 | `reconnect.initialDelayMs` | `500` | First reconnect delay; doubles per consecutive failed attempt |
 | `reconnect.maxDelayMs` | `30,000` | Backoff ceiling; also the uptime after which the attempt budget resets |
-| `reconnect.maxAttempts` | `10` | Consecutive failed attempts per outage before giving up |
+| `reconnect.maxAttempts` | `10` | Consecutive failed attempts per outage before the tools are unregistered; the supervisor keeps retrying at `maxDelayMs` |
 
 The generated [configuration catalog](../../../docs/config-catalog.md#deepseek-aidsh-mcp-client) is the exhaustive source for every accepted field.
 
@@ -90,7 +90,9 @@ Images are supported when the current model accepts image input and the harness 
 
 The server's tools appear before the harness starts its first turn. When the server changes its tool list, the model's tool set updates automatically; if the update fails, the previous tool set keeps working.
 
-When a server connection drops — for example a local server process crashes — the plugin reconnects automatically with delays that double from 500 ms up to 30 s and then refreshes the tool set; reconnect progress is visible in the logs. During an outage the last known tools stay listed but calls to them fail until the server recovers. After ten consecutive failed attempts the server's tools are removed and reconnection stops until you reload the configuration or restart the harness; a server that stays connected for a while resets that counter. Set `reconnect.enabled: false` to disable automatic reconnection — tools then stay listed but fail until you reload. Editing the configuration entry reloads the server connection in place, and unchanged names stay unchanged.
+When a server connection drops — for example a local server process crashes — the plugin reconnects automatically with delays that double from 500 ms up to 30 s and then refreshes the tool set; reconnect progress is visible in the logs. During an outage the last known tools stay listed but calls to them fail until the server recovers. After ten consecutive failed attempts the server's tools are removed and the plugin keeps probing at the 30 s ceiling, so a server that comes back is picked up without a reload; a server that stays connected for a while resets that counter. Set `reconnect.enabled: false` to disable automatic reconnection — tools then stay listed but fail until you reload. Editing the configuration entry reloads the server connection in place, and unchanged names stay unchanged.
+
+Closing or reconfiguring an entry — and replacing a lost connection — also ends the Streamable HTTP session that connection opened, so a server that serves one session at a time accepts the entry again after you disable and re-enable it. A server that refuses the release (HTTP `405`) keeps its session until the server expires it, and a release that fails is logged without failing the reload.
 
 -----
 
@@ -118,16 +120,16 @@ This section explains the design decisions behind the bridge and points at the c
 | [`src/connection.ts`](src/connection.ts) | Connection supervisor: client generations, reconnect policy, attempt budget, disposal |
 | [`src/server-context.ts`](src/server-context.ts) | Resource-provider registration and literal server instructions |
 | [`src/tools.ts`](src/tools.ts) | Tool bridge: discovery, naming, registration swap, execution, image projection |
-| [`src/transport.ts`](src/transport.ts) | Transport factory: stdio spawn with scrubbed env, Streamable HTTP |
+| [`src/transport.ts`](src/transport.ts) | Transport factory: stdio spawn with scrubbed env, Streamable HTTP, server-session release |
 | — | No runtime invariant companion is published; MCP generations contribute through the tool registry, but the bridge exposes no independent server-to-tool snapshot after an asynchronous resync. |
 
 The exported `createMcpToolDefinition(ctx, options)` adapts an upstream tool schema and raw-result callback to the same canonical values, errors, and durable image projection. Each callback receives the exact `ToolExecution`, including its Agent and cancellation signal; SDK spec-type validation checks its result before projection. Callers own registration, cancellation deadlines, and provider teardown. The native Cua Driver provider uses this adapter without opening an MCP transport.
 
 ### Lifecycle and sync
 
-`apply` resolves the reconnect policy, reserves the `serverName` inside the current registration scope, starts the supervisor, and awaits the initial connection plus discovery. Independent Agent scopes may reuse the same namespace because their tools and transports are isolated; a duplicate inside one scope fails at load. The supervisor serializes every sync — initial, notification, and reconnect — through one queue so two syncs can never interleave their dispose-previous/register-next swap. Disposal cancels pending reconnects, closes the negotiating transport or attached client, waits for the in-flight attempt and queued syncs to quiesce, and unregisters the current generation.
+`apply` resolves the reconnect policy, reserves the `serverName` inside the current registration scope, starts the supervisor, and awaits the initial connection plus discovery. Independent Agent scopes may reuse the same namespace because their tools and transports are isolated; a duplicate inside one scope fails at load. The supervisor serializes every sync — initial, notification, and reconnect — through one queue so two syncs can never interleave their dispose-previous/register-next swap. Disposal cancels pending reconnects, closes the negotiating transport or attached client, waits for the in-flight attempt and queued syncs to quiesce, and unregisters the current generation. Closing a generation first releases the Streamable HTTP session it opened, because the SDK's transport `close()` only aborts requests while the server keeps the abandoned session bound and refuses the next handshake; a release the server refuses is logged and does not fail disposal.
 
-The SDK receives tool-list changes through legacy notifications or a modern subscription. The supervisor queues each re-sync; a fetch failure keeps the previous generation registered, while a registration conflict rolls back the attempted generation. Each outage shares one attempt budget: after `maxAttempts` consecutive failures the tools are unregistered and reconnection stops, and a connection that stays up past `maxDelayMs` resets the budget.
+The SDK receives tool-list changes through legacy notifications or a modern subscription. The supervisor queues each re-sync; a fetch failure keeps the previous generation registered, while a registration conflict rolls back the attempted generation. A generation that reports closure (`onclose`) or a connection failure (`onerror`) ends the outage-free period and enters the reconnect path — the error report matters for Streamable HTTP, whose dead session surfaces as a failed request instead of a close. One outage shares one attempt budget: after `maxAttempts` consecutive failures the tools are unregistered and the supervisor keeps probing at `maxDelayMs` instead of stopping, and a connection that stays up past `maxDelayMs` resets the budget. A generation whose closure cannot be confirmed holds the scheduled retry behind that confirmation, so a replacement never overlaps a server process that may still be running.
 
 ### Tool execution internals
 
@@ -148,6 +150,7 @@ Read these pages when the package-level contract is not enough. They move from t
 
 - [Tools subsystem reference](../../../docs/subsystems/tools.md) — the `ToolRuntime` and `ctx.tools.register()` contract that receives the bridged tools.
 - [MCP client plugin Agent Note](../../../.agents/notes/implemented/feature/2026-07-07-mcp-client-plugin.md) — the naming invariants, discovery and execution design, alternatives, and consequences.
+- [MCP HTTP session release Agent Note](../../../.agents/notes/implemented/bug-fix/2026-10-02-mcp-http-session-release.md) — why abandoning a connection terminates its server session, and what a refused release leaves behind.
 - [Canonical tool output contract Agent Note](../../../.agents/notes/implemented/architecture/2026-07-20-canonical-tool-output-contract.md) — how MCP results map into the canonical tool-output contract.
 - [Third-party memory MCP guide](../../../docs/user/guide/mcp-memory.md) — three memory-server overlays using this package.
 - [Generated configuration catalog](../../../docs/config-catalog.md#deepseek-aidsh-mcp-client) — every accepted config field and its source declaration.
@@ -161,7 +164,7 @@ Read these pages when the package-level contract is not enough. They move from t
 
 #### What the model sees
 
-After discovery succeeds, SDK-admitted MCP tools appear as native tools named `mcp__<serverName>__<rawName>` (or their deterministic normalized form), with the server description and input schema. A re-sync replaces the generation; disposal or an exhausted reconnect budget removes it. A server without the tools capability connects with an empty tool set.
+After discovery succeeds, SDK-admitted MCP tools appear as native tools named `mcp__<serverName>__<rawName>` (or their deterministic normalized form), with the server description and input schema. A re-sync replaces the generation; disposal, or an outage that exhausts the reconnect budget, removes the tools until a later attempt succeeds. A server without the tools capability connects with an empty tool set.
 
 #### Token effect
 
@@ -208,7 +211,7 @@ These limits describe what you cannot do with this plugin and when it needs oper
 
 - **Resources are read on demand** — shipped profiles provide the [shared resource service](../mcp-resources/README.md); resource subscriptions and MCP prompt templates are unsupported.
 - **Startup and discovery timeouts are inherited from the MCP SDK** — the plugin exposes no separate connection or discovery timeout. Negotiation and discovery use the SDK's 60-second request default; discovery also uses its page limit. Plugin unload closes the transport to interrupt pending startup requests before awaiting teardown.
-- **Reconnect handles failed negotiation and transport close** — a failed initial probe or crashed stdio child uses the configured reconnect budget. Once HTTP is connected, request failures use the SDK transport's recovery rather than respawning the connection.
+- **Reconnect handles failed negotiation, a reported transport failure, and transport close** — a failed initial probe, a crashed stdio child, or an HTTP session the server dropped uses the configured reconnect budget, and the tools are unregistered only while the outage outlasts that budget. Per-request retry inside a live connection stays SDK behavior, as does a silent stall: a connection that accepts requests but never answers is not detected, because the supervisor observes transport signals rather than probing an idle session.
 - **Image is the only durable rich-result bridge** — PNG, JPEG, WebP, and GIF enter Native context after exact capability proof. Audio and embedded-resource payloads remain execution-local with explicit diagnostics, while resource links preserve only their name and URI as text.
 - **Invalid protocol results or output schemas fail through the SDK** — the bridge does not accept legacy `toolResult` substitutes or bypass advertised schema validation.
 - **Task-required MCP tools are rejected at call time** — a tool that requires the task-based execution extension throws instead of bridging; the extension is not implemented.
@@ -223,7 +226,7 @@ This Dev Note is working context for maintainers: open design questions and dire
 
 - The public-name algorithm is a v1 contract pinned by tests; changing it after release would break session history and permission rules.
 - An explicit DSH-owned connection and discovery timeout is an open direction; the SDK's 60-second default bounds startup requests.
-- Reconnect ownership for Streamable HTTP is open: per-request retry is SDK behavior, and the supervisor could also own the HTTP generation.
+- Reconnect ownership for Streamable HTTP is partly open: the supervisor now reconnects on a transport-reported failure, while per-request retry inside a live connection stays SDK behavior, and whether the supervisor should probe an idle HTTP session for liveness is undecided.
 - MCP prompt templates need a separate user-selection and invocation mechanism.
 - The pinned MCP SDK is still evolving; a breaking upstream change requires updating the bridge.
 

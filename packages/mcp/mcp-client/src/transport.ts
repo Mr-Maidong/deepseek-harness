@@ -23,6 +23,29 @@ function buildChildEnv(extra: Record<string, string>): Record<string, string> {
 }
 
 /**
+ * End the server-side session a transport opened, when it opened one.
+ *
+ * A Streamable HTTP session outlives the client that started it: the SDK's
+ * transport `close()` aborts in-flight requests and fires `onclose`, and
+ * releases the session only through this separate operation. A server that
+ * binds one Protocol instance to the session it serves therefore keeps
+ * refusing the next handshake — as an HTTP 500 reporting that it is already
+ * connected to a transport — until the release arrives, which is what makes an
+ * entry that was disabled and re-enabled unusable. Stdio and in-memory
+ * transports own no session and return here.
+ *
+ * @param transport - transport a connection generation was built on; absent
+ * when the attempt failed before building one, which leaves nothing to release.
+ * @throws Whatever the terminating request failed with, for the caller to
+ * report. The SDK already accepts `405 Method Not Allowed` as a server that
+ * does not terminate sessions.
+ */
+export async function terminateSession(transport: Transport | undefined): Promise<void> {
+  if (!(transport instanceof StreamableHTTPClientTransport)) return
+  await transport.terminateSession()
+}
+
+/**
  * Create an MCP transport from the resolved plugin config.
  *
  * @param config - Resolved plugin config discriminated on `transport`.

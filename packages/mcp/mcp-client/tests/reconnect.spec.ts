@@ -4,7 +4,7 @@
  * cap, the stability-window budget reset, and disposal stopping reconnection.
  * Isolated file so vi.mock of the MCP SDK doesn't pollute other test suites.
  */
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi, afterEach, beforeEach } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
@@ -27,6 +27,7 @@ const { mockConnect, mockClose, mockListTools, mockCallTool, mockSetNotification
   class MockClient {
     transport: object | undefined = {}
     onclose: (() => void) | undefined
+    onerror: ((error: Error) => void) | undefined
     connect = mockConnect
     close = mockClose
     getServerCapabilities = () => ({ tools: {} })
@@ -134,6 +135,13 @@ describe('reconnect supervisor', () => {
     ctx = await mountRegistry()
   })
 
+  // A supervisor past its attempt budget keeps probing at the ceiling delay for
+  // as long as it lives, so every test must end that loop: a surviving
+  // supervisor would keep calling the shared SDK mocks during later tests.
+  afterEach(async () => {
+    await ctx.fiber.dispose()
+  })
+
   it('keeps instructions withdrawn when disposal interrupts initial discovery', async () => {
     const listingGate: PromiseWithResolvers<ReturnType<typeof listing>> = Promise.withResolvers()
     const instructionSpy = vi.spyOn(MockClient.prototype, 'getInstructions').mockReturnValue('Instructions after discovery.')
@@ -210,7 +218,75 @@ describe('reconnect supervisor', () => {
     expect(instances).toHaveLength(2)
   })
 
-  it('stops at the failure cap, unregisters the tools, and reports final failure', async () => {
+  it('recovers from a transport error report without waiting for a close signal', async () => {
+    const { warns, infos } = captureLogs(ctx)
+    await apply(ctx, stdioConfig({ initialDelayMs: 5, maxDelayMs: 40, maxAttempts: 5 }))
+    await vi.waitFor(() => { expect(ctx.tools.get('mcp__srv__remote')).toBeDefined() })
+
+    // An HTTP transport reports a dead session through its error hook; its own
+    // close signal only follows the harness's close call.
+    mockListTools.mockResolvedValue(listing('revived'))
+    instances[0]!.onerror?.(new Error('fetch failed'))
+
+    await vi.waitFor(() => { expect(ctx.tools.get('mcp__srv__revived')).toBeDefined() })
+    expect(ctx.tools.get('mcp__srv__remote')).toBeUndefined()
+    expect(instances).toHaveLength(2)
+    expect(warns.some(line => line.includes('transport reported a connection failure: Error: fetch failed'))).toBe(true)
+    expect(warns.some(line => line.includes('connection lost; reconnecting in 5ms (attempt 1/5)'))).toBe(true)
+    expect(infos.some(line => line.includes('reconnected and re-synced tools'))).toBe(true)
+
+    // Repeated reports from the same generation collapse into the one retry.
+    instances[0]!.onerror?.(new Error('fetch failed'))
+    instances[0]!.onerror?.(new Error('session not found'))
+    await sleep(30)
+    expect(instances).toHaveLength(2)
+  })
+
+  it('defers the replacement until a silently closing generation reports closure', async () => {
+    vi.useFakeTimers()
+    try {
+      const { warns, errors } = captureLogs(ctx)
+      const handle = startConnection(
+        ctx,
+        stdioConfig(),
+        resolveReconnectPolicy({ initialDelayMs: 2, maxDelayMs: 8, maxAttempts: 2 }, 'reconnect'),
+      )
+      await vi.advanceTimersByTimeAsync(0)
+      expect(instances).toHaveLength(1)
+      // The close call returns while the transport stays open: a session-based
+      // HTTP server that never confirms its own shutdown.
+      mockClose.mockResolvedValue(undefined)
+
+      instances[0]!.onerror?.(new Error('session not found'))
+      await vi.advanceTimersByTimeAsync(5_000)
+
+      expect(warns.some(line => line.includes('transport reported a connection failure: Error: session not found'))).toBe(true)
+      expect(errors.some(line => line.includes('reconnect deferred until the previous server process is gone'))).toBe(true)
+      expect(warns.some(line => line.includes('connection lost; reconnecting in 2ms (attempt 1/2)'))).toBe(true)
+
+      // Every tick re-checks the barrier: a silent transport keeps yielding no
+      // replacement, however many retries elapse.
+      await vi.advanceTimersByTimeAsync(30_000)
+      expect(instances).toHaveLength(1)
+      expect(mockConnect).toHaveBeenCalledTimes(1)
+
+      // The transport finally reports closure; the next tick connects.
+      instances[0]!.onclose?.()
+      await vi.waitFor(() => { expect(instances).toHaveLength(2) })
+      await vi.waitFor(() => { expect(mockListTools).toHaveBeenCalledTimes(2) })
+
+      // Disposal owns the same barrier: it reports the incomplete shutdown
+      // rather than waiting on a transport that never reports closure.
+      const disposing = handle.dispose()
+      await vi.advanceTimersByTimeAsync(5_000)
+      await disposing
+      expect(errors.some(line => line.includes('transport closure could not be confirmed during disposal'))).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('withdraws the tools at the failure cap and keeps probing at the ceiling delay', async () => {
     const { warns, errors } = captureLogs(ctx)
     await apply(ctx, stdioConfig({ initialDelayMs: 2, maxDelayMs: 8, maxAttempts: 2 }))
     await vi.waitFor(() => { expect(ctx.tools.get('mcp__srv__remote')).toBeDefined() })
@@ -224,19 +300,22 @@ describe('reconnect supervisor', () => {
     instances[0]!.onclose?.()
 
     await vi.waitFor(() => {
-      expect(errors.some(line => line.includes('giving up after 2 consecutive failed reconnect attempts'))).toBe(true)
+      expect(errors.some(line => line.includes('2 consecutive reconnect attempts failed — tools unregistered'))).toBe(true)
+      // Stale tools do not outlive the exhausted budget.
+      expect(ctx.tools.get('mcp__srv__remote')).toBeUndefined()
     })
-    // Stale tools do not leak past final failure.
-    expect(ctx.tools.get('mcp__srv__remote')).toBeUndefined()
-    // Initial connect + exactly maxAttempts reconnect attempts.
-    expect(mockConnect).toHaveBeenCalledTimes(3)
     expect(warns.some(line => line.includes('connection attempt failed: Error: server gone'))).toBe(true)
     expect(warns.some(line => line.includes('connection failed; retrying in 4ms (attempt 2/2)'))).toBe(true)
-    await sleep(30)
-    expect(mockConnect).toHaveBeenCalledTimes(3)
+    expect(warns.some(line => line.includes('connection failed; retrying in 8ms (3 failed attempts)'))).toBe(true)
+
+    // Past the budget the probe continues at the ceiling delay, so a server
+    // that returns later is picked up without a reload.
+    const attempts = mockConnect.mock.calls.length
+    await vi.waitFor(() => { expect(mockConnect.mock.calls.length).toBeGreaterThan(attempts) })
+    expect(errors.filter(line => line.includes('tools unregistered'))).toHaveLength(1)
   })
 
-  it('gives up behind an in-flight re-sync and removes the generation it publishes', async () => {
+  it('withdraws the tools behind an in-flight re-sync and drops the list it publishes', async () => {
     const { errors } = captureLogs(ctx)
     await apply(ctx, stdioConfig({ initialDelayMs: 2, maxDelayMs: 8, maxAttempts: 1 }))
     await vi.waitFor(() => { expect(ctx.tools.get('mcp__srv__remote')).toBeDefined() })
@@ -250,15 +329,17 @@ describe('reconnect supervisor', () => {
     mockConnect.mockRejectedValue(new Error('server gone'))
     instances[0]!.onclose?.()
     await vi.waitFor(() => {
-      expect(errors.some(line => line.includes('giving up after 1 consecutive failed reconnect attempts'))).toBe(true)
+      expect(errors.some(line => line.includes('1 consecutive reconnect attempts failed — tools unregistered'))).toBe(true)
     })
 
+    // The re-sync that was already in flight publishes nothing: the withdrawal
+    // queued behind it disposes what the outage left registered.
     gate.resolve(listing('late'))
     await vi.waitFor(() => {
       expect(ctx.tools.get('mcp__srv__remote')).toBeUndefined()
       expect(ctx.tools.get('mcp__srv__late')).toBeUndefined()
     })
-    expect(mockConnect).toHaveBeenCalledTimes(2)
+    expect(errors.filter(line => line.includes('tools unregistered'))).toHaveLength(1)
   })
 
   it('does not start a replacement until a failed generation reports that it closed', async () => {
@@ -279,19 +360,36 @@ describe('reconnect supervisor', () => {
     expect(warns.some(line => line.includes('connection failed; retrying in 2ms (attempt 1/2)'))).toBe(true)
   })
 
-  it('stops reconnecting when a failed generation never reports that it closed', async () => {
+  it('keeps re-checking an unconfirmed close barrier instead of starting a replacement', async () => {
     vi.useFakeTimers()
     try {
-      const { errors } = captureLogs(ctx)
+      const { warns, errors } = captureLogs(ctx)
       mockConnect.mockRejectedValue(new Error('initialize failed'))
       mockClose.mockResolvedValue(undefined)
 
-      const applying = apply(ctx, stdioConfig({ initialDelayMs: 2, maxDelayMs: 8, maxAttempts: 2 }))
+      const handle = startConnection(
+        ctx,
+        stdioConfig(),
+        resolveReconnectPolicy({ initialDelayMs: 2, maxDelayMs: 8, maxAttempts: 2 }, 'reconnect'),
+      )
       await vi.advanceTimersByTimeAsync(5_000)
-      await applying
 
       expect(instances).toHaveLength(1)
-      expect(errors.some(line => line.includes('reconnect stopped to avoid overlapping server processes'))).toBe(true)
+      expect(errors.some(line => line.includes('reconnect deferred until the previous server process is gone'))).toBe(true)
+      expect(warns.some(line => line.includes('connection failed; retrying in 2ms (attempt 1/2)'))).toBe(true)
+
+      // Retries keep re-checking the barrier: a silent transport never overlaps
+      // with a replacement, and never exceeds the ceiling delay.
+      await vi.advanceTimersByTimeAsync(30_000)
+      expect(instances).toHaveLength(1)
+      expect(mockConnect).toHaveBeenCalledTimes(1)
+
+      // Disposal owns the barrier too: it reports the incomplete shutdown
+      // rather than waiting on a transport that never reports closure.
+      const disposing = handle.dispose()
+      await vi.advanceTimersByTimeAsync(5_000)
+      await disposing
+      expect(errors.some(line => line.includes('transport closure could not be confirmed during disposal'))).toBe(true)
     } finally {
       vi.useRealTimers()
     }
@@ -472,32 +570,52 @@ describe('reconnect supervisor', () => {
     instances[1]!.onclose?.()
 
     await vi.waitFor(() => {
-      expect(errors.some(line => line.includes('giving up after 1 consecutive failed reconnect attempts'))).toBe(true)
+      expect(errors.some(line => line.includes('1 consecutive reconnect attempts failed — tools unregistered'))).toBe(true)
     })
+    // The ceiling delay keeps the withdrawn state in place for this window.
     expect(instances).toHaveLength(2)
     expect(ctx.tools.get('mcp__srv__remote')).toBeUndefined()
   })
 
   it('a connect rejection racing its own transport close schedules exactly one retry per attempt', async () => {
-    const { errors } = captureLogs(ctx)
-    await apply(ctx, stdioConfig({ initialDelayMs: 2, maxDelayMs: 8, maxAttempts: 3 }))
-    await vi.waitFor(() => { expect(ctx.tools.get('mcp__srv__remote')).toBeDefined() })
+    vi.useFakeTimers()
+    try {
+      const { errors } = captureLogs(ctx)
+      const handle = startConnection(
+        ctx,
+        stdioConfig(),
+        resolveReconnectPolicy({ initialDelayMs: 2, maxDelayMs: 8, maxAttempts: 3 }, 'reconnect'),
+      )
+      await vi.advanceTimersByTimeAsync(0)
+      expect(ctx.tools.get('mcp__srv__remote')).toBeDefined()
+      expect(instances).toHaveLength(1)
 
-    // Each reconnect attempt sees the stdio transport die (onclose) AND its
-    // connect() reject — the real SDK emits both for a spawn failure.
-    mockConnect.mockImplementation(async () => {
-      instances.at(-1)!.onclose?.()
-      throw new Error('spawn failed')
-    })
-    instances[0]!.onclose?.()
+      // Each reconnect attempt sees the stdio transport die (onclose) AND its
+      // connect() reject — the real SDK emits both for a spawn failure. One
+      // generation per budgeted attempt: a double-scheduled retry would create
+      // more, so the ceiling delay makes the counts exact.
+      mockConnect.mockImplementation(async () => {
+        instances.at(-1)!.onclose?.()
+        throw new Error('spawn failed')
+      })
+      instances[0]!.onclose?.()
 
-    await vi.waitFor(() => {
-      expect(errors.some(line => line.includes('giving up after 3 consecutive failed reconnect attempts'))).toBe(true)
-    })
-    // Initial generation + exactly one generation per budgeted attempt: a
-    // double-scheduled retry would create more.
-    expect(instances).toHaveLength(4)
-    expect(errors.filter(line => line.includes('giving up')).length).toBe(1)
+      for (const [delay, generations] of [[2, 2], [4, 3], [8, 4]] as const) {
+        await vi.advanceTimersByTimeAsync(delay)
+        expect(instances).toHaveLength(generations)
+      }
+
+      // The fourth attempt exceeds the budget: the tools are withdrawn once and
+      // the probe continues at the ceiling delay.
+      expect(errors.filter(line => line.includes('tools unregistered'))).toHaveLength(1)
+      await vi.advanceTimersByTimeAsync(8)
+      expect(instances).toHaveLength(5)
+      expect(errors.filter(line => line.includes('tools unregistered'))).toHaveLength(1)
+
+      await handle.dispose()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('a transport that closes during a resolving connect registers nothing from the dead generation', async () => {
@@ -567,6 +685,85 @@ describe('reconnect supervisor', () => {
     const staleHandler = mockSetNotificationHandler.mock.calls[0]![1] as () => void
     staleHandler()
     expect(mockListTools).toHaveBeenCalledTimes(listCalls)
+  })
+
+  it('reports the retrying state and the failed attempt while backing off', async () => {
+    mockConnect.mockRejectedValue(new Error('connection refused'))
+    const config = stdioConfig({ initialDelayMs: 60_000, maxDelayMs: 60_000, maxAttempts: 3 })
+    const handle = startConnection(ctx, config, resolveReconnectPolicy(config.reconnect, 'reconnect'))
+    try {
+      await handle.ready
+      expect(handle.status()).toBe('reconnecting')
+      expect(handle.error()).toBe('connection refused')
+      expect(handle.toolNames()).toEqual([])
+    } finally {
+      await handle.dispose()
+    }
+  })
+
+  it('reports a negotiating generation as connecting before any failure', async () => {
+    const connectGate: PromiseWithResolvers<void> = Promise.withResolvers()
+    mockConnect.mockImplementationOnce(() => connectGate.promise)
+    const handle = startConnection(ctx, stdioConfig(), resolveReconnectPolicy(undefined, 'reconnect'))
+    try {
+      await vi.waitFor(() => { expect(mockConnect).toHaveBeenCalled() })
+      expect(handle.status()).toBe('connecting')
+      expect(handle.error()).toBeUndefined()
+    } finally {
+      const disposing = handle.dispose()
+      connectGate.resolve()
+      await disposing
+    }
+  })
+
+  it('reports a down connection with reconnect disabled as unavailable', async () => {
+    mockConnect.mockRejectedValue(new Error('connection refused'))
+    const config = stdioConfig({ enabled: false })
+    const handle = startConnection(ctx, config, resolveReconnectPolicy(config.reconnect, 'reconnect'))
+    try {
+      await handle.ready
+      expect(handle.status()).toBe('unavailable')
+      expect(handle.error()).toBe('connection refused')
+    } finally {
+      await handle.dispose()
+    }
+  })
+
+  it('reports a non-Error failure through its string form', async () => {
+    mockConnect.mockRejectedValue('connection refused')
+    const config = stdioConfig({ initialDelayMs: 60_000, maxDelayMs: 60_000, maxAttempts: 3 })
+    const handle = startConnection(ctx, config, resolveReconnectPolicy(config.reconnect, 'reconnect'))
+    try {
+      await handle.ready
+      expect(handle.error()).toBe('connection refused')
+    } finally {
+      await handle.dispose()
+    }
+  })
+
+  it('a barrier-owning tick that confirms closure after disposal opens no generation', async () => {
+    vi.useFakeTimers()
+    try {
+      // The first attempt dies without its transport reporting closure, so the
+      // close barrier owns the retry loop instead of the timer alone.
+      mockConnect.mockRejectedValue(new Error('connection refused'))
+      mockClose.mockResolvedValue(undefined)
+      const config = stdioConfig({ initialDelayMs: 2, maxDelayMs: 8, maxAttempts: 3 })
+      const handle = startConnection(ctx, config, resolveReconnectPolicy(config.reconnect, 'reconnect'))
+      await vi.advanceTimersByTimeAsync(5_000)
+
+      // The tick is now awaiting the barrier's verdict.
+      await vi.advanceTimersByTimeAsync(2)
+      const disposing = handle.dispose()
+      instances[0]!.onclose?.()
+      await vi.advanceTimersByTimeAsync(0)
+      await disposing
+
+      expect(instances).toHaveLength(1)
+      expect(mockConnect).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
 

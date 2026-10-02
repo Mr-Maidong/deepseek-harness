@@ -11,7 +11,7 @@ import ToolRuntime from '@deepseek-ai/dsh-tools'
 import type { JsonValue } from '@deepseek-ai/dsh-util-values'
 import type { PostToolDecision } from '@deepseek-ai/dsh-tools'
 import { publicToolName, syncTools, type ToolBridgeOptions } from '@deepseek-ai/dsh-mcp-client/src/tools.ts'
-import { createTransport } from '@deepseek-ai/dsh-mcp-client/src/transport.ts'
+import { createTransport, terminateSession } from '@deepseek-ai/dsh-mcp-client/src/transport.ts'
 import type { Config } from '@deepseek-ai/dsh-mcp-client'
 
 const testToolSignal = new AbortController().signal
@@ -1178,6 +1178,38 @@ describe('createTransport', () => {
     }
     const transport = createTransport(config)
     expect(transport).toBeDefined()
+  })
+})
+
+describe('terminateSession', () => {
+  it('releases nothing for a transport that owns no session', async () => {
+    const config: Config = {
+      transport: 'stdio',
+      serverName: 'srv',
+      command: 'node',
+      args: [],
+      env: {},
+      cwd: '/tmp',
+      toolCallTimeoutMs: 60_000,
+      failOnStartupError: false,
+    }
+    await expect(terminateSession(createTransport(config))).resolves.toBeUndefined()
+  })
+
+  it('releases nothing for a session-based transport that never received a session', async () => {
+    const config: Config = {
+      transport: 'streamable-http',
+      serverName: 'srv',
+      url: 'http://127.0.0.1:1/mcp',
+      headers: {},
+      toolCallTimeoutMs: 60_000,
+      failOnStartupError: false,
+    }
+    await expect(terminateSession(createTransport(config))).resolves.toBeUndefined()
+  })
+
+  it('releases nothing when an attempt never built a transport', async () => {
+    await expect(terminateSession(undefined)).resolves.toBeUndefined()
   })
 })
 

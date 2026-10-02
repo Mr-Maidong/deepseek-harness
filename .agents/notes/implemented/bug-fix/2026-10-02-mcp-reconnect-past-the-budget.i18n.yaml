@@ -1,0 +1,19 @@
+# Bilingual-pair consistency record for 2026-10-02-mcp-reconnect-past-the-budget.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-10-02-mcp-reconnect-past-the-budget.md
+/agent-note-mcp-reconnect-past-the-attempt-budget:
+  en: ffebfa501dcec37e
+  zh: 85a54be0c257413a
+/agent-note-mcp-reconnect-past-the-attempt-budget/problem:
+  en: 247a0b70f75e849b
+  zh: b9a77e65796cac4e
+/agent-note-mcp-reconnect-past-the-attempt-budget/decision:
+  en: 35cc019716eacb92
+  zh: fcd9e5dde890cd60
+/agent-note-mcp-reconnect-past-the-attempt-budget/alternatives-considered:
+  en: 7747a4ff27e81fa5
+  zh: f1e6d658f30923b2
+/agent-note-mcp-reconnect-past-the-attempt-budget/consequences:
+  en: 02f64af02e81bfa0
+  zh: 533226575655211d

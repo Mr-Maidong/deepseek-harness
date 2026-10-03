@@ -21,6 +21,7 @@ import {
   shell,
   type IpcMainInvokeEvent,
   type MenuItemConstructorOptions,
+  type Rectangle,
 } from 'electron'
 import { resolveDesktopPaths } from './paths.ts'
 import { DesktopProjectManager } from './project-manager.ts'
@@ -59,9 +60,15 @@ import { DesktopUpdateOverlays } from './update-overlay.ts'
 import { DesktopQuitConfirmation } from './quit-confirmation.ts'
 import { DesktopTray } from './tray.ts'
 import { DesktopBackgroundNotice } from './background-notice.ts'
+import { loadWindowBounds, restoredWindowBounds, trackWindowBounds, wasMaximized } from './window-bounds.ts'
 
 let focusPrimaryWindow = (): void => {}
 let stopForRecovery = async (): Promise<void> => {}
+
+/** First-launch main-window width in DIP px; a restored size replaces it (window-bounds.ts). */
+const DEFAULT_WINDOW_WIDTH = 1280
+/** First-launch main-window height in DIP px; a restored size replaces it (window-bounds.ts). */
+const DEFAULT_WINDOW_HEIGHT = 820
 let shuttingDown = false
 /**
  * Set by quit entries that must not ask: crash recovery exit and restart, and the
@@ -203,10 +210,11 @@ function platformLoginUrl(authorizeUrl: string): string {
   return url.href
 }
 
-function createWindow(preload: string, show = false, primary = false): BrowserWindow {
+function createWindow(preload: string, show = false, primary = false, bounds?: Rectangle): BrowserWindow {
   const window = new BrowserWindow({
-    width: 1280,
-    height: 820,
+    width: bounds?.width ?? DEFAULT_WINDOW_WIDTH,
+    height: bounds?.height ?? DEFAULT_WINDOW_HEIGHT,
+    ...(bounds === undefined ? {} : { x: bounds.x, y: bounds.y }),
     minWidth: 520,
     minHeight: 600,
     show,
@@ -1063,7 +1071,9 @@ async function main(): Promise<void> {
     }
   }
   const createMainWindow = (): BrowserWindow => {
-    const window = createWindow(appPreload, false, true)
+    const window = createWindow(appPreload, false, true, restoredWindowBounds() ?? undefined)
+    if (wasMaximized()) window.maximize()
+    trackWindowBounds(window, app.getPath('userData'))
     mainWindow = window
     browserGuests.bind(window, (guest, name) => shortcuts.attachGuest(window, guest, name))
     shortcuts.attach(window)
@@ -1280,6 +1290,7 @@ async function main(): Promise<void> {
     }).catch((error: unknown) => { console.error(error); if (!quitting && !shellInstallerOwnsQuit) finishQuit() })
   })
 
+  loadWindowBounds(app.getPath('userData'))
   mainWindow = createMainWindow()
   const manifest: unknown = JSON.parse(await readFile(join(app.getAppPath(), 'package.json'), 'utf8'))
   if (typeof manifest !== 'object' || manifest === null) throw new Error('desktop policy: invalid application manifest')

@@ -1,13 +1,17 @@
 /**
  * Root-owned frame measurement, panel preferences, and presentation reports.
  * The registration supplies a fresh store and binds its actions to ctx.layout.
+ *
+ * Only the two dragged widths are persisted (preferences.ts); the rest of this
+ * state is a live measurement or a report from the right panel's occupant.
  */
-import { defineStore, type EngineStoreHandle } from '@deepseek-ai/dsh-client-store'
+import { defineStore, type EngineStoreHandle, type EngineStoreInstance } from '@deepseek-ai/dsh-client-store'
 import type { MainPanelId } from './service.ts'
 import {
   clampWidth, RIGHTBAR_DEFAULT_RATIO, RIGHTBAR_MAX_RATIO, RIGHTBAR_MIN,
   SIDEBAR_AUTO_COLLAPSE, SIDEBAR_DEFAULT, SIDEBAR_MAX, SIDEBAR_MIN,
 } from './columns.ts'
+import { readPanelWidths, writePanelWidths } from './preferences.ts'
 
 /**
  * Transient layout preferences. Responsive concessions never rewrite widths;
@@ -75,21 +79,27 @@ type LayoutActions = {
  * override; opening the right panel clears that override.
  * @returns the store handle (spec + type + identity + factory in one).
  */
-export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutActions>  {
+export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutActions> {
   const handle = defineStore({
-    init: (): LayoutState => ({
-      panelInfo: { activePanelId: null },
-      layoutInfo: {
-        sidebar: SIDEBAR_DEFAULT,
-        viewportWidth: window.innerWidth,
-        narrowExpanded: false,
-        rightbar: null,
-        rightbarShown: false,
-        rightbarTrack: false,
-        rightbarFullscreen: false,
-        rightbarInstant: false,
-      },
-    }),
+    init: (): LayoutState => {
+      // The window's inner width is the first frame measurement, so the stored
+      // right-panel width is clamped against the frame it will actually open in.
+      const viewportWidth = window.innerWidth
+      const stored = readPanelWidths(viewportWidth)
+      return {
+        panelInfo: { activePanelId: null },
+        layoutInfo: {
+          sidebar: stored?.sidebar ?? SIDEBAR_DEFAULT,
+          viewportWidth,
+          narrowExpanded: false,
+          rightbar: stored?.rightbar ?? null,
+          rightbarShown: false,
+          rightbarTrack: false,
+          rightbarFullscreen: false,
+          rightbarInstant: false,
+        },
+      }
+    },
     actions: {
       selectPanel: (d, panelId: MainPanelId | null) => {
         d.panelInfo.activePanelId = panelId
@@ -142,5 +152,25 @@ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutAction
       },
     },
   })
-  return handle
+  // Persistence attaches per instance, after the store's own init has read the
+  // stored widths back. Writes are debounced by value comparison rather than by
+  // time: a window resize repaints the frame's measurement on every frame, and
+  // none of those updates may touch storage.
+  const persistWidths = (instance: EngineStoreInstance<LayoutState, LayoutActions>): void => {
+    let last: { sidebar: number; rightbar: number | null } | null = null
+    instance.subscribe(() => {
+      const { sidebar, rightbar } = instance.getSnapshot().layoutInfo
+      if (last !== null && last.sidebar === sidebar && last.rightbar === rightbar) return
+      last = { sidebar, rightbar }
+      writePanelWidths({ sidebar, rightbar })
+    })
+  }
+  return {
+    ...handle,
+    create(scopeKey?: string) {
+      const instance = handle.create(scopeKey)
+      persistWidths(instance)
+      return instance
+    },
+  }
 }

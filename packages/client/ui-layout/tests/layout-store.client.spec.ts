@@ -4,7 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createLayoutStore } from '../src/client/stores.ts'
 import type { MainPanelId } from '../src/client/service.ts'
 
-beforeEach(() => { vi.stubGlobal('innerWidth', 1920) })
+beforeEach(() => {
+  vi.stubGlobal('innerWidth', 1920)
+  localStorage.clear()
+})
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks() })
 
 describe('createLayoutStore', () => {
@@ -25,15 +28,61 @@ describe('createLayoutStore', () => {
     })
   })
 
-  it('creates independent instances without browser persistence', () => {
+  it('restores the dragged widths a previous window saved', () => {
+    localStorage.setItem('dsh.layout.widths.v1', JSON.stringify({ sidebar: 340, rightbar: 900 }))
+    const { store } = createLayoutStore().create()
+    expect(store.getSnapshot().layoutInfo).toMatchObject({ sidebar: 340, rightbar: 900 })
+  })
+
+  it('re-clamps a restored right-panel width to the current frame', () => {
+    // Saved on a wide monitor; the window is narrower now, so 70% of the frame
+    // is the ceiling rather than the saved value.
+    localStorage.setItem('dsh.layout.widths.v1', JSON.stringify({ sidebar: 340, rightbar: 1800 }))
+    vi.stubGlobal('innerWidth', 1000)
+    const { store } = createLayoutStore().create()
+    expect(store.getSnapshot().layoutInfo.rightbar).toBe(700)
+  })
+
+  it('restores a closed sidebar as closed rather than clamping it open', () => {
+    localStorage.setItem('dsh.layout.widths.v1', JSON.stringify({ sidebar: 0, rightbar: null }))
+    const { store } = createLayoutStore().create()
+    expect(store.getSnapshot().layoutInfo.sidebar).toBe(0)
+    expect(store.getSnapshot().layoutInfo.rightbar).toBeNull()
+  })
+
+  it('falls back to the defaults when the saved widths are unreadable', () => {
+    localStorage.setItem('dsh.layout.widths.v1', '{"sidebar":"wide","rightbar":')
+    const { store } = createLayoutStore().create()
+    expect(store.getSnapshot().layoutInfo).toMatchObject({ sidebar: 280, rightbar: null })
+  })
+
+  it('persists the dragged widths and nothing else', () => {
+    const { actions } = createLayoutStore().create()
+    actions.setSidebar(400)
+    actions.setRightbar(1100)
+    expect(JSON.parse(localStorage.getItem('dsh.layout.widths.v1') ?? 'null'))
+      .toEqual({ sidebar: 400, rightbar: 1100 })
+  })
+
+  it('does not write when an update leaves both widths unchanged', () => {
+    const { actions } = createLayoutStore().create()
+    actions.setSidebar(400)
     const write = vi.spyOn(Storage.prototype, 'setItem')
+    // A window resize repaints the frame measurement every frame; none of those
+    // updates is a width preference, so none may reach storage.
+    actions.setViewportWidth(1400)
+    actions.selectPanel('conversation' as MainPanelId)
+    actions.closeRightbar()
+    expect(write).not.toHaveBeenCalled()
+  })
+
+  it('creates independent instances that read the same saved widths', () => {
+    localStorage.setItem('dsh.layout.widths.v1', JSON.stringify({ sidebar: 340, rightbar: 900 }))
     const a = createLayoutStore().create()
     const b = createLayoutStore().create()
+    expect(b.store.getSnapshot().layoutInfo).toMatchObject({ sidebar: 340, rightbar: 900 })
     a.actions.setSidebar(400)
-    a.actions.openRightbar(true, false)
-    expect(b.store.getSnapshot().layoutInfo.sidebar).toBe(280)
-    expect(b.store.getSnapshot().layoutInfo.rightbar).toBeNull()
-    expect(write).not.toHaveBeenCalled()
+    expect(b.store.getSnapshot().layoutInfo.sidebar).toBe(340)
   })
 
   it('clamps the sidebar to 264–420px', () => {

@@ -6,7 +6,7 @@ import { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { SessionLogDownloadHeaderAction } from '../src/client/HeaderAction.tsx'
 import { apply, inject } from '../src/client/index.ts'
-import type { SessionLogDownloadHeaderInjected } from '../src/client/HeaderAction.tsx'
+import type { SessionLogDownloadDialogInjected } from '../src/client/Dialog.tsx'
 
 const SID = 'session-export-apply' as SessionId
 
@@ -34,22 +34,14 @@ async function bench() {
 }
 
 describe('session-log-download browser plugin', () => {
-  it('follows feedback plugin availability and opens the selected Session form', async () => {
+  it('registers a dialog-only entry, with no feedback dependency', async () => {
     const b = await bench()
     const entry = b.slots.entries('conversation.session.header.utilities')[0]!
-    const injected = (entry.inject as unknown as () => SessionLogDownloadHeaderInjected)()
-    expect(injected.hooks.feedbackAvailable.getSnapshot()).toBe(false)
-    injected.openFeedback(SID)
-
-    const openSession = vi.fn()
-    const feedback = b.ctx.plugin((ctx) => { ctx.provide('feedbackUi', { openSession }) })
-    await feedback.await()
-    await vi.waitFor(() => { expect(injected.hooks.feedbackAvailable.getSnapshot()).toBe(true) })
-    injected.openFeedback(SID)
-    expect(openSession).toHaveBeenCalledWith(SID)
-
-    await feedback.dispose()
-    await vi.waitFor(() => { expect(injected.hooks.feedbackAvailable.getSnapshot()).toBe(false) })
+    // The header trigger is gone, so the entry no longer injects a feedback
+    // availability hook or an openFeedback action; it drives the modal only.
+    const injected = (entry.inject as unknown as () => SessionLogDownloadDialogInjected)()
+    expect(injected.hooks).toEqual({ sessionLogDownload: b.ctx.sessionLogDownload.store })
+    expect(b.ctx.get('feedbackUi')).toBeUndefined()
     expect(b.slots.entries('conversation.session.header.utilities')).toHaveLength(1)
     await b.fiber.dispose()
   })
@@ -63,7 +55,7 @@ describe('session-log-download browser plugin', () => {
     const entry = b.slots.entries('conversation.session.header.utilities')[0]
     expect(entry?.component).toBe(SessionLogDownloadHeaderAction)
     expect(entry?.options).toMatchObject({ id: 'session-log-download' })
-    const injected = (entry?.inject as unknown as () => import('../src/client/Dialog.tsx').SessionLogDownloadDialogInjected)()
+    const injected = (entry?.inject as unknown as () => SessionLogDownloadDialogInjected)()
     await injected.request(SID)
     expect(b.ctx.sessionLogDownload.store.getSnapshot().bySession[SID]?.status).toBe('error')
     injected.dismiss(SID)

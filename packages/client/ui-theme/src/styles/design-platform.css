@@ -54,7 +54,7 @@ body {
   --dsw-static-neutral-850: rgb(33, 33, 35);
   --dsw-static-neutral-900: rgb(15, 15, 15);
   --dsw-static-neutral-bluish-00: rgb(255, 255, 255);
-  --dsw-static-neutral-bluish-1000: #143068d1;
+  --dsw-static-neutral-bluish-1000: rgb(40 49 66 / 92%);
   --dsw-static-neutral-bluish-100: rgb(235, 238, 242);
   --dsw-static-neutral-bluish-150: rgb(233, 236, 242);
   --dsw-static-neutral-bluish-200: rgb(225, 229, 238);
@@ -135,7 +135,7 @@ body[data-ds-dark-theme] {
   --dsw-static-neutral-850: rgb(33, 33, 35);
   --dsw-static-neutral-900: rgb(15, 15, 15);
   --dsw-static-neutral-bluish-00: rgb(255, 255, 255);
-  --dsw-static-neutral-bluish-1000: #143068d1;
+  --dsw-static-neutral-bluish-1000: rgb(40 49 66 / 92%);
   --dsw-static-neutral-bluish-100: rgb(235, 238, 242);
   --dsw-static-neutral-bluish-150: rgb(233, 236, 242);
   --dsw-static-neutral-bluish-200: rgb(225, 229, 238);

@@ -1,20 +1,22 @@
-/* Albert Sans carries Latin text and YaHei Consolas Hybrid the CJK text;
- * base.css names both through --dsw-font-family. Albert Sans is variable across
- * weights 100-900 and ships under the SIL Open Font License in
- * AlbertSans-OFL.txt. The CJK face prefers the family installed on the host
- * and falls back to the bundled WOFF2. */
+/* Inter Light carries Latin text and Alibaba PuHuiTi 3.0 the CJK text;
+ * base.css names both through --dsw-font-family, --ds-font-family-code and
+ * --dsw-font-mono. Inter Light is variable across weights 100-900 and ships
+ * under the SIL Open Font License in AlbertSans-OFL.txt; the bundled CJK cut is
+ * the 45 Light instance, declared at weight 300 so heavier CJK text still takes
+ * synthetic bold. The CJK face prefers the family installed on the host and
+ * falls back to the bundled WOFF2. */
 @font-face {
-  font-family: 'Albert Sans';
+  font-family: 'Inter Light';
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: url(./albert-sans.woff2) format('woff2');
+  src: url(./Inter-Light.woff2) format('woff2');
 }
 
 @font-face {
-  font-family: 'YaHei Consolas Hybrid';
+  font-family: 'Alibaba PuHuiTi 3.0';
   font-style: normal;
-  font-weight: 400;
+  font-weight: 300;
   font-display: swap;
-  src: local('YaHei Consolas Hybrid'), url(./yahei-consolas-hybrid.woff2) format('woff2');
+  src: local('Alibaba PuHuiTi 3.0'), url(./alibaba-puhuiti-light.woff2) format('woff2');
 }

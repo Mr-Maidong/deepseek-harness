@@ -23,7 +23,7 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-type Row = { id: string; order: number; label: string }
+type Row = { id: string; order: number; label: string; hasIcon: boolean }
 type Step = { id: string; order: number }
 
 /** Slot-content stand-ins: the shell renders whatever the seats contribute. */
@@ -48,9 +48,9 @@ function mount({
   onboardingActive = true,
   mainView = true,
   rows = [
-    { id: 'general', order: 0, label: 'General' },
-    { id: 'models', order: 10, label: 'Models' },
-    { id: 'agent-presets', order: 20, label: 'Agent presets' },
+    { id: 'general', order: 0, label: 'General', hasIcon: false },
+    { id: 'models', order: 10, label: 'Models', hasIcon: false },
+    { id: 'agent-presets', order: 20, label: 'Agent presets', hasIcon: false },
   ],
   steps = [
     { id: 'welcome', order: -100 },
@@ -77,6 +77,7 @@ function mount({
   const renderSlot = vi.fn(
     ((key: string, _owner: unknown, opts?: { only?: string; fallback?: import('react').ReactNode }) => {
       if (key === 'settings.section') return <div data-testid={`section-${opts?.only ?? 'all'}`} />
+      if (key === 'settings.section.icon') return <div data-testid={`glyph-${opts?.only ?? 'all'}`} />
       return SEAT_CONTENT[key] ?? opts?.fallback
     }) as SettingsRootComponentProps['renderSlot'],
   )
@@ -368,15 +369,16 @@ describe('SettingsPanel navigation', () => {
     expect(screen.getByTestId('section-general')).toBeTruthy()
   })
 
-  it('gives every section a nav glyph, distinct for the ids the shell knows', () => {
+  it('gives every section a nav glyph: the shell mapping, or the row contribution', () => {
     mount({
       rows: [
-        { id: 'general', order: 0, label: 'General' },
-        { id: 'models', order: 10, label: 'Models' },
-        { id: 'agent-presets', order: 20, label: 'Agent presets' },
-        { id: 'plugins', order: 30, label: 'Plugins' },
-        { id: 'archived-sessions', order: 40, label: 'Archived sessions' },
-        { id: 'contributed', order: 50, label: 'Contributed' },
+        { id: 'general', order: 0, label: 'General', hasIcon: false },
+        { id: 'models', order: 10, label: 'Models', hasIcon: false },
+        { id: 'agent-presets', order: 20, label: 'Agent presets', hasIcon: false },
+        { id: 'plugins', order: 30, label: 'Plugins', hasIcon: false },
+        { id: 'archived-sessions', order: 40, label: 'Archived sessions', hasIcon: false },
+        { id: 'contributed', order: 50, label: 'Contributed', hasIcon: false },
+        { id: 'custom', order: 60, label: 'Custom', hasIcon: true },
       ],
     })
     openPanel()
@@ -389,6 +391,9 @@ describe('SettingsPanel navigation', () => {
     // including one this package never heard of — shares the gear.
     expect(new Set(glyphs.slice(0, 5)).size).toBe(5)
     expect(glyphs[5]).toBe(glyphs[0])
+    // A section with a glyph contribution draws it for that row instead.
+    expect(screen.getByTestId('glyph-custom')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Custom' }).querySelector('svg')).toBeNull()
   })
 
   it('switches the rendered section on nav click', () => {
@@ -463,7 +468,7 @@ describe('SettingsPanel navigation', () => {
     const { bump } = mount()
     openPanel()
     fireEvent.click(screen.getByRole('button', { name: 'Models' }))
-    bump([{ id: 'general', order: 0, label: 'General' }])
+    bump([{ id: 'general', order: 0, label: 'General', hasIcon: false }])
     expect(screen.queryByRole('button', { name: 'Models' })).toBeNull()
     expect(screen.getByTestId('section-general')).toBeTruthy()
   })
@@ -497,7 +502,7 @@ it('explicitly reopens one onboarding editor during an existing session', () => 
 })
 
 it('opens Account from the contributed sidebar launcher', () => {
-  const { renderSlot } = mount({ rows: [{ id: 'account', order: -10, label: 'Account' }] })
+  const { renderSlot } = mount({ rows: [{ id: 'account', order: -10, label: 'Account', hasIcon: false }] })
   const launcher = renderSlot.mock.calls.find(call => call[0] === 'settings.launcher')!
   expect(launcher[1]).toMatchObject({ settingsOpen: false })
   act(() => { (launcher[1] as { openSettings: () => void }).openSettings() })

@@ -32,6 +32,7 @@ const CHILD_SPECS = {
   'settings.action': { kind: 'list', scope: 'root' },
   'settings.close': { kind: 'single', scope: 'root' },
   'settings.section': { kind: 'list', scope: 'root' },
+  'settings.section.icon': { kind: 'list', scope: 'root' },
   'settings.onboarding': { kind: 'list', scope: 'root' },
 } as const
 const CHILD_NAMES = Object.keys(CHILD_SPECS) as Array<keyof typeof CHILD_SPECS>
@@ -95,8 +96,8 @@ describe('ui-settings-general shell', () => {
     // No order and no label: both projection defaults apply, and order 0 sorts among the product rows.
     c.ctx.slots.register({ name: 'settings.section', id: 'a' } as never, () => null)
     const rows = sections.getSnapshot()
-    expect(rows.at(-1)).toEqual({ id: 'z', order: 1_000, label: 'Z' })
-    expect(rows.find(row => row.id === 'a')).toEqual({ id: 'a', order: 0, label: '' })
+    expect(rows.at(-1)).toEqual({ id: 'z', order: 1_000, label: 'Z', hasIcon: false })
+    expect(rows.find(row => row.id === 'a')).toEqual({ id: 'a', order: 0, label: '', hasIcon: false })
     expect(rows.map(row => row.order)).toEqual([...rows.map(row => row.order)].sort((x, y) => x - y))
     // Snapshot identity is stable until the ledger moves (uSES contract).
     expect(sections.getSnapshot()).toBe(rows)
@@ -106,6 +107,10 @@ describe('ui-settings-general shell', () => {
     await Promise.resolve()
     expect(listener).toHaveBeenCalled()
     expect(sections.getSnapshot()).not.toBe(rows)
+    // A glyph contribution marks its section row and rides its own ledger.
+    c.ctx.slots.register({ name: 'settings.section.icon', id: 'z' } as never, () => null)
+    await Promise.resolve()
+    expect(sections.getSnapshot().filter(row => row.hasIcon).map(row => row.id)).toEqual(['z'])
     off()
   })
 

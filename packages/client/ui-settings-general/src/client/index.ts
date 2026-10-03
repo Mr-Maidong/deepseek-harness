@@ -112,9 +112,11 @@ export function apply(ctx: ClientContext): void {
   // The settings shell: this package occupies the sidebar-owned hole and
   // declares the settings slots. Ledger → nav-row projection as an observable
   // source (uSES contract: getSnapshot returns the cached rows until the
-  // ledger version moves). Labels may be locale-following thunks, so the cache
-  // key includes the locale revision and subscribers ride both sources.
+  // ledger version moves). Labels may be locale-following thunks, and a row
+  // reports whether a glyph contribution draws it, so the cache key includes
+  // the locale revision and subscribers ride every source.
   let rowsVersion = -1
+  let iconsVersion = -1
   let rowsRevision = -1
   let rows: readonly SettingsSectionRow[] = []
   let onboardingVersion = -1
@@ -129,16 +131,20 @@ export function apply(ctx: ClientContext): void {
       sections: {
         getSnapshot: () => {
           const version = ctx.slots.getVersion('settings.section')
+          const icons = ctx.slots.getVersion('settings.section.icon')
           const revision = ctx.locale.getSnapshot().revision
-          if (version !== rowsVersion || revision !== rowsRevision) {
+          if (version !== rowsVersion || icons !== iconsVersion || revision !== rowsRevision) {
             rowsVersion = version
+            iconsVersion = icons
             rowsRevision = revision
+            const glyphs = new Set(ctx.slots.entries('settings.section.icon').map(e => e.options.id))
             rows = ctx.slots.entries('settings.section')
               .map(e => ({
                 /* v8 ignore next -- list-slot registration requires id (SlotCore rejects an entry without one) */
                 id: e.options.id ?? '',
                 order: e.options.order ?? 0,
                 label: resolveSlotLabel(e.options.label) ?? '',
+                hasIcon: glyphs.has(e.options.id),
               }))
               .sort((a, b) => a.order - b.order)
           }
@@ -146,9 +152,11 @@ export function apply(ctx: ClientContext): void {
         },
         subscribe: (listener) => {
           const offLedger = ctx.slots.subscribe('settings.section', listener)
+          const offIcons = ctx.slots.subscribe('settings.section.icon', listener)
           const offLocale = ctx.locale.subscribe(listener)
           return () => {
             offLedger()
+            offIcons()
             offLocale()
           }
         },
@@ -206,6 +214,7 @@ export function apply(ctx: ClientContext): void {
         'settings.action': { kind: 'list', scope: 'root' },
         'settings.close': { kind: 'single', scope: 'root' },
         'settings.section': { kind: 'list', scope: 'root' },
+        'settings.section.icon': { kind: 'list', scope: 'root' },
         'settings.onboarding': { kind: 'list', scope: 'root' },
       },
       inject: shellInjected,

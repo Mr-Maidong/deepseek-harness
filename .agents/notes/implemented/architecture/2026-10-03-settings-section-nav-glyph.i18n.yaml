@@ -1,0 +1,19 @@
+# Bilingual-pair consistency record for 2026-10-03-settings-section-nav-glyph.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-03-settings-section-nav-glyph.md
+/agent-note-settings-nav-glyphs-are-a-slot-not-a-shell-owned-id-map:
+  en: 6de468cdeffbca86
+  zh: 1b342e95dbb87142
+/agent-note-settings-nav-glyphs-are-a-slot-not-a-shell-owned-id-map/problem:
+  en: 5203f334a2f1c8d2
+  zh: 93c13cb7c89d52f7
+/agent-note-settings-nav-glyphs-are-a-slot-not-a-shell-owned-id-map/decision:
+  en: ba95f7f899e86a3a
+  zh: a4b1b5c3bc23fbfb
+/agent-note-settings-nav-glyphs-are-a-slot-not-a-shell-owned-id-map/alternatives-considered:
+  en: 25cd921ec14b45ca
+  zh: 9d85c74cac3704eb
+/agent-note-settings-nav-glyphs-are-a-slot-not-a-shell-owned-id-map/consequences:
+  en: 83de1ba67be892a3
+  zh: f8d5153cd0d08e2a

@@ -56,6 +56,15 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
      */
     'settings.section': { kind: 'list'; scope: 'root'; owner: SettingsSectionOwnerProps }
     /**
+     * Optional nav glyph for one settings section, addressed by that section's
+     * `id`: a contribution whose registration id equals the section id draws
+     * the row's glyph in place of the shell's built-in mapping. Content renders
+     * inside the nav cell beside the label, where the shipped glyphs draw at
+     * 16×16 in `currentColor`; a contribution matches that size and color and
+     * owns no copy. Declared at runtime by the shell's `sidebar.settings` entry.
+     */
+    'settings.section.icon': { kind: 'list'; scope: 'root'; owner: SettingsSectionIconOwnerProps }
+    /**
      * One page inside the Plugins settings section. The section owner renders
      * localized entry labels as tabs and mounts each contribution inside its
      * corresponding tab panel. Options: `id` (tab key), `order` (tab order),
@@ -126,6 +135,12 @@ export interface SettingsHeaderOwnerProps {
 export interface SettingsSectionOwnerProps {
   /** Close the settings panel (the shell owns the open state). */
   close: () => void
+}
+
+/** Owner share of a section nav glyph (the shell supplies nothing). */
+export interface SettingsSectionIconOwnerProps {
+  /** Marker field: glyph owner props are intentionally empty. */
+  children?: never
 }
 
 /** Owner share of the currently active settings-backed onboarding step. */

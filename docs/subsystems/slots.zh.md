@@ -127,11 +127,12 @@ root
 │     ├─ settings.action
 │     ├─ settings.close
 │     ├─ settings.onboarding
-│     └─ settings.section
-│        ├─ settings.general.item
-│        ├─ settings.models.provider-card
-│        ├─ settings.models.footer
-│        └─ settings.plugins.tab
+│     ├─ settings.section
+│     │  ├─ settings.general.item
+│     │  ├─ settings.models.provider-card
+│     │  ├─ settings.models.footer
+│     │  └─ settings.plugins.tab
+│     └─ settings.section.icon
 ├─ main
 │  ├─ plugins.item
 │  ├─ plugins.bundle.config

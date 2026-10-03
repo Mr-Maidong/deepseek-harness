@@ -1,8 +1,9 @@
 /**
  * Settings shell root: the sidebar-foot trigger row plus the centered modal
  * panel (figma 2552:26025, 760x500) with the section nav rail. The shell is
- * a pure composition face — slot-owned text (trigger label, panel title,
- * close label, sections) arrives from registrants through slots; accessible
+ * a pure composition face — slot-owned content (trigger label, panel title,
+ * close label, sections, and the glyphs their nav rows draw) arrives from
+ * registrants through slots; accessible
  * names resolve from localized content (trigger: shell locale; dialog:
  * aria-labelledby the title node; close: visually-hidden slot text). Modal
  * open state and the active section id belong to the declared owner store;
@@ -28,14 +29,14 @@ const RECOVERY_CONFIRMATION_MS = 2_000
 /** Minimum visible time for the connecting pill; shorter attempts read as flicker. */
 const CONNECTING_MIN_VISIBLE_MS = 800
 
-/** Nav glyph by section id; unknown ids fall back to the settings gear. */
+/** Nav glyph by section id for rows without a `settings.section.icon` contribution. */
 function navIcon(id: string) {
-  if (id === 'account') return <IconUserOutlineMedium className={css.navIcon} size={16} />
-  if (id === 'models') return <IconDataOutlineMedium className={css.navIcon} size={16} />
-  if (id === 'agent-presets') return <IconAgentPresetOutlineMedium className={css.navIcon} size={16} />
-  if (id === 'plugins') return <IconPersonalizationOutlineMedium className={css.navIcon} size={16} />
-  if (id === 'archived-sessions') return <IconArchiveOutlineMedium className={css.navIcon} size={16} />
-  return <IconSettingsOutlineMedium className={css.navIcon} size={16} />
+  if (id === 'account') return <IconUserOutlineMedium size={16} />
+  if (id === 'models') return <IconDataOutlineMedium size={16} />
+  if (id === 'agent-presets') return <IconAgentPresetOutlineMedium size={16} />
+  if (id === 'plugins') return <IconPersonalizationOutlineMedium size={16} />
+  if (id === 'archived-sessions') return <IconArchiveOutlineMedium size={16} />
+  return <IconSettingsOutlineMedium size={16} />
 }
 
 type PanelProps = {
@@ -81,7 +82,9 @@ function SettingsPanel({ rows, renderSlot, activeId, onSelect, onClose }: PanelP
                 data-modal-autofocus={row.id === active ? '' : undefined}
                 onClick={() => { onSelect(row.id) }}
               >
-                {navIcon(row.id)}
+                <span className={css.navIcon}>
+                  {row.hasIcon ? renderSlot('settings.section.icon', {}, { only: row.id }) : navIcon(row.id)}
+                </span>
                 <span className={css.navLabel}>{row.label}</span>
               </button>
             ))}

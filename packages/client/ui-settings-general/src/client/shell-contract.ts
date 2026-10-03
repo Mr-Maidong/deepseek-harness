@@ -20,11 +20,16 @@ import type { createSettingsShellStore } from './shell-store.ts'
 import type { ShortcutCatalogEntry } from '@deepseek-ai/dsh-client-shortcuts/client'
 import type { DesktopUpdateView } from '../types.ts'
 
-/** One nav row projected from a settings.section registration's options. */
+/**
+ * One nav row projected from a `settings.section` registration's options plus
+ * the `settings.section.icon` ledger.
+ */
 export interface SettingsSectionRow {
   id: string
   order: number
   label: string
+  /** A glyph contribution draws this row; otherwise the shell draws its built-in mapping. */
+  hasIcon: boolean
 }
 
 /** One ordered onboarding step projected from a slot registration. */
@@ -72,6 +77,7 @@ export type SettingsRootComponentProps =
     | 'settings.action'
     | 'settings.close'
     | 'settings.section'
+    | 'settings.section.icon'
     | 'settings.onboarding'
   >
   & InjectFace<SettingsRootInjected>

@@ -164,8 +164,10 @@
   background: var(--dsw-specific-sidebar-nav-item-active);
 }
 
+/* Nav glyph box: flex, so the SVG fills it without inline baseline space. */
 .navIcon {
   flex: none;
+  display: flex;
 }
 
 .navLabel {

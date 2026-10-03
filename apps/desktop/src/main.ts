@@ -240,6 +240,10 @@ function createWindow(preload: string, show = false, primary = false, bounds?: R
       contextIsolation: true,
       sandbox: true,
       webSecurity: true,
+      // The composer takes software names, file paths, identifiers and
+      // ordinary English prose in one field; a checker underlines most of the
+      // first three and the underline is noise the user cannot act on.
+      spellcheck: false,
       webviewTag: primary,
       devTools: true,
     },

@@ -41,6 +41,10 @@ export function ComposerContentEditable({ editor, editable, ...rest }: ComposerC
       // renders it, and setEditable above keeps the editor's own gate in step.
       contentEditable={editor !== null && editable}
       suppressContentEditableWarning
+      // A contenteditable inherits spellcheck=true, and the composer takes
+      // software names, paths and identifiers beside ordinary prose; the
+      // resulting underlines are noise the user cannot act on.
+      spellCheck={false}
       role="textbox"
       aria-multiline="true"
       data-composer-input

@@ -497,7 +497,7 @@ describe('desktop main startup', () => {
       { role: 'toggleDevTools', visible: false },
       { role: 'toggleDevTools', visible: false, accelerator: 'F12' },
     ])
-    expect(harness.windows[0]!.options).toMatchObject({ webPreferences: { devTools: true } })
+    expect(harness.windows[0]!.options).toMatchObject({ webPreferences: { devTools: true, spellcheck: false } })
   })
 
   it.each([

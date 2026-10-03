@@ -193,6 +193,16 @@ describe('resident composer', () => {
     expect(view.container.querySelector<HTMLDivElement>('[data-composer-input]')).toBe(hero)
     await runtime.dispose()
   })
+
+  it('declares spellcheck off on the composer surface', async () => {
+    const runtime = await bench({ blank: true })
+    const view = runtime.renderRoot()
+    const composer = view.container.querySelector<HTMLDivElement>('[data-composer-input]')!
+    // A contenteditable inherits spellcheck=true, which underlines the
+    // software names, paths and identifiers the composer is expected to carry.
+    expect(composer.getAttribute('spellcheck')).toBe('false')
+    await runtime.dispose()
+  })
 })
 
 describe('prompt rejection through the assembled composer', () => {

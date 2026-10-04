@@ -365,13 +365,24 @@ describe('AppFrame normal width concessions', () => {
     expect(tracks(frame)[0]).toBe(400)
   })
 
-  it('re-expands a wide-closed sidebar at the default width while narrow', () => {
+  it('restores the dragged width when a collapsed wide sidebar reopens', () => {
+    const { frame, instance, sidebarOwner } = mountFrame()
+    drag(handleFor(frame, 'sidebar'), 280, 360)
+    expect(tracks(frame)[0]).toBe(360)
+    act(() => { instance.actions.toggleSidebar() })
+    expect(sidebarOwner()).toEqual({ collapsed: true, width: 56 })
+    act(() => { instance.actions.toggleSidebar() })
+    expect(sidebarOwner()).toEqual({ collapsed: false, width: 360 })
+    expect(tracks(frame)[0]).toBe(360)
+  })
+
+  it('re-expands a wide-closed sidebar at its dragged width while narrow', () => {
     const { frame, instance } = mountFrame()
+    act(() => { instance.actions.setSidebar(360) })
     act(() => { instance.actions.toggleSidebar() })
     resize(980)
     act(() => { instance.actions.toggleSidebar() })
-    expect(tracks(frame)[0]).toBe(280)
-    expect(instance.getSnapshot().layoutInfo.sidebar).toBe(0)
+    expect(tracks(frame)[0]).toBe(360)
   })
 })
 

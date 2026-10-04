@@ -128,15 +128,15 @@ describe('assembled shortcut command owners', () => {
     expect(reference.getSnapshot().open).toBe(true)
     press('Comma')
     expect(settings.getSnapshot().open).toBe(false)
-    const sidebar = layout.getSnapshot().layoutInfo.sidebar
+    const sidebarClosed = layout.getSnapshot().layoutInfo.sidebarClosed
     press('KeyB')
-    expect(layout.getSnapshot().layoutInfo.sidebar).not.toBe(sidebar)
+    expect(layout.getSnapshot().layoutInfo.sidebarClosed).not.toBe(sidebarClosed)
     press('Slash')
     expect(reference.getSnapshot().open).toBe(false)
     press('KeyB')
-    expect(layout.getSnapshot().layoutInfo.sidebar).toBe(sidebar)
+    expect(layout.getSnapshot().layoutInfo.sidebarClosed).toBe(sidebarClosed)
     press('KeyB', true)
-    expect(layout.getSnapshot().layoutInfo.sidebar).toBe(sidebar)
+    expect(layout.getSnapshot().layoutInfo.sidebarClosed).toBe(sidebarClosed)
     const menu = (commandId: ShortcutCommandId): void => {
       act(() => {
         for (const listener of listeners) listener({ kind: 'menu', commandId, revision: shortcuts.config.getSnapshot().revision })

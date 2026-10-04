@@ -7,9 +7,9 @@
  * Narrow read and write instead of a whole-store snapshot: the store's
  * `persist` key would also capture `viewportWidth`, the active main panel, and
  * the right panel's reported presentation, none of which describe a user
- * preference worth restoring. The right panel's *width* is restored, its open
- * state is not — that belongs to its occupant, which already persists its own
- * layout tree separately.
+ * preference worth restoring. Neither panel's *open* state is restored: the
+ * sidebar starts expanded, and the right panel's open state belongs to its
+ * occupant, which already persists its own layout tree separately.
  */
 import {
   clampWidth, RIGHTBAR_MAX_RATIO, RIGHTBAR_MIN, SIDEBAR_DEFAULT, SIDEBAR_MAX, SIDEBAR_MIN,
@@ -20,7 +20,7 @@ const WIDTHS_KEY = 'dsh.layout.widths.v1'
 
 /** The two persisted widths; absent rightbar means "never opened". */
 interface PanelWidths {
-  /** Left sidebar width in px, 0 when closed. */
+  /** Left sidebar width in px, expanded or collapsed alike. */
   sidebar: number
   /** Right panel width in px, or null before its first opening. */
   rightbar: number | null
@@ -61,9 +61,7 @@ export function readPanelWidths(viewportWidth: number): PanelWidths | null {
   }
   if (typeof saved !== 'object' || saved === null) return null
   const { sidebar, rightbar } = saved as Partial<PanelWidths>
-  // 0 is the closed sidebar, a state rather than a width; clamping it up to the
-  // floor would silently reopen a sidebar the user closed.
-  const restoredSidebar = sidebar === 0 ? 0 : usableWidth(sidebar, SIDEBAR_MIN, SIDEBAR_MAX)
+  const restoredSidebar = usableWidth(sidebar, SIDEBAR_MIN, SIDEBAR_MAX)
   // null is the right panel before its first opening, which is also what an
   // unreadable value falls back to: the frame re-derives it from the frame.
   const restoredRightbar = rightbar === null || rightbar === undefined

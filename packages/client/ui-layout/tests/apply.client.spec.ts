@@ -107,7 +107,7 @@ describe('ui-layout client apply', () => {
     const layout = ctx.get('layout') as LayoutController
     expect(() => { layout.selectPanel('missing' as MainPanelId) }).toThrow('main panel "missing" is not registered')
     layout.toggleSidebar()
-    expect(instance.getSnapshot().layoutInfo.sidebar).toBe(0)
+    expect(instance.getSnapshot().layoutInfo.sidebarClosed).toBe(true)
     const host = rendererHost()
     expect(host.storeOf(entry, undefined)).toBe(instance)
     const panelInfo = host.root.getSnapshot().hooks.panelInfo!
@@ -120,7 +120,7 @@ describe('ui-layout client apply', () => {
     disposePanel()
     await vi.waitFor(() => { expect(panelInfo.getSnapshot()).toEqual({ activePanelId: null }) })
     expect(() => { layout.selectPanel(panelId) }).toThrow('main panel "panel-a" is not registered')
-    expect(instance.getSnapshot().layoutInfo.sidebar).toBe(0)
+    expect(instance.getSnapshot().layoutInfo.sidebarClosed).toBe(true)
     const pending = layout.beginNavigation()
     await fiber.dispose()
     expect(pending.aborted).toBe(true)

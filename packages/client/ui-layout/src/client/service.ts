@@ -39,7 +39,7 @@ export interface ILayout {
    * @returns a signal aborted by the next navigation or layout disposal; check it before committing UI state.
    */
   beginNavigation(): AbortSignal
-  /** Toggle the sidebar panel (closed ⟷ contract default width). */
+  /** Toggle the sidebar panel, restoring its saved width when reopening. */
   toggleSidebar(): void
   /**
    * Report the right panel's presentation without changing its expanded state.
@@ -89,7 +89,7 @@ export class LayoutController implements ILayout {
     this.navigation.abort()
   }
 
-  /** Toggle the sidebar panel (closed ⟷ contract default width). */
+  /** Toggle the sidebar panel, restoring its saved width when reopening. */
   toggleSidebar(): void {
     this.panels.toggleSidebar()
   }

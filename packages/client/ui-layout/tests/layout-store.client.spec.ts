@@ -17,6 +17,7 @@ describe('createLayoutStore', () => {
       panelInfo: { activePanelId: null },
       layoutInfo: {
         sidebar: 280,
+        sidebarClosed: false,
         viewportWidth: 1920,
         narrowExpanded: false,
         rightbar: null,
@@ -43,11 +44,10 @@ describe('createLayoutStore', () => {
     expect(store.getSnapshot().layoutInfo.rightbar).toBe(700)
   })
 
-  it('restores a closed sidebar as closed rather than clamping it open', () => {
+  it('clamps an out-of-range saved sidebar width instead of treating it as closed', () => {
     localStorage.setItem('dsh.layout.widths.v1', JSON.stringify({ sidebar: 0, rightbar: null }))
     const { store } = createLayoutStore().create()
-    expect(store.getSnapshot().layoutInfo.sidebar).toBe(0)
-    expect(store.getSnapshot().layoutInfo.rightbar).toBeNull()
+    expect(store.getSnapshot().layoutInfo).toMatchObject({ sidebar: 264, sidebarClosed: false, rightbar: null })
   })
 
   it('falls back to the defaults when the saved widths are unreadable', () => {
@@ -69,11 +69,21 @@ describe('createLayoutStore', () => {
     actions.setSidebar(400)
     const write = vi.spyOn(Storage.prototype, 'setItem')
     // A window resize repaints the frame measurement every frame; none of those
-    // updates is a width preference, so none may reach storage.
+    // updates is a width preference, so none may reach storage. Neither is a
+    // collapse: it moves the expansion state, which is not persisted.
     actions.setViewportWidth(1400)
     actions.selectPanel('conversation' as MainPanelId)
+    actions.toggleSidebar()
     actions.closeRightbar()
     expect(write).not.toHaveBeenCalled()
+  })
+
+  it('keeps a dragged sidebar width across a collapse in storage', () => {
+    const { actions } = createLayoutStore().create()
+    actions.setSidebar(400)
+    actions.toggleSidebar()
+    expect(JSON.parse(localStorage.getItem('dsh.layout.widths.v1') ?? 'null'))
+      .toEqual({ sidebar: 400, rightbar: null })
   })
 
   it('creates independent instances that read the same saved widths', () => {
@@ -93,13 +103,13 @@ describe('createLayoutStore', () => {
     expect(store.getSnapshot().layoutInfo.sidebar).toBe(420)
   })
 
-  it('toggles the wide sidebar between closed and default width', () => {
+  it('toggles the wide sidebar between closed and open while keeping its dragged width', () => {
     const { store, actions } = createLayoutStore().create()
     actions.setSidebar(400)
     actions.toggleSidebar()
-    expect(store.getSnapshot().layoutInfo.sidebar).toBe(0)
+    expect(store.getSnapshot().layoutInfo).toMatchObject({ sidebar: 400, sidebarClosed: true })
     actions.toggleSidebar()
-    expect(store.getSnapshot().layoutInfo.sidebar).toBe(280)
+    expect(store.getSnapshot().layoutInfo).toMatchObject({ sidebar: 400, sidebarClosed: false })
   })
 
   it('keeps the sidebar preference while toggling its narrow override', () => {

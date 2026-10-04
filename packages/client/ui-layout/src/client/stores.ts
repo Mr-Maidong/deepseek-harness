@@ -26,7 +26,14 @@ type LayoutState = {
 }
 
 type LayoutInfo = {
+  /**
+   * Sidebar width preference in px, always inside the drag range whether the
+   * sidebar is expanded or not; `sidebarClosed` carries the expansion state, so
+   * collapsing the sidebar keeps the width the user dragged.
+   */
   sidebar: number
+  /** Whether the user collapsed the sidebar on a frame at or above the breakpoint. */
+  sidebarClosed: boolean
   /** Last positive frame measurement; window width bootstraps the first render. */
   viewportWidth: number
   narrowExpanded: boolean
@@ -71,12 +78,13 @@ type LayoutActions = {
 }
 
 /**
- * Create the layout panel store handle. For the sidebar the preference IS the
- * width, so closing it forgets its drag width — reopening restores the contract
- * default. The right panel initializes at 45% of the frame on first opening
- * and keeps that px preference across resizes and close. Drag writes clamp to
- * the current frame's range. Narrow sidebar toggles change only the expansion
- * override; opening the right panel clears that override.
+ * Create the layout panel store handle. The sidebar keeps its dragged px width
+ * across a collapse, symmetrically with the right panel, so reopening restores
+ * the user's width rather than the contract default. The right panel
+ * initializes at 45% of the frame on first opening and keeps that px preference
+ * across resizes and close. Drag writes clamp to the current frame's range.
+ * Narrow sidebar toggles change only the expansion override; opening the right
+ * panel clears that override.
  * @returns the store handle (spec + type + identity + factory in one).
  */
 export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutActions> {
@@ -90,6 +98,7 @@ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutAction
         panelInfo: { activePanelId: null },
         layoutInfo: {
           sidebar: stored?.sidebar ?? SIDEBAR_DEFAULT,
+          sidebarClosed: false,
           viewportWidth,
           narrowExpanded: false,
           rightbar: stored?.rightbar ?? null,
@@ -114,11 +123,12 @@ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutAction
         d.layoutInfo.sidebar = clampWidth(px, SIDEBAR_MIN, SIDEBAR_MAX)
       },
       // Narrow toggles flip only the override: the width preference survives
-      // untouched, so re-widening restores the pre-squeeze layout.
+      // untouched, so re-widening restores the pre-squeeze layout. Wide toggles
+      // flip `sidebarClosed`, which likewise leaves the dragged width in place.
       toggleSidebar: (d) => {
         d.layoutInfo.rightbarInstant = false
         if (d.layoutInfo.viewportWidth < SIDEBAR_AUTO_COLLAPSE) d.layoutInfo.narrowExpanded = !d.layoutInfo.narrowExpanded
-        else d.layoutInfo.sidebar = d.layoutInfo.sidebar === 0 ? SIDEBAR_DEFAULT : 0
+        else d.layoutInfo.sidebarClosed = !d.layoutInfo.sidebarClosed
       },
       // Crossing the breakpoint in either direction drops the override: the
       // narrow default is auto-collapsed, the wide state is the preference.

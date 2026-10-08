@@ -71,7 +71,7 @@ kind: "package-reference"
 
 `brand-font.css` 导出本地 Montserrat Light、Regular 和 Medium 字体（正体、字重 300、400 和 500），`lib/styles/` 同时提供 `montserrat-light.woff2`、`montserrat-regular.woff2`、`montserrat-medium.woff2` 及其 SIL Open Font License。Desktop 将同一份样式表、字体和许可证打包，用于欢迎页品牌文字的离线显示；普通界面字体栈由 `app-font.css` 与 `base.css` 提供。
 
-`app-font.css` 导出拉丁字体 `Albert Sans`（可变字重 100–900）与中文字体 `YaHei Consolas Hybrid`，并把 `albert-sans.woff2`、`yahei-consolas-hybrid.woff2` 与 Albert Sans 的 SIL Open Font License 放在 `lib/styles/`。`base.css` 让 `--dsw-font-family` 与 `--ds-font-family-code` 都以这两个字体开头，再各自接系统与等宽兜底；Web 入口导入包的 `./app-font.css` 导出，由 Vite 输出字体资源。
+`app-font.css` 导出单一字体 `YaHei Consolas Hybrid`，中英文共用（单一 400 字重、声明为 300，优先使用主机已安装的同名字体），并把 `yahei-consolas-hybrid.woff2` 放在 `lib/styles/`。该字体拉丁字形固定为 0.55 em 宽、中文为满宽 1 em，因此整个界面为等宽渲染。`base.css` 让 `--dsw-font-family` 与 `--ds-font-family-code` 都以该字体开头，再各自接系统与等宽兜底；Web 入口导入包的 `./app-font.css` 导出，由 Vite 输出字体资源。
 
 `corner-shape.css` 平滑所有圆角：在 `@supports (corner-shape: superellipse(1.5))` 内定义 `--dsw-corner-shape`，并通过通配选择器应用到所有元素及其 `::before`/`::after`，因此不支持 `corner-shape` 的引擎保持普通圆弧。正圆形状——`border-radius: 50%` 的圆与胶囊半径——因超级椭圆会使其变形，须在所属组件样式表中把 `corner-shape: round` 与半径声明配对；corner-shape 样式表 spec 跨全部包样式表强制这一配对。
 

@@ -7,19 +7,17 @@ const WOFF2_MAGIC = 0x774f4632
 describe('bundled application fonts', () => {
   it('ships a local WOFF2 for each face with its license', () => {
     const css = readFileSync(new URL('../src/styles/app-font.css', import.meta.url), 'utf8')
-    expect(css).toContain("font-family: 'Albert Sans'")
-    expect(css).toContain('font-weight: 100 900')
     expect(css).toContain("font-family: 'YaHei Consolas Hybrid'")
     expect(css).toContain("local('YaHei Consolas Hybrid')")
     expect(css).not.toMatch(/url\(https?:/)
+    expect(css.match(/@font-face/g)).toHaveLength(1)
 
-    for (const name of ['albert-sans.woff2', 'yahei-consolas-hybrid.woff2']) {
-      expect(css).toContain(`url(./${name})`)
-      const font = readFileSync(new URL(`../src/styles/${name}`, import.meta.url))
-      expect(font.readUInt32BE(0)).toBe(WOFF2_MAGIC)
-    }
+    const name = 'yahei-consolas-hybrid.woff2'
+    expect(css).toContain(`url(./${name})`)
+    const font = readFileSync(new URL(`../src/styles/${name}`, import.meta.url))
+    expect(font.readUInt32BE(0)).toBe(WOFF2_MAGIC)
 
-    const license = readFileSync(new URL('../src/styles/AlbertSans-OFL.txt', import.meta.url), 'utf8')
+    const license = readFileSync(new URL('../src/styles/Montserrat-OFL.txt', import.meta.url), 'utf8')
     expect(license).toContain('SIL OPEN FONT LICENSE Version 1.1')
 
     const manifest = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as {

@@ -34,7 +34,7 @@ function fontLicenses(): Plugin {
   return {
     name: 'dsh-font-licenses',
     async generateBundle() {
-      for (const name of ['Montserrat-OFL.txt', 'AlbertSans-OFL.txt']) {
+      for (const name of ['Montserrat-OFL.txt']) {
         this.emitFile({
           type: 'asset',
           fileName: `assets/fonts/${name}`,

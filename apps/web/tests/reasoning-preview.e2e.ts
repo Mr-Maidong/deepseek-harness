@@ -65,55 +65,40 @@ it('shows completed paragraph first lines across blank lines with a right-edge f
       const reasoning = page.locator('[data-variant="think"][data-state="running"]')
       await expandOwningTurnProcess(page, reasoning)
       await reasoning.waitFor()
-      const whale = page.locator('[data-chat-running] span[aria-hidden="true"]:has(> svg)')
-      const animatedWhale = whale.locator(':scope > span')
-      const restingWhale = whale.locator(':scope > svg')
-      await whale.waitFor()
-      expect(await whale.locator('animate').count()).toBe(0)
-      const expectStaticWhale = async () => {
-        await expect.poll(() => animatedWhale.isVisible()).toBe(false)
-        await expect.poll(() => restingWhale.isVisible()).toBe(true)
-        expect(await animatedWhale.evaluate(element => getComputedStyle(element).maskImage)).toBe('none')
-        const colors = await restingWhale.locator('path').evaluate((path) => {
-          const probe = document.createElement('span')
-          probe.style.cssText = 'color: Canvas; forced-color-adjust: none'
-          document.body.append(probe)
-          try {
-            const style = getComputedStyle(path)
+      const matrix = page.locator('[data-chat-running] span[aria-hidden="true"]:has(> span)')
+      const cells = matrix.locator(':scope > span')
+      await matrix.waitFor()
+      expect(await matrix.locator('animate').count()).toBe(0)
+      expect(await cells.count()).toBe(6)
+      const expectStaticMatrix = async () => {
+        for (const cell of await cells.all()) {
+          await expect.poll(() => cell.isVisible()).toBe(true)
+          const style = await cell.evaluate((element) => {
+            const computed = getComputedStyle(element)
             return {
-              stroke: style.stroke.toLowerCase() === 'currentcolor' ? style.color : style.stroke,
-              canvas: getComputedStyle(probe).color,
-              length: (path as SVGPathElement).getTotalLength(),
+              animationName: computed.animationName,
+              background: computed.backgroundColor,
+              radius: computed.borderTopLeftRadius,
             }
-          } finally { probe.remove() }
-        })
-        expect(colors.stroke).not.toBe('none')
-        expect(colors.stroke).not.toBe('transparent')
-        expect(colors.stroke).not.toBe(colors.canvas)
-        expect(colors.length).toBeGreaterThan(0)
+          })
+          // No sweep, and each cell still paints a rounded square rather than
+          // disappearing, so the indicator reads as activity in both fallbacks.
+          expect(style.animationName).toBe('none')
+          expect(style.background).not.toBe('rgba(0, 0, 0, 0)')
+          expect(style.radius).not.toBe('0px')
+        }
       }
       try {
         await page.emulateMedia({ reducedMotion: 'no-preference', forcedColors: 'none' })
-        await expect.poll(() => animatedWhale.isVisible()).toBe(true)
-        expect(await animatedWhale.evaluate(element => getComputedStyle(element).maskMode)).toBe('alpha')
-        const imageSize = await animatedWhale.evaluate(async (element) => {
-          const source = getComputedStyle(element).maskImage.match(/^url\("?(data:image\/png;base64,[A-Za-z0-9+/=]+)"?\)$/)?.[1]
-          if (source === undefined) throw new Error('Running whale mask must use the bundled PNG data URL')
-          const image = new Image()
-          image.src = source
-          await image.decode()
-          return [image.naturalWidth, image.naturalHeight]
-        })
-        expect(imageSize).toEqual([28, 28])
-        expect(await restingWhale.isVisible()).toBe(false)
-        const firstWhaleFrame = await whale.screenshot({ animations: 'allow' })
-        await expect.poll(async () => !(await whale.screenshot({ animations: 'allow' })).equals(firstWhaleFrame), {
+        expect(await cells.first().evaluate(element => getComputedStyle(element).animationName)).not.toBe('none')
+        const firstMatrixFrame = await matrix.screenshot({ animations: 'allow' })
+        await expect.poll(async () => !(await matrix.screenshot({ animations: 'allow' })).equals(firstMatrixFrame), {
           timeout: 5000,
         }).toBe(true)
         await page.emulateMedia({ reducedMotion: 'reduce' })
-        await expectStaticWhale()
+        await expectStaticMatrix()
         await page.emulateMedia({ reducedMotion: 'no-preference', forcedColors: 'active' })
-        await expectStaticWhale()
+        await expectStaticMatrix()
       } finally {
         await page.emulateMedia({ reducedMotion: null, forcedColors: null })
       }
@@ -139,7 +124,7 @@ it('shows completed paragraph first lines across blank lines with a right-edge f
       third.proceed.resolve(undefined)
       await settled
       await page.getByText('Done', { exact: true }).waitFor()
-      await whale.waitFor({ state: 'detached' })
+      await matrix.waitFor({ state: 'detached' })
       expect(console.pageErrors).toEqual([])
       expect(console.warnings).toEqual([])
     } finally {

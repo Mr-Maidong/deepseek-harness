@@ -18,7 +18,7 @@ import {
   HoverCard, IconArchiveOutlineRegular, IconEditOutlineRegular,
   IconEllipsisOutlineRegular, IconFolderCloseRegular, IconFolderOpenRegular,
   IconNewChatOutlineRegular, IconPinFillRegular, IconTrashOutlineRegular,
-  IconTriangleRightFillRegular, IconUnarchiveOutlineRegular, Menu, relativeTime, StateDot, Tooltip,
+  IconTriangleRightFillRegular, IconUnarchiveOutlineRegular, Menu, relativeTime, RunningMatrix, StateDot, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ShortcutCatalogEntry } from '@deepseek-ai/dsh-client-shortcuts/client'
 import type { StateDotState } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -396,11 +396,23 @@ function sessionStatuses(
   return [{ state: 'idle', label: t('status.idle') }]
 }
 
-/** Primary status dot plus every status's screen-reader label, shared by the search and session rows. */
+/**
+ * The primary status mark. Live activity renders the six-cell running matrix;
+ * every other state keeps its solid or glyph StateDot. Both branches are
+ * decorative, so neither adds an accessibility node; the wrapper carries
+ * `data-state` for the status selectors the assembled app and its snapshots query.
+ */
+function PrimaryStatusMark({ state }: { state: StateDotState }) {
+  return state === 'ongoing'
+    ? <span className={css.statusMark} data-state="ongoing" aria-hidden="true"><RunningMatrix /></span>
+    : <StateDot state={state} />
+}
+
+/** Primary status mark plus every status's screen-reader label, shared by the search and session rows. */
 function SessionStatusDots({ statuses }: { statuses: readonly [SessionStatus, ...SessionStatus[]] }) {
   return (
     <>
-      <StateDot state={statuses[0].state} />
+      <PrimaryStatusMark state={statuses[0].state} />
       {statuses.map(status => (
         <span className={css.visuallyHidden} key={status.label}>{status.label}</span>
       ))}
@@ -442,7 +454,7 @@ function SessionHoverContent({ node, now, renderSlot, t }: {
       {renderSlot('sidebar.session.row.hover', { sessionId: node.id })}
       {statuses.map(status => (
         <div className={css.hoverStatus} key={status.label}>
-          <StateDot state={status.state} />
+          <PrimaryStatusMark state={status.state} />
           <span>{status.label}</span>
         </div>
       ))}

@@ -360,6 +360,69 @@ describe('workspace browser rows', () => {
     expect(delegated.container.querySelector('[data-state="done"]')).toBeNull()
   })
 
+  it('marks live activity with the shared running matrix in the row and on the hover card', () => {
+    vi.useFakeTimers()
+    try {
+      const node: SessionNode = {
+        id: sid('matrix'), title: 'Working', blank: false, running: true,
+        runningSubagentCount: 0, completed: false, updatedAt: 0, pinned: false, archived: false,
+      }
+      render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()} t={t} />)
+      const row = screen.getByRole('treeitem')
+      // The row's leading cell holds the decorative six-cell matrix, not the
+      // rotating StateDot loader: six empty spans in a three-row, two-column grid.
+      const mark = row.querySelector('[data-state="ongoing"]')!
+      expect(mark.getAttribute('aria-hidden')).toBe('true')
+      const matrix = mark.querySelector('[data-running-matrix]')
+      expect(matrix).not.toBeNull()
+      const cells = matrix!.children
+      expect(cells).toHaveLength(6)
+      for (const cell of cells) {
+        expect(cell.tagName).toBe('SPAN')
+        expect(cell.childElementCount).toBe(0)
+      }
+      expect(mark.querySelector('svg')).toBeNull()
+
+      fireEvent.pointerEnter(row.parentElement as HTMLElement)
+      act(() => { vi.advanceTimersByTime(800) })
+      // The hover card's own status line carries the same matrix, alongside its
+      // screen-reader label; the two marks are the row's and the card's.
+      const marks = document.querySelectorAll('[data-state="ongoing"]')
+      expect(marks).toHaveLength(2)
+      for (const each of marks) expect(each.querySelectorAll('[data-running-matrix] > span')).toHaveLength(6)
+      expect(screen.getAllByText('进行中')).toHaveLength(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('keeps the solid StateDot for every non-running status', () => {
+    // Completion and user attention stay the primitive's SVG-free marks, so the
+    // matrix is limited to live activity.
+    const done = render(
+      <SessionNodeItem
+        node={{
+          id: sid('done'), title: 'Finished', blank: false, running: false,
+          runningSubagentCount: 0, completed: true, updatedAt: 0, pinned: false, archived: false,
+        }}
+        currentId={undefined} now={0} onOpen={vi.fn()} t={t}
+      />,
+    )
+    expect(done.container.querySelector('[data-state="done"] [data-running-matrix]')).toBeNull()
+    expect(done.container.querySelectorAll('[data-running-matrix]')).toHaveLength(0)
+    done.unmount()
+    const waiting = render(
+      <SessionNodeItem
+        node={{
+          id: sid('waiting'), title: 'Blocked', blank: false, pendingInteraction: 'approval',
+          running: false, runningSubagentCount: 0, completed: false, updatedAt: 0, pinned: false, archived: false,
+        }}
+        currentId={undefined} now={0} onOpen={vi.fn()} t={t}
+      />,
+    )
+    expect(waiting.container.querySelectorAll('[data-running-matrix]')).toHaveLength(0)
+  })
+
   it('shows descendant activity without describing an idle parent as running', () => {
     vi.useFakeTimers()
     try {

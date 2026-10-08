@@ -116,6 +116,16 @@
   margin: 0 6px 0 4px;
 }
 
+/* Live activity mark. It keeps StateDot's ongoing color and 14px seat, but as a
+   grid it needs its own centering box; the row's .slot already centers it. */
+.statusMark {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dsw-alias-label-tertiary);
+}
+
 .slot {
   flex: none;
   width: 16px;

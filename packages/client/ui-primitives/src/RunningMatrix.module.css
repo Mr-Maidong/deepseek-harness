@@ -1,0 +1,62 @@
+/* Cell geometry: three rows of two square cells, sized to the tighter of the
+   two axis budgets so both dimensions fit the square seat. DOM order is
+   1 2 / 3 4 / 5 6, which the animation rules below traverse as a ring. A host
+   rebinds --dsh-running-matrix-size to match its own seat. */
+.runningMatrix {
+  --dsh-running-matrix-size: 12px;
+  --dsh-running-matrix-gap: 1px;
+  --dsh-running-cell: min(
+    calc((var(--dsh-running-matrix-size) - var(--dsh-running-matrix-gap)) / 2),
+    calc((var(--dsh-running-matrix-size) - 2 * var(--dsh-running-matrix-gap)) / 3)
+  );
+  --dsh-running-cell-floor: .3;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, var(--dsh-running-cell));
+  grid-template-rows: repeat(3, var(--dsh-running-cell));
+  place-content: center;
+  gap: var(--dsh-running-matrix-gap);
+  flex: none;
+  width: var(--dsh-running-matrix-size);
+  height: var(--dsh-running-matrix-size);
+  /* The fixed footprint contains the animation's layout and paint. */
+  contain: strict;
+  color: inherit;
+}
+
+/* Without the animation every cell stays solid, so the mark still reads as
+   activity; the floor opacity only applies while the sweep is running. */
+.runningMatrix > span {
+  display: block;
+  background: currentColor;
+  border-radius: calc(var(--dsh-running-cell) * .18);
+}
+
+/* One lit cell travels clockwise around the perimeter, starting top-left:
+   1 (0s) → 2 (.15s) → 4 (.3s) → 6 (.45s) → 5 (.6s) → 3 (.75s). Six steps of
+   .15s fill the .9s cycle, so the loop restarts in phase. */
+@keyframes dsh-running-matrix-ring {
+  0%, 100% {
+    opacity: var(--dsh-running-cell-floor);
+    transform: scale(.8);
+  }
+
+  35% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) and (forced-colors: none) {
+  .runningMatrix > span {
+    animation: dsh-running-matrix-ring .9s ease-in-out infinite;
+    will-change: opacity, transform;
+  }
+
+  .runningMatrix > span:nth-child(1) { animation-delay: 0s; }
+  .runningMatrix > span:nth-child(2) { animation-delay: .15s; }
+  .runningMatrix > span:nth-child(4) { animation-delay: .3s; }
+  .runningMatrix > span:nth-child(6) { animation-delay: .45s; }
+  .runningMatrix > span:nth-child(5) { animation-delay: .6s; }
+  .runningMatrix > span:nth-child(3) { animation-delay: .75s; }
+}

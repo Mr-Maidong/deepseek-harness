@@ -524,11 +524,10 @@
   cursor: pointer;
 }
 
-.iconButton svg {
-  width: 15px;
-  height: 15px;
-}
-
+/* No glyph sizing: the svgs declare their own 16px, and forcing 15 scaled the
+   1px stroke to 0.94 and the 2.5 corner to 2.34 — the split control then read
+   finer than the sidebar toggle beside it. The 28px button with 6px padding
+   leaves exactly 16px of content box. */
 .iconButton:hover:not(:disabled) {
   background: var(--dsw-alias-interactive-bg-hover);
 }

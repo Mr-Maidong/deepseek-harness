@@ -30,7 +30,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import type { CSSProperties, ReactNode, RefObject } from 'react'
 import type { ShortcutCatalogEntry } from '@deepseek-ai/dsh-client-shortcuts/client'
-import { IconPanelLeftOutlineRegular, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
+import { ICON_REGULAR_STROKE, IconPanelLeftOutlineRegular, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import type {
   HostObservable, InjectFace, PropsLocale, PropsRenderSlots, PropsRuntime, PropsStore,
 } from '@deepseek-ai/dsh-client-ui-slots'
@@ -240,21 +240,24 @@ function titlesFor(panel: PanelProps): TabRenderer {
   return tab => <TabSlot key={tab.id} {...panel} tab={tab} seat="sidebar.right.pane.tab.title" fallback={tab.title} />
 }
 
-/** Expand-to-viewport glyph from the shared product artwork. */
+/** Expand-to-viewport glyph: four corner brackets opening outward, drawn as line work to match the panel controls. */
 function FullscreenGlyph(): ReactNode {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M2.33203 10.4054V13.1681C2.33229 13.444 2.55605 13.6681 2.83203 13.6681H5.49512V14.6681H2.83203C2.00376 14.6681 1.33229 13.9963 1.33203 13.1681V10.4054H2.33203ZM14.6689 13.1681C14.6687 13.996 13.9968 14.6676 13.1689 14.6681H10.4951V13.6681H13.1689C13.4445 13.6676 13.6687 13.4437 13.6689 13.1681V10.4054H14.6689V13.1681ZM13.1689 1.33118C13.9969 1.33163 14.6688 2.00315 14.6689 2.83118V5.4054H13.6689V2.83118C13.6688 2.55544 13.4446 2.33162 13.1689 2.33118H10.4951V1.33118H13.1689ZM5.49512 2.33118H2.83203C2.55598 2.33118 2.33218 2.55516 2.33203 2.83118V5.4054H1.33203V2.83118C1.33218 2.00288 2.00369 1.33118 2.83203 1.33118H5.49512V2.33118Z" fill="currentColor" />
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" strokeWidth={ICON_REGULAR_STROKE} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 6.5V3.5A1.5 1.5 0 0 1 3.5 2H6.5" stroke="currentColor" />
+      <path d="M14 6.5V3.5A1.5 1.5 0 0 0 12.5 2H9.5" stroke="currentColor" />
+      <path d="M14 9.5V12.5A1.5 1.5 0 0 1 12.5 14H9.5" stroke="currentColor" />
+      <path d="M2 9.5V12.5A1.5 1.5 0 0 0 3.5 14H6.5" stroke="currentColor" />
     </svg>
   )
 }
 
-/** Restore-from-fullscreen glyph from the shared product artwork. */
+/** Restore-from-fullscreen glyph: two elbows drawing the corners back to the centre, spanning the same 2 to 14 as its pair. */
 function ExitFullscreenGlyph(): ReactNode {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M9 2.5V6C9 6.26522 9.10536 6.51957 9.29289 6.70711C9.48043 6.89464 9.73478 7 10 7H13.5" stroke="currentColor" />
-      <path d="M7 13.5V10C7 9.73478 6.89464 9.48043 6.70711 9.29289C6.51957 9.10536 6.26522 9 6 9H2.5" stroke="currentColor" />
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" strokeWidth={ICON_REGULAR_STROKE} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9.09 2V5.82A1.09 1.09 0 0 0 10.18 6.91H14" stroke="currentColor" />
+      <path d="M6.91 14V10.18A1.09 1.09 0 0 0 5.82 9.09H2" stroke="currentColor" />
     </svg>
   )
 }

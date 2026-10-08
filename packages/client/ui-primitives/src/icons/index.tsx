@@ -79,9 +79,9 @@ export const IconSettingsOutlineMedium = (props: IconProps) => (
 )
 
 const IconPanelLeftOutlineArtwork = ({ size = 16, className, strokeWidth }: WeightedIconProps) => (
-  <svg width={size} height={size} className={className} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" strokeWidth={strokeWidth}>
-    <path d="M13.5 1.5H2.5C1.94772 1.5 1.5 1.94772 1.5 2.5V13.5C1.5 14.0523 1.94772 14.5 2.5 14.5H13.5C14.0523 14.5 14.5 14.0523 14.5 13.5V2.5C14.5 1.94772 14.0523 1.5 13.5 1.5Z" stroke="currentColor" />
-    <path d="M5.5 1.5V14.5" stroke="currentColor" />
+  <svg width={size} height={size} className={className} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="2" width="12" height="12" rx="2.5" stroke="currentColor" />
+    <path d="M7 2V14" stroke="currentColor" />
   </svg>
 )
 
@@ -1268,21 +1268,27 @@ export const IconInfoOutlineMedium = (props: IconProps) => (
   <IconInfoOutlineArtwork {...props} strokeWidth={ICON_MEDIUM_STROKE} />
 )
 
+/**
+ * Three stacked blocks: one centred above a symmetric pair, reading as a set of
+ * building blocks. Each block is a rounded rect sharing this set's stroke
+ * weight, so the whole mark inherits the caller's weight. Ink spans 1.5 to 14.5
+ * on both axes — the same extent as the new-chat glyph — and the three pairs
+ * stand 1px apart.
+ */
 const IconPluginPinwheelOutlineArtwork = ({ size = 16, className, strokeWidth }: WeightedIconProps) => (
-  <svg width={size} height={size} className={className} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" strokeWidth={strokeWidth}>
-    <path d="M7.84457 5.06199C11.6605 4.93876 14.7962 6.14848 14.8484 7.76397C14.8875 8.97461 13.1838 10.0696 10.7215 10.5942" stroke="currentColor" />
-    <path d="M5.12742 8.07731C5.00419 4.26138 6.21391 1.12568 7.8294 1.07351C9.04004 1.03441 10.135 2.73808 10.6596 5.20037" stroke="currentColor" />
-    <path d="M8.02457 10.6802C4.20865 10.8034 1.07294 9.5937 1.02077 7.97821C0.981678 6.76758 2.68535 5.67262 5.14763 5.14798" stroke="currentColor" />
-    <path d="M10.7476 7.89535C10.8708 11.7113 9.66109 14.847 8.0456 14.8991C6.83496 14.9382 5.74 13.2346 5.21536 10.7723" stroke="currentColor" />
+  <svg width={size} height={size} className={className} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" strokeWidth={strokeWidth} strokeLinejoin="round">
+    <rect x="5.5" y="2" width="5" height="5" rx="1.5" stroke="currentColor" />
+    <rect x="2" y="9" width="5" height="5" rx="1.5" stroke="currentColor" />
+    <rect x="9" y="9" width="5" height="5" rx="1.5" stroke="currentColor" />
   </svg>
 )
 
-/** Regular one-pixel plugin pinwheel artwork. */
+/** Regular one-pixel plugin blocks artwork. */
 export const IconPluginPinwheelOutlineRegular = (props: IconProps) => (
   <IconPluginPinwheelOutlineArtwork {...props} strokeWidth={ICON_REGULAR_STROKE} />
 )
 
-/** Medium plugin pinwheel artwork with a 1.3px stroke. */
+/** Medium plugin blocks artwork with a 1.3px stroke. */
 export const IconPluginPinwheelOutlineMedium = (props: IconProps) => (
   <IconPluginPinwheelOutlineArtwork {...props} strokeWidth={ICON_MEDIUM_STROKE} />
 )

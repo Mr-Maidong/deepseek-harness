@@ -32,4 +32,4 @@ Status: implemented
 
 中断耗尽预算后，只要它持续存在，就会每 `maxDelayMs` 探测一次；定时器保持 unref，因此探测本身不会让进程保持运行。永不恢复的服务不会保留任何已注册工具，原先要求重载的日志现在改为报告该上限延迟。丢失检测依赖 SDK 报告传输失败，因此静默停滞的连接仍然无法被发现。
 
-验证：`packages/mcp/mcp-client/tests/reconnect.spec.ts` 覆盖已建立的 HTTP 代通过错误报告丢失、达到上限后继续探测并只注销一次工具、未确认的关闭屏障推迟替代连接，以及持屏障的 tick 待处理期间发生清理。`packages/mcp/mcp-client/tests/negotiation-lifecycle.spec.ts` 覆盖没有 close 信号时从传输错误报告恢复，以及被推迟的替代连接。它们验证的当前重连策略记录在 [MCP 客户端插件说明](../feature/2026-07-07-mcp-client-plugin.zh.md)和[包 README](../../../../packages/mcp/mcp-client/README.zh.md)中。
+验证：`packages/mcp/mcp-client/tests/reconnect.spec.ts` 覆盖已建立的 HTTP 代通过错误报告丢失、达到上限后继续探测并只注销一次工具、未确认的关闭屏障推迟替代连接，以及持屏障的 tick 待处理期间发生清理。`packages/mcp/mcp-client/tests/negotiation-lifecycle.spec.ts` 覆盖没有 close 信号时从传输错误报告恢复，以及被推迟的替代连接。它们验证的当前重连策略记录在 [MCP 客户端插件说明](../../archived/feature/2026-07-07-mcp-client-plugin.md)和[包 README](../../../../packages/mcp/mcp-client/README.zh.md)中。

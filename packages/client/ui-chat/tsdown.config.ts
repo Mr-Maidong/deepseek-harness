@@ -1,5 +1,5 @@
 import { clientBundle } from '../tsdown.client.ts'
 
-const bundle = clientBundle('@deepseek-ai/dsh-client-ui-chat', ['lib/types/index.js'])
+const bundle = clientBundle(import.meta.dirname, ['lib/types/index.js'])
 
 export default ((options) => bundle(options)) satisfies typeof bundle

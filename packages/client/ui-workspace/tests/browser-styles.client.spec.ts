@@ -113,20 +113,15 @@ describe('WorkspaceBrowser.module.css list', () => {
       .toBe('var(--dsw-alias-interactive-bg-hover)')
   })
 
-  it('marquees a clipped session title on row hover', () => {
-    // The crawl itself is scripted in Rows.tsx frame by frame, so the title
-    // declares no scroll-behavior; the stylesheet keeps the hovered cell
-    // unclipped and fades whichever edges cut text mid-travel, on the title
-    // span itself so the status slot beside it keeps its full color.
+  it('keeps a clipped session title static on one line while the row is hovered', () => {
+    // No marquee: the title keeps its ellipsis and its cell width through the
+    // hover swap, so no scroll or fade hooks apply to it.
     expect(rowDeclarations('.sessionRow .title')?.get('flex')).toBe('1')
     expect(rowDeclarations('.sessionRow .title')?.get('scroll-behavior')).toBeUndefined()
-    expect(rowDeclarations('.sessionRow:hover .title')?.get('text-overflow')).toBe('clip')
-    expect(rowDeclarations('.sessionRow .title[data-scrolled]')?.get('mask-image'))
-      .toBe('linear-gradient(to right, transparent, #000 12px)')
-    expect(rowDeclarations('.sessionRow .title[data-clipped]')?.get('mask-image'))
-      .toBe('linear-gradient(to left, transparent, #000 12px)')
-    expect(rowDeclarations('.sessionRow .title[data-scrolled][data-clipped]')?.get('mask-image'))
-      .toBe('linear-gradient(to right, transparent, #000 12px, #000 calc(100% - 12px), transparent)')
+    expect(rowDeclarations('.sessionRow:hover .title')).toBeUndefined()
+    expect(rowDeclarations('.sessionRow.menuOpen .title')).toBeUndefined()
+    expect(rowDeclarations('.sessionRow .title[data-scrolled]')).toBeUndefined()
+    expect(rowDeclarations('.sessionRow .title[data-clipped]')).toBeUndefined()
   })
 
   it('pins both rail controls to the shared left anchor during the column slide', () => {

@@ -224,14 +224,28 @@ describe('design-platform.css scrollbar tokens', () => {
   })
 
   it('resolves every scrollbar token to a static scale value, not to another alias', () => {
-    // The alias layer is the only indirection in the token sheet: an alias
-    // pointing at a second alias makes the dark override order-dependent.
+    // The alias layer points at the static scale, directly or through a
+    // color-mix of it: an alias pointing at a second alias makes the dark
+    // override order-dependent.
     for (const rule of platformRules) {
       for (const [property, value] of rule.declarations) {
         if (!property.startsWith(TOKEN_PREFIX)) continue
         for (const reference of varReferences(value)) {
           expect(reference, `${property}: ${value}`).toMatch(/^--dsw-static-/)
         }
+      }
+    }
+  })
+
+  it('leaves every scrollbar token 30% transparent', () => {
+    // The thumb reads as a hint beside the content rather than a solid bar.
+    // Stating the alpha here, on the tokens, is what lets an elevated surface
+    // keep it: that surface rebinds the indirection to one of these tokens and
+    // would otherwise have to restate the transparency at every rebind site.
+    for (const rule of platformRules) {
+      for (const [property, value] of rule.declarations) {
+        if (!property.startsWith(TOKEN_PREFIX)) continue
+        expect(value, property).toMatch(/^color-mix\(in srgb, var\(--dsw-static-[\w-]+\) 70%, transparent\)$/)
       }
     }
   })

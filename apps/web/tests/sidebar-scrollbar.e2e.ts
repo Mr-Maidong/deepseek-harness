@@ -384,7 +384,10 @@ describe('web e2e: sidebar session list scrollbar (reserved gutter / themed thum
     // the two resolve to DIFFERENT colours on this list: the l1 pair arrived
     // here intact rather than collapsing to one value or falling back.
     expect(light.hoverRules).toEqual(['var(--dsh-scrollbar-thumb-hover)'])
-    expect(light.token).toMatch(/^rgba?\(/)
+    // Both tokens resolve to their palette rung at 70% opacity; chromium
+    // serializes the color-mix() result as `color(srgb … / 0.7)`.
+    expect(light.token).toMatch(/^(?:rgba?|color)\(/)
+    expect(light.token).toMatch(/\s?0\.7\)$/)
     expect(light.hoverToken).not.toBe(light.token)
     // The dark palette declares different scrollbar tokens; driving the body
     // attribute pins the cascade the way lifecycle-chrome does (the Settings

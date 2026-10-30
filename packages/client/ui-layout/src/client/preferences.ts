@@ -1,15 +1,15 @@
 /**
- * Persisted panel widths, in localStorage. The frame restores the dragged
- * sidebar and right-panel preferences across restarts; everything else in the
- * layout store (measurements, panel selection, presentation reports) is
- * transient and stays in memory.
+ * Persisted layout preferences, in localStorage. The frame restores the dragged
+ * panel widths and the sidebar's open state across restarts and windows;
+ * everything else in the layout store (measurements, panel selection,
+ * presentation reports) is transient and stays in memory.
  *
  * Narrow read and write instead of a whole-store snapshot: the store's
  * `persist` key would also capture `viewportWidth`, the active main panel, and
  * the right panel's reported presentation, none of which describe a user
- * preference worth restoring. Neither panel's *open* state is restored: the
- * sidebar starts expanded, and the right panel's open state belongs to its
- * occupant, which already persists its own layout tree separately.
+ * preference worth restoring. The right panel's open state belongs to its
+ * occupant, which persists its own layout tree separately; only the sidebar's
+ * open state is a frame-wide preference, stored in its own record below.
  */
 import {
   clampWidth, RIGHTBAR_MAX_RATIO, RIGHTBAR_MIN, SIDEBAR_DEFAULT, SIDEBAR_MAX, SIDEBAR_MIN,
@@ -81,6 +81,42 @@ export function writePanelWidths(widths: PanelWidths): void {
     localStorage.setItem(WIDTHS_KEY, JSON.stringify(widths))
   } catch (error) {
     console.error('Layout width persistence failed:', error)
+  }
+}
+
+/** localStorage key for the sidebar's open state, absent before the first toggle. */
+const SIDEBAR_KEY = 'dsh.layout.sidebar.v1'
+
+/**
+ * Read the sidebar state the user last chose.
+ * @returns true when they left it expanded, false when collapsed, or null
+ * before the first toggle and when the record is unreadable.
+ */
+export function readSidebarOpen(): boolean | null {
+  if (typeof localStorage === 'undefined') return null
+  let saved: unknown
+  try {
+    const raw = localStorage.getItem(SIDEBAR_KEY)
+    if (raw === null) return null
+    saved = JSON.parse(raw) as unknown
+  } catch (_unreadableRecord) {
+    return null
+  }
+  if (typeof saved !== 'object' || saved === null) return null
+  const { open } = saved as { open?: unknown }
+  return typeof open === 'boolean' ? open : null
+}
+
+/**
+ * Write the sidebar state the user chose, so the next window opens the same way.
+ * @param open - whether the sidebar was left expanded.
+ */
+export function writeSidebarOpen(open: boolean): void {
+  if (typeof localStorage === 'undefined') return
+  try {
+    localStorage.setItem(SIDEBAR_KEY, JSON.stringify({ open }))
+  } catch (error) {
+    console.error('Sidebar state persistence failed:', error)
   }
 }
 

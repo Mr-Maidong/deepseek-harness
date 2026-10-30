@@ -21,6 +21,25 @@ export const SIDEBAR_COLLAPSED = 56
  * LG breakpoint); a manual toggle below it re-expands over the squeezed center
  * (stores.ts narrowExpanded). */
 export const SIDEBAR_AUTO_COLLAPSE = 1024
+/** The frame facts the sidebar's responsive expansion rule reads. */
+export interface SidebarExpansion {
+  /** Frame width in px. */
+  readonly viewportWidth: number
+  /** Whether the user collapsed the sidebar on a frame at or above the breakpoint. */
+  readonly sidebarClosed: boolean
+  /** Manual expansion override below the breakpoint. */
+  readonly narrowExpanded: boolean
+}
+
+/**
+ * Whether the sidebar occupies its dragged width at this frame width.
+ * @param state - frame width plus the two manual expansion facts.
+ * @returns true while the sidebar shows expanded.
+ */
+export function sidebarOpen(state: SidebarExpansion): boolean {
+  return state.viewportWidth < SIDEBAR_AUTO_COLLAPSE ? state.narrowExpanded : !state.sidebarClosed
+}
+
 /** Right column drag clamp floor. */
 export const RIGHTBAR_MIN = 300
 /** Maximum normal right panel width as a fraction of the frame. */

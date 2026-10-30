@@ -2,16 +2,17 @@
  * Root-owned frame measurement, panel preferences, and presentation reports.
  * The registration supplies a fresh store and binds its actions to ctx.layout.
  *
- * Only the two dragged widths are persisted (preferences.ts); the rest of this
- * state is a live measurement or a report from the right panel's occupant.
+ * Only the dragged widths and the sidebar's open state are persisted
+ * (preferences.ts); the rest of this state is a live measurement or a report
+ * from the right panel's occupant.
  */
 import { defineStore, type EngineStoreHandle, type EngineStoreInstance } from '@deepseek-ai/dsh-client-store'
 import type { MainPanelId } from './service.ts'
 import {
   clampWidth, RIGHTBAR_DEFAULT_RATIO, RIGHTBAR_MAX_RATIO, RIGHTBAR_MIN,
-  SIDEBAR_AUTO_COLLAPSE, SIDEBAR_DEFAULT, SIDEBAR_MAX, SIDEBAR_MIN,
+  SIDEBAR_AUTO_COLLAPSE, SIDEBAR_DEFAULT, SIDEBAR_MAX, SIDEBAR_MIN, sidebarOpen,
 } from './columns.ts'
-import { readPanelWidths, writePanelWidths } from './preferences.ts'
+import { readPanelWidths, readSidebarOpen, writePanelWidths, writeSidebarOpen } from './preferences.ts'
 
 /**
  * Transient layout preferences. Responsive concessions never rewrite widths;
@@ -94,13 +95,15 @@ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutAction
       // right-panel width is clamped against the frame it will actually open in.
       const viewportWidth = window.innerWidth
       const stored = readPanelWidths(viewportWidth)
+      // Without a stored choice the width decides: expanded wide, collapsed narrow.
+      const chosenOpen = readSidebarOpen()
       return {
         panelInfo: { activePanelId: null },
         layoutInfo: {
           sidebar: stored?.sidebar ?? SIDEBAR_DEFAULT,
-          sidebarClosed: false,
+          sidebarClosed: chosenOpen !== null && !chosenOpen,
           viewportWidth,
-          narrowExpanded: false,
+          narrowExpanded: chosenOpen ?? false,
           rightbar: stored?.rightbar ?? null,
           rightbarShown: false,
           rightbarTrack: false,
@@ -163,23 +166,46 @@ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutAction
     },
   })
   // Persistence attaches per instance, after the store's own init has read the
-  // stored widths back. Writes are debounced by value comparison rather than by
-  // time: a window resize repaints the frame's measurement on every frame, and
-  // none of those updates may touch storage.
-  const persistWidths = (instance: EngineStoreInstance<LayoutState, LayoutActions>): void => {
-    let last: { sidebar: number; rightbar: number | null } | null = null
+  // stored preferences back. Writes are debounced by value comparison rather than
+  // by time: a window resize repaints the frame's measurement on every frame, and
+  // none of those updates may touch storage. The sidebar's open state is stored
+  // only for a manual toggle — a resize and an opening right panel move the same
+  // two facts through the responsive rules, so a width change or a right-panel
+  // transition in the same update suppresses that write.
+  const persistPreferences = (instance: EngineStoreInstance<LayoutState, LayoutActions>): void => {
+    const initial = instance.getSnapshot().layoutInfo
+    let last = {
+      sidebar: initial.sidebar,
+      rightbar: initial.rightbar,
+      viewportWidth: initial.viewportWidth,
+      sidebarClosed: initial.sidebarClosed,
+      narrowExpanded: initial.narrowExpanded,
+      rightbarShown: initial.rightbarShown,
+    }
     instance.subscribe(() => {
-      const { sidebar, rightbar } = instance.getSnapshot().layoutInfo
-      if (last !== null && last.sidebar === sidebar && last.rightbar === rightbar) return
-      last = { sidebar, rightbar }
-      writePanelWidths({ sidebar, rightbar })
+      const next = instance.getSnapshot().layoutInfo
+      if (next.sidebar !== last.sidebar || next.rightbar !== last.rightbar) {
+        writePanelWidths({ sidebar: next.sidebar, rightbar: next.rightbar })
+      }
+      const toggled = next.viewportWidth === last.viewportWidth
+        && next.rightbarShown === last.rightbarShown
+        && (next.sidebarClosed !== last.sidebarClosed || next.narrowExpanded !== last.narrowExpanded)
+      if (toggled) writeSidebarOpen(sidebarOpen(next))
+      last = {
+        sidebar: next.sidebar,
+        rightbar: next.rightbar,
+        viewportWidth: next.viewportWidth,
+        sidebarClosed: next.sidebarClosed,
+        narrowExpanded: next.narrowExpanded,
+        rightbarShown: next.rightbarShown,
+      }
     })
   }
   return {
     ...handle,
     create(scopeKey?: string) {
       const instance = handle.create(scopeKey)
-      persistWidths(instance)
+      persistPreferences(instance)
       return instance
     },
   }

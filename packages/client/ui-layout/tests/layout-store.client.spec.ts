@@ -64,18 +64,60 @@ describe('createLayoutStore', () => {
       .toEqual({ sidebar: 400, rightbar: 1100 })
   })
 
-  it('does not write when an update leaves both widths unchanged', () => {
+  it('writes nothing when an update is neither a width drag nor a sidebar toggle', () => {
     const { actions } = createLayoutStore().create()
     actions.setSidebar(400)
     const write = vi.spyOn(Storage.prototype, 'setItem')
     // A window resize repaints the frame measurement every frame; none of those
-    // updates is a width preference, so none may reach storage. Neither is a
-    // collapse: it moves the expansion state, which is not persisted.
+    // updates is a preference, so none may reach storage.
     actions.setViewportWidth(1400)
     actions.selectPanel('conversation' as MainPanelId)
-    actions.toggleSidebar()
     actions.closeRightbar()
     expect(write).not.toHaveBeenCalled()
+  })
+
+  it('stores the state a sidebar toggle chose, and only that record', () => {
+    const { actions } = createLayoutStore().create()
+    const write = vi.spyOn(Storage.prototype, 'setItem')
+    actions.toggleSidebar()
+    expect(write.mock.calls).toEqual([['dsh.layout.sidebar.v1', JSON.stringify({ open: false })]])
+    actions.toggleSidebar()
+    expect(write.mock.lastCall).toEqual(['dsh.layout.sidebar.v1', JSON.stringify({ open: true })])
+  })
+
+  it('does not store the responsive collapse a narrow frame gets from opening the right panel', () => {
+    vi.stubGlobal('innerWidth', 980)
+    const { actions } = createLayoutStore().create()
+    actions.toggleSidebar()
+    const write = vi.spyOn(Storage.prototype, 'setItem')
+    actions.openRightbar(true, false)
+    // The first opening records its width; the forced collapse is not a sidebar choice.
+    expect(write.mock.calls.map(([key]) => key)).toEqual(['dsh.layout.widths.v1'])
+  })
+
+  it('restores the collapsed sidebar a previous window saved', () => {
+    localStorage.setItem('dsh.layout.sidebar.v1', JSON.stringify({ open: false }))
+    const { store } = createLayoutStore().create()
+    expect(store.getSnapshot().layoutInfo).toMatchObject({ sidebarClosed: true, narrowExpanded: false })
+  })
+
+  it('restores a saved open state as the manual override on a narrow frame', () => {
+    localStorage.setItem('dsh.layout.sidebar.v1', JSON.stringify({ open: true }))
+    vi.stubGlobal('innerWidth', 980)
+    const { store } = createLayoutStore().create()
+    expect(store.getSnapshot().layoutInfo).toMatchObject({ sidebarClosed: false, narrowExpanded: true })
+  })
+
+  it('ignores a sidebar record that does not hold a boolean', () => {
+    localStorage.setItem('dsh.layout.sidebar.v1', JSON.stringify({ open: 'yes' }))
+    const { store } = createLayoutStore().create()
+    expect(store.getSnapshot().layoutInfo).toMatchObject({ sidebarClosed: false, narrowExpanded: false })
+  })
+
+  it('falls back to the defaults when the saved sidebar state is unreadable', () => {
+    localStorage.setItem('dsh.layout.sidebar.v1', '{"open":')
+    const { store } = createLayoutStore().create()
+    expect(store.getSnapshot().layoutInfo).toMatchObject({ sidebarClosed: false, narrowExpanded: false })
   })
 
   it('keeps a dragged sidebar width across a collapse in storage', () => {

@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-This package provides the Web GUI's three-column AppFrame, edge-column widths, and `ctx.layout` presentation control. The right column concedes space before the center; its occupant renders fullscreen while the frame retains the wide-screen track underneath. The theme presenter owns color scheme, alias tokens, font sizes, font lists, and document metadata. Both panels' dragged widths survive a reload and a collapse; their open states do not.
+This package provides the Web GUI's three-column AppFrame, edge-column widths, and `ctx.layout` presentation control. The right column concedes space before the center; its occupant renders fullscreen while the frame retains the wide-screen track underneath. The theme presenter owns color scheme, alias tokens, font sizes, font lists, and document metadata. Both panels' dragged widths survive a reload and a collapse. The sidebar's open state is a frame-wide preference stored beside them, so it survives a reload and every new window; the right panel's open state belongs to its occupant.
 
 ## Table of Contents
 
@@ -27,7 +27,7 @@ This package provides the Web GUI's three-column AppFrame, edge-column widths, a
 
 Desktop Mod+B toggles the left sidebar through the same layout action used by its controls. The shortcut command is unavailable behind modal dialogs and yields to terminal input.
 
-The root slot composes the sidebar, main content, and right column. The sidebar spans 264–420px, defaults to 280px, and retains a 56px rail when collapsed; below 1024px it collapses automatically, and opening the right panel collapses a manually expanded sidebar. Collapsing the sidebar keeps its dragged width, so expanding it again restores that width rather than the 280px default. The right panel first opens at 45% of the viewport, then retains the user's pixel preference, capped at 70%. Both dragged widths are persisted, so a reload restores them. To protect 400px for the center, the frame first reduces the right panel to 300px, then reports insufficient room so its occupant closes it, and only then compresses the center further. Dragging has no transition delay; the right handle is absent while closed or fullscreen.
+The root slot composes the sidebar, main content, and right column. The sidebar spans 264–420px, defaults to 280px, and retains a 56px rail when collapsed; below 1024px it collapses automatically, and opening the right panel collapses a manually expanded sidebar. Collapsing the sidebar keeps its dragged width, so expanding it again restores that width rather than the 280px default. The right panel first opens at 45% of the viewport, then retains the user's pixel preference, capped at 70%. Both dragged widths and the sidebar's open state are persisted, so a reload and any new window restore them; a frame narrower than the breakpoint restores that state as its manual override. To protect 400px for the center, the frame first reduces the right panel to 300px, then reports insufficient room so its occupant closes it, and only then compresses the center further. Dragging has no transition delay; the right handle is absent while closed or fullscreen.
 
 Global panels occupy the root-scoped `main` keyed slot; `conversation` is the reserved key for the Conversation. `ctx.layout.selectPanel(id)` selects a registered panel, and `null` selects the Conversation without changing the current Session. The Plugins page contributes one of the shipped global panels.
 
@@ -91,7 +91,7 @@ None; this package neither assembles nor sends a provider request.
 
 These limits define the current layout behavior. They are current package constraints, not a general window-manager comparison or a task backlog.
 
-- **Only the two dragged widths are remembered** — reload restores each panel's saved width, but the sidebar opens expanded and the right panel closed; neither open state is stored, and each width is one frame-wide preference, not a per-Session fact.
+- **The dragged widths and the sidebar's open state are remembered** — reload restores each panel's saved width and the sidebar's last state, while the right panel starts closed because its open state belongs to its occupant. Each is one frame-wide preference, not a per-Session fact, and only a manual sidebar toggle rewrites the stored state: a resize or an opening right panel moves the same facts by the responsive rules without recording a choice.
 - **Extremely narrow windows** — after the right panel closes, the center may still fall below 400px; the left 56px rail remains.
 - **Track and panel travel on one shared curve only while animating** — during a discrete open/close the frame sets `data-animating` and its track transition and the occupant's slide read the same duration and easing variables; an occupant that used its own would detach the panel's edge from the conversation's while squeezing. Drags and instant presentation switches run transition-free, so the curve does not cover them.
 - **No scroll anchoring during squeeze reflow** — layout changes may move the reader's viewport.

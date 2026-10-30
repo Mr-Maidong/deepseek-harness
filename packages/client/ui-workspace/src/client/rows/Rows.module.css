@@ -158,22 +158,6 @@
 }
 
 
-/* Project leading slot: folder by default, expand arrow on row hover. */
-.projectRow .chevron { display: none; }
-@media (hover: hover) {
-  .projectRow:hover .chevron { display: inline-flex; }
-
-  .projectRow:hover .folder { display: none; }
-}
-
-/* Expand arrow (filled triangle): points right closed, rotates to point down open. */
-.arrow {
-  transition: transform 150ms var(--ds-ease-in-out);
-}
-
-.arrowOpen {
-  transform: rotate(90deg);
-}
 
 .projectText {
   flex: 1;

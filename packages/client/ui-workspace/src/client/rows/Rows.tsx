@@ -1,7 +1,7 @@
 /**
  * Workspace browser tree row components (figma Cell set 14:3080): pure presentational —
- * all data and callbacks arrive via props. Hover swaps (folder->chevron,
- * time->ellipsis, action buttons) are CSS-only, and a session row's clipped
+ * all data and callbacks arrive via props. Hover swaps (time->ellipsis, action
+ * buttons) are CSS-only, and a session row's clipped
  * title stays clipped to one line while the row is hovered. Workspace row
  * menus are visual-only except Rename/Delete. A Session row's "..." menu and
  * its hover buttons are the `sidebar.workspaces.session.menu.item` and
@@ -17,7 +17,7 @@ import {
   HoverCard, IconArchiveOutlineRegular, IconEditOutlineRegular,
   IconEllipsisOutlineRegular, IconFolderCloseRegular, IconFolderOpenRegular,
   IconNewChatOutlineRegular, IconPinFillRegular, IconTrashOutlineRegular,
-  IconTriangleRightFillRegular, IconUnarchiveOutlineRegular, Menu, relativeTime, RunningMatrix, StateDot, Tooltip, useRowDragPreview,
+  IconUnarchiveOutlineRegular, Menu, relativeTime, RunningMatrix, StateDot, Tooltip, useRowDragPreview,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ShortcutCatalogEntry } from '@deepseek-ai/dsh-client-shortcuts/client'
 import type { StateDotState } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -145,7 +145,7 @@ interface ProjectRowAccess {
 
 /**
  * Project (workspace) header row: folder + title;
- * hover reveals the chevron and create button, and dwelling on a real
+ * hover reveals the create button, and dwelling on a real
  * Workspace shows its hover card (the ungrouped bucket has none).
  * `containsCurrent` arrives on the node (derivation fact, no renderer scan).
  * The create button, each Workspace menu row, and the drag handle are absent
@@ -217,11 +217,8 @@ function ProjectRow({
         }}
       onDragEnd={() => { if (dragPreview.clear()) drag?.end() }}
     >
-      <span className={clsx(css.slot, css.folder, active && css.folderActive)}>
+      <span className={clsx(css.slot, active && css.folderActive)}>
         {row.expanded ? <IconFolderOpenRegular /> : <IconFolderCloseRegular />}
-      </span>
-      <span className={clsx(css.slot, css.chevron)}>
-        <IconTriangleRightFillRegular className={clsx(css.arrow, row.expanded && css.arrowOpen)} />
       </span>
       <span className={css.projectText}>
         <span className={css.title}>{label}</span>

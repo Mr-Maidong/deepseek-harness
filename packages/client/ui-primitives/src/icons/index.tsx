@@ -462,10 +462,10 @@ export const IconInfoOutlineRegular = productIcon('info-outline', 'regular')
 /** Medium IconInfoOutline artwork; its fill-only geometry is weight-independent. */
 export const IconInfoOutlineMedium = productIcon('info-outline', 'medium')
 
-/** Regular one-pixel plugin pinwheel artwork. */
+/** Regular one-pixel plugin blocks artwork. */
 export const IconPluginPinwheelOutlineRegular = productIcon('plugin-pinwheel-outline', 'regular')
 
-/** Medium plugin pinwheel artwork with a 1.3px stroke. */
+/** Medium plugin blocks artwork with a 1.3px stroke. */
 export const IconPluginPinwheelOutlineMedium = productIcon('plugin-pinwheel-outline', 'medium')
 
 /** Regular one-pixel IconAlarmClockOutline artwork. */

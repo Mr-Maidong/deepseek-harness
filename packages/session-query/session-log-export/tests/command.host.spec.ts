@@ -3,14 +3,14 @@ import { Context } from '@deepseek-ai/cordis'
 import type { CommandDefinition, CommandInvocation } from '@deepseek-ai/dsh-commands'
 import * as SessionLogDownload from '../src/index.ts'
 
-describe('/export Web download command', () => {
-  it('registers one pathless command and removes it with the plugin fiber', async () => {
-    let descriptor: CommandDefinition | undefined
+describe('Web export commands', () => {
+  it('registers pathless /export and /copy commands and removes both with the plugin fiber', async () => {
+    const descriptors = new Map<string, CommandDefinition>()
     const ctx = new Context()
     ctx.provide('commands', {
       register(next: CommandDefinition) {
-        descriptor = next
-        return () => { descriptor = undefined }
+        descriptors.set(next.name, next)
+        return () => { descriptors.delete(next.name) }
       },
     } as never)
     ctx.provide('connection', {
@@ -18,19 +18,33 @@ describe('/export Web download command', () => {
     } as never)
     const fiber = await ctx.plugin(SessionLogDownload)
 
-    expect(descriptor).toMatchObject({
+    const downloadCommand = descriptors.get('export')
+    expect(downloadCommand).toMatchObject({
       name: 'export',
       description: 'Download this Session log as a ZIP archive',
     })
-    const invoke = (rawInput: string) => descriptor?.handler({ rawInput } as CommandInvocation)
-    await expect(invoke('')).resolves.toEqual({
+    const invokeDownload = (rawInput: string) => downloadCommand?.handler({ rawInput } as CommandInvocation)
+    await expect(invokeDownload('')).resolves.toEqual({
       kind: 'success', text: 'Session log download requested.',
     })
-    await expect(invoke(' output.zip')).resolves.toEqual({
+    await expect(invokeDownload(' output.zip')).resolves.toEqual({
       kind: 'error', text: 'The Web /export command does not accept a path.',
     })
 
+    const copyCommand = descriptors.get('copy')
+    expect(copyCommand).toMatchObject({
+      name: 'copy',
+      description: 'Copy this Session transcript as Markdown',
+    })
+    const invokeCopy = (rawInput: string) => copyCommand?.handler({ rawInput } as CommandInvocation)
+    await expect(invokeCopy('')).resolves.toEqual({
+      kind: 'success', text: 'Session Markdown copy requested.',
+    })
+    await expect(invokeCopy(' notes.md')).resolves.toEqual({
+      kind: 'error', text: 'The Web /copy command does not accept a path.',
+    })
+
     await fiber.dispose()
-    expect(descriptor).toBeUndefined()
+    expect(descriptors.size).toBe(0)
   })
 })

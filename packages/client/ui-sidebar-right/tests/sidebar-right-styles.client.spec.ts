@@ -1,5 +1,6 @@
 /**
- * The panel's styling as CSS text, where it reaches into the docking kit.
+ * The panel's styling as CSS text, where it reaches into the docking kit and
+ * how its docked margins slide.
  *
  * The kit paints its own chrome around a docked pane, including the first
  * pane's left hairline. Only one presentation has to lose it, and this sheet
@@ -26,15 +27,17 @@ const PANEL_RESET = ".panel[data-sidebar-right-panel='fullscreen']"
 
 const panelCss = read('../src/client/shell/SidebarRight.module.css')
 const kitCss = read('../../ui-dockkit/src/components/dockkit.module.css')
+const css = panelCss.replace(/\/\*[\s\S]*?\*\//g, ' ')
+const host = String.raw`:global\(\[data-dockkit-host='dock'\]\)`
 
 /**
  * Declarations of one exact selector, keyed by property.
- * @param css - stylesheet text.
+ * @param stylesheet - stylesheet text.
  * @param selector - exact selector text.
  * @returns the normalized declarations, or undefined when the selector is absent.
  */
-function declarations(css: string, selector: string): Map<string, string> | undefined {
-  const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, ' ')
+function declarations(stylesheet: string, selector: string): Map<string, string> | undefined {
+  const withoutComments = stylesheet.replace(/\/\*[\s\S]*?\*\//g, ' ')
   for (const [, selectorList = '', body = ''] of withoutComments.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
     if (!selectorList.split(',').map(value => value.trim()).includes(selector)) continue
     const found = new Map<string, string>()
@@ -73,5 +76,15 @@ describe('SidebarRight.module.css', () => {
       .filter(([, , body = '']) => /border-left:\s*none/.test(body))
       .map(([, selectorList = '']) => selectorList.trim())
     expect(resets).toEqual([PANEL_RESET])
+  })
+
+  it('starts docked items mounted by an opening at the closed position', () => {
+    expect(css).toMatch(new RegExp(String.raw`@starting-style\s*\{\s*\.panel\[data-sidebar-right-opening\] ${host},[^{}]*\{`
+      + String.raw`\s*transform: translateX\(var\(--dsh-sidebar-width\)\);\s*}\s*}`))
+  })
+
+  it('removes the open slide as well as the close slide for reduced motion', () => {
+    expect(css).toMatch(new RegExp(String.raw`@media \(prefers-reduced-motion: reduce\)\s*\{[^{}]*`
+      + String.raw`\.panel\[data-sidebar-right-open\] ${host}[^{}]*\{\s*transition: none;\s*}`))
   })
 })

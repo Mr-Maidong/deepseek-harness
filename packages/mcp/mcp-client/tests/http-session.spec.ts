@@ -13,13 +13,32 @@
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import { ToolCallId } from '@deepseek-ai/dsh-llm'
+import type { ToolExecutionResult } from '@deepseek-ai/dsh-tools'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
+import * as NativeToolExecutor from '@deepseek-ai/dsh-tool-executor-native'
 import { resolveReconnectPolicy, startConnection, type ConnectionHandle, type ReconnectConfig } from '../src/connection.ts'
 import type { Config } from '../src/index.ts'
 import { startStatefulHttpMcpFixture, type StatefulHttpMcpFixture } from './stateful-http-fixture.ts'
 
 const testToolSignal = new AbortController().signal
+
+/**
+ * Run one tool call through the batch executor.
+ * @param ctx - context whose tool registry dispatches the call.
+ * @param name - registered tool name.
+ * @param callId - identity recorded for the call.
+ * @returns the call's settled result.
+ */
+async function settledCall(ctx: Context, name: string, callId: ToolCallId): Promise<ToolExecutionResult> {
+  const batch = await ctx.tools.execute({
+    calls: [{ type: 'tool-call', id: callId, name, arguments: '{}' }],
+    signal: testToolSignal,
+  })
+  const settled = batch.results[0]
+  if (settled === undefined) throw new Error('the batch returned no result')
+  return settled.result
+}
 
 /** One started supervisor and the context its tool registry lives on. */
 interface Mounted {
@@ -43,6 +62,7 @@ async function mount(fixture: StatefulHttpMcpFixture, reconnect: ReconnectConfig
   const ctx = new Context()
   await ctx.plugin(SystemPrompt)
   await ctx.plugin(ToolRuntime)
+  await ctx.plugin(NativeToolExecutor)
   onTestFinished(() => ctx.fiber.dispose())
   const connection = startConnection(ctx, httpConfig(fixture.url), resolveReconnectPolicy(reconnect, 'stateful'))
   return { ctx, connection }
@@ -84,12 +104,7 @@ describe('streamable HTTP sessions', () => {
     expect(second.connection.status()).toBe('connected')
     expect(second.connection.toolNames()).toEqual(['mcp__stateful__ping'])
 
-    const result = await second.ctx.tools.execute({
-      signal: testToolSignal,
-      callId: ToolCallId('session-reuse-1'),
-      name: 'mcp__stateful__ping',
-      arguments: {},
-    })
+    const result = await settledCall(second.ctx, 'mcp__stateful__ping', ToolCallId('session-reuse-1'))
     expect(result.isError).toBe(false)
     expect(result.content).toContainEqual({ type: 'text', text: 'pong' })
 
@@ -118,12 +133,7 @@ describe('streamable HTTP sessions', () => {
     // One failed request is how a dead HTTP session reaches the supervisor: the
     // SDK reports the transport failure and the tool call fails with it.
     fixture.failRequestOnce()
-    const failed = await mounted.ctx.tools.execute({
-      signal: testToolSignal,
-      callId: ToolCallId('session-loss-1'),
-      name: 'mcp__stateful__ping',
-      arguments: {},
-    })
+    const failed = await settledCall(mounted.ctx, 'mcp__stateful__ping', ToolCallId('session-loss-1'))
     expect(failed.isError).toBe(true)
 
     await vi.waitFor(() => { expect(fixture.issued).toEqual(['session-1', 'session-2']) })
@@ -133,12 +143,7 @@ describe('streamable HTTP sessions', () => {
     expect(mounted.connection.toolNames()).toEqual(['mcp__stateful__ping'])
     expect(fixture.openSession()).toBe('session-2')
 
-    const recovered = await mounted.ctx.tools.execute({
-      signal: testToolSignal,
-      callId: ToolCallId('session-loss-2'),
-      name: 'mcp__stateful__ping',
-      arguments: {},
-    })
+    const recovered = await settledCall(mounted.ctx, 'mcp__stateful__ping', ToolCallId('session-loss-2'))
     expect(recovered.isError).toBe(false)
     expect(recovered.content).toContainEqual({ type: 'text', text: 'pong' })
   })

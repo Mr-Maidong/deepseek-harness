@@ -1,6 +1,23 @@
 import { z } from 'zod'
-/** Real SDK probe ownership, failed negotiation recovery, established-session recovery, and subprocess quiescence. */
 
+/**
+ * Run one tool call through the batch executor.
+ * @param ctx - context whose tool registry dispatches the call.
+ * @param name - registered tool name.
+ * @param callId - identity recorded for the call.
+ * @returns the call's settled result.
+ */
+async function settledCall(ctx: Context, name: string, callId: ToolCallId): Promise<ToolExecutionResult> {
+  const batch = await ctx.tools.execute({
+    calls: [{ type: 'tool-call', id: callId, name, arguments: '{}' }],
+    signal: new AbortController().signal,
+  })
+  const settled = batch.results[0]
+  if (settled === undefined) throw new Error('the batch returned no result')
+  return settled.result
+}
+/** Real SDK probe ownership, failed negotiation recovery, established-session recovery, and subprocess quiescence. */
+import * as NativeToolExecutor from '@deepseek-ai/dsh-tool-executor-native'
 import { once } from 'node:events'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
@@ -8,6 +25,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
+import type { ToolExecutionResult } from '@deepseek-ai/dsh-tools'
 import { Context } from '@deepseek-ai/cordis'
 import { StreamableHTTPClientTransport, type Transport } from '@modelcontextprotocol/client'
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio'
@@ -33,6 +51,7 @@ async function connection(factory: () => Transport, retry: boolean) {
   onTestFinished(() => ctx.fiber.dispose())
   await ctx.plugin(SystemPrompt)
   await ctx.plugin(ToolRuntime)
+  await ctx.plugin(NativeToolExecutor)
   const errors: string[] = []
   const warns: string[] = []
   const infos: string[] = []
@@ -194,9 +213,7 @@ describe('SDK negotiation lifecycle', () => {
     // The session dies under an in-flight tool call. Streamable HTTP reports
     // this through the SDK error channel only; the Client close event never fires.
     fixture.failNext()
-    const failed = await handle.ctx.tools.execute({
-      name: tool, arguments: {}, callId: ToolCallId('ping-lost'), signal: new AbortController().signal,
-    })
+    const failed = await settledCall(handle.ctx, tool, ToolCallId('ping-lost'))
     expect(failed.isError).toBe(true)
     await vi.waitFor(() => {
       expect(handle.warns.filter(line => line.startsWith('mcp-client(fixture): connection lost; reconnecting')))
@@ -207,9 +224,7 @@ describe('SDK negotiation lifecycle', () => {
     }, { timeout: 15_000 })
 
     // The replacement generation serves the same tool from the same URL.
-    const result = await handle.ctx.tools.execute({
-      name: tool, arguments: {}, callId: ToolCallId('ping-after-http-loss'), signal: new AbortController().signal,
-    })
+    const result = await settledCall(handle.ctx, tool, ToolCallId('ping-after-http-loss'))
     expect(result).toMatchObject({ isError: false, value: { content: [{ type: 'text', text: 'pong' }] } })
     expect(fixture.calls).toEqual(['ping'])
     expect(handle.transports).toHaveLength(2)

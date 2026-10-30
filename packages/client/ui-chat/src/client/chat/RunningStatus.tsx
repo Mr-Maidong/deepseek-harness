@@ -8,6 +8,8 @@ import css from './ChatView.module.css'
 
 interface RunningStatusProps {
   readonly startTime: number | undefined
+  /** Freeze the shown duration while the Client cannot observe the Session. */
+  readonly paused: boolean
   readonly t: ChatViewSlotProps['t']
 }
 
@@ -15,17 +17,17 @@ interface RunningStatusProps {
  * Show live elapsed time after the current Turn's content without announcing ticks.
  * The label is present from the first frame, standing at its one-second floor
  * until the Turn's start time arrives.
- * @param props - Current Turn start time and localized copy.
+ * @param props - Current Turn start time, pause state, and localized copy.
  * @returns the blue running indicator; mount only while the Session is running.
  */
-export const RunningStatus = memo(function RunningStatus({ startTime, t }: RunningStatusProps) {
+export const RunningStatus = memo(function RunningStatus({ startTime, paused, t }: RunningStatusProps) {
   const [now, setNow] = useState(Date.now)
   useEffect(() => {
-    if (startTime === undefined) return
+    if (startTime === undefined || paused) return
     setNow(Date.now())
     const timer = setInterval(() => { setNow(Date.now()) }, LIVE_RUN_CLOCK_INTERVAL_MS)
     return () => { clearInterval(timer) }
-  }, [startTime])
+  }, [startTime, paused])
   // Before the Turn's start time arrives the clock stands at its one-second
   // floor, so the label is present from the first frame.
   const elapsed = `${t('chat.runningFor')}${formatRunDuration(Math.max(1000, now - (startTime ?? now)), t).map(part => part.text).join('')}`

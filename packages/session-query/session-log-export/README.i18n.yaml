@@ -3,68 +3,77 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/session-query/session-log-export/README.md
 /:
-  en: 3b67077a6dfacd19
-  zh: e5b78d039d310dc2
+  en: ebcec58793d0ef37
+  zh: b6a9cffa6b4cb9e7
 /deepseek-ai-dsh-session-log-export:
   en: eea87f5da57ff494
   zh: db388203522b840f
 /deepseek-ai-dsh-session-log-export/summary:
-  en: 6d233698f74a4525
-  zh: bc71c923b90dbb40
+  en: 74cf4dd97629e708
+  zh: 92100d587fad0da7
 /deepseek-ai-dsh-session-log-export/table-of-contents:
   en: d152484eb41ac6b4
   zh: 09388d293f9be9cb
 /deepseek-ai-dsh-session-log-export/use-this-package:
-  en: d515e8f90a8567a3
-  zh: 2bc933644b27155a
+  en: b6759fef8161357f
+  zh: 008ecac0f77c8ede
+/deepseek-ai-dsh-session-log-export/use-this-package/copy-the-transcript-as-markdown:
+  en: c912e4b3906da468
+  zh: e8831d28106a356f
 /deepseek-ai-dsh-session-log-export/use-this-package/when-to-choose-it:
-  en: 2b9dbec4877d332e
-  zh: dcf6638938eedb01
+  en: 4011f686afd24f09
+  zh: 2710b9995c80ba1f
+/deepseek-ai-dsh-session-log-export/use-this-package/backend-conversion:
+  en: 252bc78a7850557a
+  zh: e695658a94c8c2bf
 /deepseek-ai-dsh-session-log-export/use-this-package/composition:
-  en: 2fef1fe4411cc5da
-  zh: cff5dbcc4901402b
+  en: 4168a2d3e653ab73
+  zh: 8bf955cfab7b08e2
 /deepseek-ai-dsh-session-log-export/use-this-package/configuration:
   en: 377a0d8860c46f63
   zh: 9eb7698f813b2fa3
 /deepseek-ai-dsh-session-log-export/use-this-package/command-contract:
-  en: 26329688b9a924a7
-  zh: 94e21c10fdcfc1ac
+  en: 44c9c61538ba8c31
+  zh: fe0761cc4db434eb
 /deepseek-ai-dsh-session-log-export/use-this-package/what-to-expect:
   en: 44be1f1d1903d12a
   zh: c8f1eb5b92b71a30
 /deepseek-ai-dsh-session-log-export/use-this-package/failures:
-  en: 3fc8985946d67024
-  zh: 5bb40a4b531d68f4
+  en: e92a382bebfe99e3
+  zh: 671178b06808bfb9
 /deepseek-ai-dsh-session-log-export/understand-the-implementation:
   en: 7cb82a6851405f95
   zh: b8c525170d19dc6c
 /deepseek-ai-dsh-session-log-export/understand-the-implementation/design-split:
-  en: 15bffcb3bc1409b7
-  zh: 9d59b93788e15148
+  en: eb1081b6b136fe11
+  zh: e08bf9291602a9d4
 /deepseek-ai-dsh-session-log-export/understand-the-implementation/download-flow:
-  en: 24d03ece9b7e684d
-  zh: caf6db0a2d4f6153
+  en: 2bec2ae049b09412
+  zh: 00f476b9dcbaed91
+/deepseek-ai-dsh-session-log-export/understand-the-implementation/markdown-copy-flow:
+  en: d4e02b56ffb8ee8a
+  zh: 0a329039788a13ee
 /deepseek-ai-dsh-session-log-export/further-exploration:
   en: 8eef7e6c58c9f962
   zh: 6c720c91c7f26299
 /deepseek-ai-dsh-session-log-export/model-experience:
   en: 215e7ba838619b7b
   zh: a311da3843709f90
-/deepseek-ai-dsh-session-log-export/model-experience/human-export-control:
-  en: 55c1a61a041a2aeb
-  zh: 48e05043cc42304f
-/deepseek-ai-dsh-session-log-export/model-experience/human-export-control/what-the-model-sees:
-  en: 6b3c3cfc5d68d5f9
-  zh: b1689c57ee3b4ccb
-/deepseek-ai-dsh-session-log-export/model-experience/human-export-control/token-effect:
-  en: 380535e564a4ea2c
-  zh: 2672eac76afd90f5
-/deepseek-ai-dsh-session-log-export/model-experience/human-export-control/kv-cache-effect:
-  en: 78163c30fdf0b43d
-  zh: 165043e307b38cb3
+/deepseek-ai-dsh-session-log-export/model-experience/human-export-and-copy-controls:
+  en: fc738fb50c699115
+  zh: d9184c11b904d36c
+/deepseek-ai-dsh-session-log-export/model-experience/human-export-and-copy-controls/what-the-model-sees:
+  en: e7784b93213942e5
+  zh: 598c2ce6af076d2f
+/deepseek-ai-dsh-session-log-export/model-experience/human-export-and-copy-controls/token-effect:
+  en: 312b2def8b2cd7d4
+  zh: 9af5e3a7cd12ce65
+/deepseek-ai-dsh-session-log-export/model-experience/human-export-and-copy-controls/kv-cache-effect:
+  en: 61e7dbf79010d071
+  zh: 29294355598c0476
 /deepseek-ai-dsh-session-log-export/known-limitations-and-deferred-work:
-  en: 9978d234cbfe7e73
-  zh: 9ba0b12300ff4d38
+  en: 961c206403204080
+  zh: c0cea2c965cc0b1b
 /deepseek-ai-dsh-session-log-export/known-limitations-and-deferred-work/dev-note:
   en: 4ee4d24c26c127bf
   zh: 1facdfbfa3ccefbc

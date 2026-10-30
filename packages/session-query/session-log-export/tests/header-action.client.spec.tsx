@@ -4,12 +4,27 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useSyncExternalStore } from 'react'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { type ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
+import type { GlobalStandardProps, SessionStandardProps } from '@deepseek-ai/dsh-client-ui-slots'
+import { allowAllAccess } from '@deepseek-ai/dsh-client-test-runtime'
 import { SessionLogDownloadController } from '../src/client/controller.ts'
 import { SessionLogDownloadHeaderAction } from '../src/client/HeaderAction.tsx'
 import type { SessionLogDownloadHeaderProps } from '../src/client/HeaderAction.tsx'
 import { en } from '../src/client/locales.ts'
 
 const SID = 'session-export-header' as SessionId
+const dictionary: Record<string, string> = en
+const translate: SessionLogDownloadHeaderProps['t'] = key => dictionary[key] ?? key
+
+const unused = (): never => { throw new Error('This isolated component does not consume framework hooks') }
+const standard: GlobalStandardProps & SessionStandardProps = {
+  sessionId: SID, useSession: unused, useProjection: unused, useConversation: unused,
+  useInput: unused, useChat: unused, useTrajectory: unused,
+  usePanelInfo: unused, useSessions: unused, useSessionStatus: unused,
+  useSessionRetainInfo: unused, useResource: unused, useWorkspaces: unused,
+  ...allowAllAccess,
+  inputActions: { insertQuote: () => false, captureInsertion: unused, insertText: unused, setDraft: unused,
+    persistDraft: unused, addAttachments: unused, removeAttachment: unused, pruneAttachments: unused, submit: unused },
+}
 
 function bindSnapshot<State>(store: ObservableSnapshot<State>) {
   return function useSnapshot<T>(selector: (state: State) => T): T {
@@ -24,11 +39,12 @@ function bench() {
   const controller = new SessionLogDownloadController(async () => new Response('zip'), vi.fn())
   const dismiss = vi.fn((sessionId: SessionId) => { controller.dismiss(sessionId) })
   const props = {
+    ...standard,
     sessionId: SID,
     useSessionLogDownload: bindSnapshot(controller.store),
     dismiss,
-    t: (key: keyof typeof en): string => en[key],
-  } as unknown as SessionLogDownloadHeaderProps
+    t: translate,
+  }
   const view = render(<SessionLogDownloadHeaderAction {...props} />)
   return { controller, dismiss, view }
 }

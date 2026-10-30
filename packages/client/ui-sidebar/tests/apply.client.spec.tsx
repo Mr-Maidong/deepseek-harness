@@ -81,10 +81,8 @@ describe('ui-sidebar apply', () => {
     expect(leading[0]!.locale).toBe('sidebar')
     expect(leading[0]!.inject).toBe(b.slots.entries('sidebar')[0]!.inject)
     const injected = (b.slots.entries('sidebar')[0]!.inject as () => SidebarRootInjected)()
-    expect(Object.keys(injected)).toEqual(['startSession', 'toggleSidebar', 'selectPanel', 'setPinned', 'trackEntryClick', 'hooks'])
+    expect(Object.keys(injected)).toEqual(['startSession', 'toggleSidebar', 'selectPanel', 'trackEntryClick', 'hooks'])
     expect(injected.hooks.panels.getSnapshot()).toEqual([])
-    expect(injected.hooks.entryPins.getSnapshot()).toEqual([])
-    expect(injected.hooks.entryActions.getSnapshot()).toBe(false)
     expect(b.slots.entries('main')).toEqual([])
     // Both arms delegate to the Workspace UI's shared New Session action.
     injected.startSession('workspace' as never)
@@ -104,7 +102,7 @@ describe('ui-sidebar apply', () => {
     await b.ctx.plugin({ inject: [...inject], apply }).await()
     const injected = (b.slots.entries('sidebar')[0]!.inject as () => SidebarRootInjected)()
     // Ordinary Web mounts no analytics service; reporting is then a no-op.
-    expect(() => { injected.trackEntryClick({ menu_name: 'more', position: 'sidebar' }) }).not.toThrow()
+    expect(() => { injected.trackEntryClick({ menu_name: 'plugin', position: 'sidebar' }) }).not.toThrow()
     const track = vi.fn<TrackProductEvent>()
     b.ctx.provide('productAnalytics', { track } as never)
     injected.trackEntryClick({ menu_name: 'new_session', position: 'titlebar' })
@@ -116,8 +114,8 @@ describe('ui-sidebar apply', () => {
     expect(track).toHaveBeenCalledOnce()
     // The window-chrome occupant shares the same reporting callback.
     const leading = (b.slots.entries('shell.leading')[0]!.inject as () => SidebarRootInjected)()
-    leading.trackEntryClick({ menu_name: 'cron', position: 'sidebar_more' })
-    expect(track).toHaveBeenLastCalledWith('sidebar_menu_click', { menu_name: 'cron', position: 'sidebar_more' })
+    leading.trackEntryClick({ menu_name: 'cron', position: 'sidebar' })
+    expect(track).toHaveBeenLastCalledWith('sidebar_menu_click', { menu_name: 'cron', position: 'sidebar' })
   })
 
   it('waits for the sidebar declaration before registering', async () => {

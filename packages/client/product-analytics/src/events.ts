@@ -57,13 +57,13 @@ export interface ProductEventMap {
 }
 
 /** Official navigation entries; third-party identifiers are never analytics dimensions. */
-export type SidebarAnalyticsEntry = 'new_session' | 'plugin' | 'cron' | 'more'
+export type SidebarAnalyticsEntry = 'new_session' | 'plugin' | 'cron'
 
 /** Physical navigation placement, independent of the selected destination. */
-export type SidebarAnalyticsPosition = 'sidebar' | 'sidebar_more' | 'titlebar'
+export type SidebarAnalyticsPosition = 'sidebar' | 'titlebar'
 
 /** Entry-customization menu regions. */
-export type EntryAnalyticsRegion = 'sidebar' | 'conversation' | 'rightbar'
+export type EntryAnalyticsRegion = 'conversation' | 'rightbar'
 
 /** Built-in presets, independent of localized names and custom preset identifiers. */
 export type AnalyticsPreset = 'creator' | 'ptc' | 'minimal' | 'standard'

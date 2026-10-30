@@ -51,7 +51,7 @@ Only `plugin_toggle` carries `plugin_type`: plugin rows use `plugin`, and packag
 
 ### Navigation, preset, and new-session events
 
-Official navigation reports New Session, Plugins, Automation tasks, and More clicks with their physical placement: `sidebar`, `sidebar_more`, or `titlebar`. Opening Automation tasks from the left sidebar More menu counts as `sidebar_more`, not as a direct sidebar click. Historical `sidebar_menu_click` records without `position` remain unattributed. More-menu actions distinguish the sidebar, conversation, and rightbar regions. Third-party entry identifiers and custom preset names are excluded.
+Official navigation reports New Session, Plugins, and Automation tasks clicks with their physical placement: `sidebar` or `titlebar`. Historical `sidebar_menu_click` records without `position` remain unattributed. More-menu actions distinguish the conversation and rightbar regions. Third-party entry identifiers and custom preset names are excluded.
 
 Direct preset switches report accepted different choices in the mode picker: an unbound staged choice, or Host application for a blank Session. Custom source modes are `other`, and only built-in targets are reported. Default changes, automatic fallback, restoration, and Creator launchers are excluded. Each switch records the Coding Tools setting known at the action; an unknown setting reports nothing. `code_work_view_toggle` reports a successful change of that setting.
 

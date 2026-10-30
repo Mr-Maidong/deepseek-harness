@@ -3,11 +3,11 @@ import {
   IconCheckOutlineRegular, IconPluginPinwheelOutlineRegular, IconPlusOutlineRegular, MenuItemButton,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { HostObservable, InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
+import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import css from './EntryMenu.module.css'
 
 /** Navigation region whose More menu hosts one registration. */
-export type EntryRegion = 'sidebar' | 'conversation' | 'rightbar'
+export type EntryRegion = 'conversation' | 'rightbar'
 
 /** Region identity and footer actions injected into each registration. */
 export interface EntryMenuInjected {
@@ -23,8 +23,8 @@ export interface EntryMenuInjected {
   readonly createPlugin: () => void
 }
 
-// The three region owners declare the same fields; the sidebar's slot names them.
-type EntryMenuContentProps = PropsRuntime<'sidebar.panellist.actions'>
+// Both region owners declare the same fields; the Conversation slot names them.
+type EntryMenuContentProps = PropsRuntime<'conversation.session.header.views.actions'>
   & PropsLocale<'entryCustomization'> & InjectFace<EntryMenuInjected>
 
 /**

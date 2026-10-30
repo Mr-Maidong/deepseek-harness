@@ -13,8 +13,8 @@ import { EntryMenuContent } from '../src/client/EntryMenuContent.tsx'
 import { en } from '../src/client/locales.ts'
 import { apply, inject } from '../src/client/index.ts'
 
-type Seats = 'sidebar.panellist.actions' | 'conversation.session.header.views.actions' | 'sidebar.right.tab.guide.actions'
-const SEATS = ['sidebar.panellist.actions', 'conversation.session.header.views.actions', 'sidebar.right.tab.guide.actions'] as const
+type Seats = 'conversation.session.header.views.actions' | 'sidebar.right.tab.guide.actions'
+const SEATS = ['conversation.session.header.views.actions', 'sidebar.right.tab.guide.actions'] as const
 const runtimes = new Set<SlotTestRuntime>()
 afterEach(async () => {
   try { for (const runtime of runtimes) await runtime.dispose() }
@@ -32,7 +32,7 @@ function content(overrides: Partial<ContentProps> = {}) {
   }
   const props = {
     entries: [{ id: 'notes', label: 'Notes', pinned: true }, { id: 'tasks', label: 'Tasks', pinned: false }],
-    region: 'sidebar', t: makeTranslate(en),
+    region: 'rightbar', t: makeTranslate(en),
     usePluginNavigation: <T,>(select: (present: boolean) => T): T => select(true),
     usePanelInfo: unused, useSessions: unused, useSessionStatus: unused, useSessionRetainInfo: unused,
     useResource: unused, useWorkspaces: unused,
@@ -44,8 +44,8 @@ function content(overrides: Partial<ContentProps> = {}) {
 }
 
 describe('More menu rows', () => {
-  it.each(['sidebar', 'rightbar'] as const)('shows only discovery and creation in %s regardless of entries', (region) => {
-    const b = content({ region, entries: [
+  it('shows only discovery and creation in rightbar regardless of entries', () => {
+    const b = content({ entries: [
       { id: 'notes', label: 'Notes', pinned: true, active: true },
       { id: 'tasks', label: 'Tasks', pinned: false },
     ] })
@@ -89,8 +89,8 @@ describe('More menu rows', () => {
     expect(b.view.queryByRole('separator')).toBeNull()
   })
 
-  it.each(['sidebar', 'rightbar'] as const)('keeps only creation in %s without plugin navigation', (region) => {
-    const b = content({ region, usePluginNavigation: select => select(false) })
+  it('keeps only creation in rightbar without plugin navigation', () => {
+    const b = content({ usePluginNavigation: select => select(false) })
     expect(b.view.getAllByRole('menuitem').map(row => row.textContent)).toEqual(['Create your plugin'])
     expect(b.view.queryByRole('separator')).toBeNull()
     fireEvent.click(b.view.getByRole('menuitem', { name: 'Create your plugin' }))
@@ -137,7 +137,6 @@ async function bench(
     },
   })
   await runtime.root.declare({
-    'sidebar.panellist.actions': { kind: 'list', scope: 'root' },
     'conversation.session.header.views.actions': { kind: 'list', scope: 'root' },
     'sidebar.right.tab.guide.actions': { kind: 'list', scope: 'root' },
   }, Frame)
@@ -149,11 +148,11 @@ async function bench(
 describe('More menu registrations', () => {
   it('shows plugin discovery only while the Plugins page navigation is present', async () => {
     const b = await bench('en', { navigation: false })
-    const sidebar = () => within(b.view.getByRole('menu', { name: 'sidebar.panellist.actions' }))
-    expect(sidebar().queryByRole('menuitem', { name: 'Browse other plugins' })).toBeNull()
-    expect(sidebar().getByRole('menuitem', { name: 'Create your plugin' })).toBeTruthy()
-    expect(sidebar().queryByRole('separator')).toBeNull()
-    const injected = b.runtime.slots.entries('sidebar.panellist.actions')[0]!.inject!() as { browsePlugins: () => void }
+    const guide = () => within(b.view.getByRole('menu', { name: 'sidebar.right.tab.guide.actions' }))
+    expect(guide().queryByRole('menuitem', { name: 'Browse other plugins' })).toBeNull()
+    expect(guide().getByRole('menuitem', { name: 'Create your plugin' })).toBeTruthy()
+    expect(guide().queryByRole('separator')).toBeNull()
+    const injected = b.runtime.slots.entries('sidebar.right.tab.guide.actions')[0]!.inject!() as { browsePlugins: () => void }
     expect(() => { injected.browsePlugins() }).not.toThrow()
 
     const navigation = await b.runtime.mount({
@@ -161,12 +160,12 @@ describe('More menu registrations', () => {
       apply(ctx: Context) { ctx.provide('pluginNavigation', { openList: b.openList } as never) },
     })
     await act(async () => { await Promise.resolve() })
-    fireEvent.click(sidebar().getByRole('menuitem', { name: 'Browse other plugins' }))
+    fireEvent.click(guide().getByRole('menuitem', { name: 'Browse other plugins' }))
     expect(b.openList).toHaveBeenCalledExactlyOnceWith()
 
     await navigation.dispose()
     await act(async () => { await Promise.resolve() })
-    expect(sidebar().queryByRole('menuitem', { name: 'Browse other plugins' })).toBeNull()
+    expect(guide().queryByRole('menuitem', { name: 'Browse other plugins' })).toBeNull()
   })
 
   it('registers one row set per region and removes all of them when the plugin unloads', async () => {
@@ -176,8 +175,8 @@ describe('More menu registrations', () => {
       expect(within(b.view.getByRole('menu', { name: seat })).getAllByRole('menuitem').map(row => row.textContent))
         .toEqual(['Browse other plugins', 'Create your plugin'])
     }
-    const sidebar = within(b.view.getByRole('menu', { name: 'sidebar.panellist.actions' }))
-    fireEvent.click(sidebar.getByRole('menuitem', { name: 'Browse other plugins' }))
+    const guide = within(b.view.getByRole('menu', { name: 'sidebar.right.tab.guide.actions' }))
+    fireEvent.click(guide.getByRole('menuitem', { name: 'Browse other plugins' }))
     expect(b.openList).toHaveBeenCalledExactlyOnceWith()
     await b.plugin.dispose()
     for (const seat of SEATS) {
@@ -187,10 +186,8 @@ describe('More menu registrations', () => {
   })
 
   it.each([
-    ['en', 'sidebar.panellist.actions', 'Create a DSH plugin with a left sidebar entry.'],
     ['en', 'conversation.session.header.views.actions', 'Create a DSH conversation view plugin.'],
     ['en', 'sidebar.right.tab.guide.actions', 'Create a DSH plugin with a right sidebar entry.'],
-    ['zh', 'sidebar.panellist.actions', '创建一个带左侧栏入口的 DSH 插件。'],
     ['zh', 'conversation.session.header.views.actions', '创建一个 DSH 会话视图插件。'],
     ['zh', 'sidebar.right.tab.guide.actions', '创建一个带右侧栏入口的 DSH 插件。'],
   ] as const)('starts an unsent %s Creator draft from %s', async (language, seat, prompt) => {
@@ -203,7 +200,6 @@ describe('More menu registrations', () => {
   })
 
   it.each([
-    ['sidebar.panellist.actions', 'sidebar'],
     ['conversation.session.header.views.actions', 'conversation'],
     ['sidebar.right.tab.guide.actions', 'rightbar'],
   ] as const)('reports both footer actions of %s as the %s region before acting', async (seat, region) => {

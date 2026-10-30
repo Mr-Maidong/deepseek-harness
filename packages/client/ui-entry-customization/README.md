@@ -1,5 +1,5 @@
 ---
-description: "Offer plugin browsing and a Creator draft in three navigation regions."
+description: "Offer plugin browsing and a Creator draft in two navigation regions."
 kind: "package-reference"
 ---
 
@@ -11,7 +11,7 @@ Desktop product events use the optional [product analytics service](../product-a
 
 ## Summary
 
-Browse plugins and prepare a reviewable Creator draft from the More menus of the left sidebar, Conversation View tabs, and right-sidebar guide. The Web app loads this package by default. Each region draws its own More button; this package stores nothing.
+Browse plugins and prepare a reviewable Creator draft from the More menus of the Conversation View tabs and the right-sidebar guide. The Web app loads this package by default. Each region draws its own More button; this package stores nothing.
 
 ## Table of Contents
 
@@ -26,13 +26,13 @@ Browse plugins and prepare a reviewable Creator draft from the More menus of the
 <a id="use-this-package"></a>
 ## Use this package
 
-The `@deepseek-ai/dsh-web-app` bundle loads this package by default; it needs no Plugins switch or profile selection. A region shows its More button only while its actions slot has a registration, so unloading this package removes all three buttons.
+The `@deepseek-ai/dsh-web-app` bundle loads this package by default; it needs no Plugins switch or profile selection. A region shows its More button only while its actions slot has a registration, so unloading this package removes both buttons.
 
-Open **More** beneath the left navigation entries, **More conversation views** after the Conversation View tabs, or **More tools** after the right-sidebar guide cards. Left-sidebar and guide menus offer only **Browse other plugins** (when available) and **Create your plugin**. The Conversation menu also lists folded Views before those actions and marks the active View with a check on the right. None of these menus provide pin controls or sorting.
+Open **More conversation views** after the Conversation View tabs or **More tools** after the right-sidebar guide cards. The guide menu offers only **Browse other plugins** (when available) and **Create your plugin**. The Conversation menu also lists folded Views before those actions and marks the active View with a check on the right. Neither menu provides pin controls or sorting.
 
 **Browse other plugins** opens the Plugins main list without opening an installation dialog. **Create your plugin** opens a new or reusable blank Session with the Creator preset and adds a short localized request for a plugin in that region to its draft: an empty draft takes the request as its text, and an existing draft keeps its text, references, and attachments with the request appended as a new paragraph. It never sends a message. Review and send the draft yourself. Creation remains available regardless of the region’s entries; a separator appears only between folded Views and the actions, before browsing when available or before creation otherwise.
 
-On Desktop, **Browse other plugins** and **Create your plugin** report `more_menu_item_click` before they act, with `action=browse_plugins` or `action=create_plugin` and the menu's `region`: `sidebar` for **More**, `conversation` for **More conversation views**, and `rightbar` for **More tools**. The menus report no exposure events. Without the analytics service, both actions behave the same and report nothing.
+On Desktop, **Browse other plugins** and **Create your plugin** report `more_menu_item_click` before they act, with `action=browse_plugins` or `action=create_plugin` and the menu's `region`: `conversation` for **More conversation views**, and `rightbar` for **More tools**. The menus report no exposure events. Without the analytics service, both actions behave the same and report nothing.
 
 The browse-plugins row appears only while the `pluginNavigation` service is present; the plugin starts without it. Its absence removes only browsing, not More buttons, folded Views, or creation.
 
@@ -44,7 +44,7 @@ The browse-plugins row appears only while the `pluginNavigation` service is pres
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-[`apply`](src/client/index.ts) registers [`EntryMenuContent`](src/client/EntryMenuContent.tsx) under id `entry-customization` into `sidebar.panellist.actions`, `conversation.session.header.views.actions`, and `sidebar.right.tab.guide.actions` through `ctx.slots.inject`, so each registration follows its region's declaration lifetime. The regions render these slots inside their own `Menu`; the rows call `onDismiss` before browsing or creating. Only the Conversation menu consumes its owner’s folded entry list and navigation callback; pin callbacks remain unused.
+[`apply`](src/client/index.ts) registers [`EntryMenuContent`](src/client/EntryMenuContent.tsx) under id `entry-customization` into `conversation.session.header.views.actions` and `sidebar.right.tab.guide.actions` through `ctx.slots.inject`, so each registration follows its region's declaration lifetime. The regions render these slots inside their own `Menu`; the rows call `onDismiss` before browsing or creating. Only the Conversation menu consumes its owner’s folded entry list and navigation callback; pin callbacks remain unused.
 
 Each registration's `inject` supplies its region and two callbacks. Each callback first calls `ctx.get('productAnalytics')?.track('more_menu_item_click', { region, action })`. Browsing then calls `ctx.get('pluginNavigation')?.openList()`; ui-plugin-manager provides that service only while the Plugins page has access, so this package reads it optionally and never lists it in `inject`. Creation then calls `uiWorkspace.startSession(undefined, { agentPreset: 'cordis', prompt, whenDraftExists: 'append' })` with the region's localized prompt; it does not go through `ui-agent-preset`, so the preset chip plays no introduction. The [`dsh-web-app` bundle patch](../../bundle/web-app/cordis.patch.yml) mounts the browser plugin.
 
